@@ -579,32 +579,6 @@ h2.stitle::after {
   gap: 12px;
 }
 
-.artifacts-details {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card-bg);
-  padding: 0 20px 20px;
-}
-.artifacts-details__summary {
-  cursor: pointer;
-  list-style: none;
-  padding: 20px 0 0;
-}
-.artifacts-details__summary::-webkit-details-marker {
-  display: none;
-}
-.artifacts-details__summary::before {
-  content: '▸ ';
-  font-size: 14px;
-  color: var(--ink-soft);
-}
-.artifacts-details[open] .artifacts-details__summary::before {
-  content: '▾ ';
-}
-.artifacts-details__intro {
-  margin: 8px 0 20px;
-}
-
 .btn {
   font-family: var(--sans);
   font-weight: 500;

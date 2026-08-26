@@ -8,7 +8,8 @@ import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
 import SlidesEmbed from '../components/SlidesEmbed'
 import { CLASS04 } from '../data/curriculum'
-import { useProgress, useRememberVisit } from '../hooks/useProgress'
+import { useRememberVisit } from '../hooks/useProgress'
+import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 
 const BASE = '/class-04-build-offline-chat'
 
@@ -21,9 +22,10 @@ const ANCHORS = [
 ]
 
 export default function Class04() {
-  const { state, toggle, pct, feedback } = useProgress(CLASS04.id, {
-    itemCount: CLASS04.dodItems.length,
-  })
+  const { state, toggle, pct, feedback } = useProgressWithFeedback(
+    CLASS04.id,
+    CLASS04.dodItems.length,
+  )
 
   useRememberVisit()
 
