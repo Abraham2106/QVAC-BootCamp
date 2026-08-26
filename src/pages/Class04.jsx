@@ -1,14 +1,14 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import DodLiveRegion from '../components/DodLiveRegion'
+import ClassArtifactsSection from '../components/ClassArtifactsSection'
+import ClassLessonLinks from '../components/ClassLessonLinks'
 import FeatureCard from '../components/FeatureCard'
-import LinkButton from '../components/LinkButton'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
 import SlidesEmbed from '../components/SlidesEmbed'
-import { markdownRoute } from '../lib/markdown'
 import { CLASS04 } from '../data/curriculum'
-import { rememberVisit, useProgress } from '../hooks/useProgress'
+import { useProgress, useRememberVisit } from '../hooks/useProgress'
 
 const BASE = '/class-04-build-offline-chat'
 
@@ -21,11 +21,11 @@ const ANCHORS = [
 ]
 
 export default function Class04() {
-  const { state, toggle, pct } = useProgress(CLASS04.id)
+  const { state, toggle, pct, feedback } = useProgress(CLASS04.id, {
+    itemCount: CLASS04.dodItems.length,
+  })
 
-  useEffect(() => {
-    rememberVisit(window.location.pathname)
-  }, [])
+  useRememberVisit()
 
   return (
     <>
@@ -78,15 +78,7 @@ export default function Class04() {
             Tres ciclos de vida, ownership de estado, frontera de commit, cancelación, persistencia JSON y
             verificación offline — legible sin las diapositivas.
           </p>
-          <div className="cta-row">
-            <LinkButton to={markdownRoute(`${BASE}/lesson.md`)}>Leer lección canónica →</LinkButton>
-            <LinkButton href="/lessons/class-04.html" variant="ghost">
-              Índice HTML resumido
-            </LinkButton>
-            <LinkButton href={`${BASE}/lesson.md`} variant="ghost">
-              Ver Markdown fuente
-            </LinkButton>
-          </div>
+          <ClassLessonLinks base={BASE} classIndex={4} />
           <div className="grid grid--3">
             {CLASS04.outcomes.map((o) => (
               <FeatureCard key={o.tag} tag={o.tag} title={o.title} body={o.body} />
@@ -127,11 +119,7 @@ export default function Class04() {
         </Reveal>
       </section>
 
-      <section className="section container" id="artefactos" aria-labelledby="art-title">
-        <Reveal>
-          <h2 className="stitle" id="art-title">
-            Artefactos de la clase
-          </h2>
+      <ClassArtifactsSection>
           <div className="grid grid--2">
             <div className="card artifact card--lift">
               <span className="tag">EXAMPLES</span>
@@ -208,8 +196,7 @@ export default function Class04() {
               </div>
             </div>
           </div>
-        </Reveal>
-      </section>
+      </ClassArtifactsSection>
 
       <section className="section container" id="dod" aria-labelledby="dod-title">
         <Reveal>
@@ -217,6 +204,7 @@ export default function Class04() {
             Definition of Done
           </h2>
           <p className="lede section-intro">Marca cada evidencia cuando la tengas. Se guarda en este navegador.</p>
+          <DodLiveRegion message={feedback} />
           <ul className="dod">
             {CLASS04.dodItems.map((item) => (
               <li key={item.id}>

@@ -1,14 +1,15 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import DodLiveRegion from '../components/DodLiveRegion'
+import ClassArtifactsSection from '../components/ClassArtifactsSection'
+import ClassLessonLinks from '../components/ClassLessonLinks'
 import FeatureCard from '../components/FeatureCard'
-import LinkButton from '../components/LinkButton'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
 import SlidesEmbed from '../components/SlidesEmbed'
-import { markdownRoute } from '../lib/markdown'
 import { CLASS01 } from '../data/curriculum'
-import { rememberVisit, useProgress } from '../hooks/useProgress'
+import { useRememberVisit } from '../hooks/useProgress'
+import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 
 const BASE = '/class-01-airplane-mode-intelligence'
 
@@ -21,11 +22,12 @@ const ANCHORS = [
 ]
 
 export default function Class01() {
-  const { state, toggle, pct } = useProgress(CLASS01.id)
+  const { state, toggle, pct, feedback } = useProgressWithFeedback(
+    CLASS01.id,
+    CLASS01.dodItems.length,
+  )
 
-  useEffect(() => {
-    rememberVisit(window.location.pathname)
-  }, [])
+  useRememberVisit()
 
   return (
     <>
@@ -78,13 +80,7 @@ export default function Class01() {
             El artefacto más profundo: concepto, modelo mental, Inside QVAC, Under the Hood, misconcepciones y
             checkpoint — legible sin las diapositivas.
           </p>
-          <div className="cta-row">
-            <LinkButton href="/lessons/class-01.html">Leer la lección →</LinkButton>
-            <LinkButton to={markdownRoute(`${BASE}/lesson.md`)}>Leer Markdown →</LinkButton>
-            <LinkButton href={`${BASE}/lesson.md`} variant="ghost">
-              Ver Markdown fuente
-            </LinkButton>
-          </div>
+          <ClassLessonLinks base={BASE} classIndex={1} />
           <div className="grid grid--3">
             {CLASS01.outcomes.map((o) => (
               <FeatureCard key={o.tag} tag={o.tag} title={o.title} body={o.body} />
@@ -124,11 +120,7 @@ export default function Class01() {
         </Reveal>
       </section>
 
-      <section className="section container" id="artefactos" aria-labelledby="art-title">
-        <Reveal>
-          <h2 className="stitle" id="art-title">
-            Artefactos de la clase
-          </h2>
+      <ClassArtifactsSection>
           <div className="grid grid--2">
             <div className="card artifact card--lift">
               <span className="tag">EXAMPLES</span>
@@ -202,8 +194,7 @@ export default function Class01() {
               </div>
             </div>
           </div>
-        </Reveal>
-      </section>
+      </ClassArtifactsSection>
 
       <section className="section container" id="dod" aria-labelledby="dod-title">
         <Reveal>
@@ -211,6 +202,7 @@ export default function Class01() {
             Definition of Done
           </h2>
           <p className="lede section-intro">Marca cada evidencia cuando la tengas. Se guarda en este navegador.</p>
+          <DodLiveRegion message={feedback} />
           <ul className="dod">
             {CLASS01.dodItems.map((item) => (
               <li key={item.id}>

@@ -1,14 +1,15 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import DodLiveRegion from '../components/DodLiveRegion'
+import ClassArtifactsSection from '../components/ClassArtifactsSection'
 import FeatureCard from '../components/FeatureCard'
-import LinkButton from '../components/LinkButton'
+import ClassLessonLinks from '../components/ClassLessonLinks'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
 import SlidesEmbed from '../components/SlidesEmbed'
-import { markdownRoute } from '../lib/markdown'
 import { CLASS03 } from '../data/curriculum'
-import { rememberVisit, useProgress } from '../hooks/useProgress'
+import { useRememberVisit } from '../hooks/useProgress'
+import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 
 const BASE = '/class-03-local-inference-fundamentals'
 
@@ -21,11 +22,12 @@ const ANCHORS = [
 ]
 
 export default function Class03() {
-  const { state, toggle, pct } = useProgress(CLASS03.id)
+  const { state, toggle, pct, feedback } = useProgressWithFeedback(
+    CLASS03.id,
+    CLASS03.dodItems.length,
+  )
 
-  useEffect(() => {
-    rememberVisit(window.location.pathname)
-  }, [])
+  useRememberVisit()
 
   return (
     <>
@@ -78,13 +80,7 @@ export default function Class03() {
             Mecánica observable de inferencia: tokenización, prefill vs decode, sampling, contexto, KV cache,
             TTFT vs throughput — legible sin las diapositivas.
           </p>
-          <div className="cta-row">
-            <LinkButton href="/lessons/class-03.html">Leer la lección →</LinkButton>
-            <LinkButton to={markdownRoute(`${BASE}/lesson.md`)}>Leer Markdown →</LinkButton>
-            <LinkButton href={`${BASE}/lesson.md`} variant="ghost">
-              Ver Markdown fuente
-            </LinkButton>
-          </div>
+          <ClassLessonLinks base={BASE} classIndex={3} />
           <div className="grid grid--3">
             {CLASS03.outcomes.map((o) => (
               <FeatureCard key={o.tag} tag={o.tag} title={o.title} body={o.body} />
@@ -124,11 +120,7 @@ export default function Class03() {
         </Reveal>
       </section>
 
-      <section className="section container" id="artefactos" aria-labelledby="art-title">
-        <Reveal>
-          <h2 className="stitle" id="art-title">
-            Artefactos de la clase
-          </h2>
+      <ClassArtifactsSection>
           <div className="grid grid--2">
             <div className="card artifact card--lift">
               <span className="tag">EXAMPLES</span>
@@ -205,8 +197,7 @@ export default function Class03() {
               </div>
             </div>
           </div>
-        </Reveal>
-      </section>
+      </ClassArtifactsSection>
 
       <section className="section container" id="dod" aria-labelledby="dod-title">
         <Reveal>
@@ -214,6 +205,7 @@ export default function Class03() {
             Definition of Done
           </h2>
           <p className="lede section-intro">Marca cada evidencia cuando la tengas. Se guarda en este navegador.</p>
+          <DodLiveRegion message={feedback} />
           <ul className="dod">
             {CLASS03.dodItems.map((item) => (
               <li key={item.id}>
