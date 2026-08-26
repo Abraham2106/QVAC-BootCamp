@@ -25,6 +25,11 @@
   padding: 28px 32px;
 }
 
+.card.markdown-page,
+.markdown-page.card {
+  padding: 28px 32px;
+}
+
 .markdown-viewer__state {
   font-family: var(--mono);
   font-size: 14px;
@@ -161,8 +166,18 @@
 }
 
 @media (max-width: 720px) {
-  .markdown-page {
-    padding: 20px 22px;
+  .markdown-page,
+  .card.markdown-page,
+  .markdown-page.card {
+    padding: 24px 24px;
+  }
+
+  .markdown-viewer {
+    font-size: 16px;
+  }
+
+  .markdown-viewer :where(pre) {
+    max-width: 100%;
   }
 
   .markdown-page-hero {

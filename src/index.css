@@ -1478,6 +1478,17 @@ pre.mermaid svg {
     padding: 28px 24px;
   }
 
+  /* Markdown reading — padding de card no debe perder contra .card genérico */
+  .markdown-reading-card,
+  .card.markdown-page,
+  .markdown-page.card {
+    padding: 24px 24px;
+  }
+
+  .markdown-reading-section {
+    padding-block: 32px;
+  }
+
   [id] {
     scroll-margin-top: 72px;
   }

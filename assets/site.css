@@ -488,6 +488,10 @@ body.lesson-page .site-foot .inner {
     margin-bottom: 8px;
 }
 
+.lesson-toc-toggle {
+    display: none;
+}
+
 .lesson-toc a {
     display: block;
     color: var(--ink-soft);
@@ -710,6 +714,8 @@ body.lesson-page .site-foot { margin-top: 0; }
         grid-template-columns: 1fr;
     }
     .lesson-sidebar {
+        grid-column: 1;
+        grid-row: auto;
         position: static;
         max-height: none;
         overflow: visible;
@@ -726,20 +732,102 @@ body.lesson-page .site-foot { margin-top: 0; }
         overflow: visible;
         padding: 0 var(--doc-pad) 16px;
     }
+    .lesson-toc.is-collapsed {
+        display: none;
+    }
+    .lesson-toc-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: calc(100% - 2 * var(--doc-pad));
+        margin: 0 var(--doc-pad) 12px;
+        min-height: 44px;
+        padding: 10px 14px;
+        font-family: var(--sans);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+    }
+    .lesson-toc-toggle:hover {
+        background: var(--bg-muted);
+        border-color: var(--border-strong);
+    }
     article.lesson {
         grid-column: 1;
-        padding: 20px var(--doc-pad) 48px;
+        grid-row: auto;
+        padding: 24px var(--doc-pad) 48px;
+        min-width: 0;
+    }
+    article.lesson table.booktabs {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
     }
     .site-nav { gap: 14px; font-size: 14.5px; }
 }
 
-/* Móvil: el header puede envolver (su min-content era la causa de
-   overflow horizontal en viewports < 480px) y se centra. */
+/* Móvil: header de lección legible; TOC en una columna */
 @media (max-width: 720px) {
-    .site-head .bar { flex-wrap: wrap; justify-content: center; row-gap: 6px; text-align: center; }
-    .site-nav { flex-wrap: wrap; justify-content: center; width: 100%; }
-    .hero { padding: 48px 0 40px; }
-    .section { padding: 40px 0; }
+    :root {
+        --doc-pad: 24px;
+    }
+
+    body.lesson-page {
+        overflow-x: clip;
+    }
+
+    body.lesson-page .site-head .bar {
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        text-align: left;
+        max-width: none;
+    }
+
+    body.lesson-page .site-nav {
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+        width: auto;
+        font-size: 13px;
+        gap: 4px;
+    }
+
+    body.lesson-page .site-nav a {
+        padding: 8px 10px;
+    }
+
+    .lesson-toc {
+        columns: 1;
+    }
+
+    .lesson-toc a {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        padding: 8px 0 8px 10px;
+    }
+
+    article.lesson {
+        font-size: 17px;
+        padding-block: 20px 40px;
+    }
+
+    pre.codebox,
+    pre.diagram {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .block-body {
+        padding: 14px 16px;
+    }
+
+    .hero { padding-block: 48px 40px; }
+    .section { padding-block: 40px; }
     .cta-row .btn { flex: 1 1 100%; text-align: center; }
     .embed-wrap { min-height: 210px; }
 }

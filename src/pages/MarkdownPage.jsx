@@ -28,9 +28,9 @@ export default function MarkdownPage() {
         </Reveal>
       </section>
 
-      <section className="section container">
+      <section className="section container markdown-reading-section">
         <Reveal>
-          <div className="markdown-page card">
+          <div className="markdown-page card markdown-reading-card">
             <MarkdownViewer src={staticPath} />
           </div>
         </Reveal>

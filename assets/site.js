@@ -261,6 +261,45 @@
     if (window.BootcampTheme) window.BootcampTheme.mountToggle();
   }
 
+  function bindMobileLessonToc() {
+    const sidebar = document.querySelector('.lesson-sidebar');
+    const toc = document.querySelector('.lesson-toc');
+    if (!sidebar || !toc) return;
+
+    const mq = window.matchMedia('(max-width: 900px)');
+
+    const sync = () => {
+      const mobile = mq.matches;
+      let btn = sidebar.querySelector('.lesson-toc-toggle');
+
+      if (!mobile) {
+        toc.classList.remove('is-collapsed');
+        if (btn) btn.remove();
+        return;
+      }
+
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'lesson-toc-toggle';
+        btn.setAttribute('aria-controls', 'lesson-toc-panel');
+        sidebar.querySelector('.lesson-sidebar-title')?.after(btn);
+        toc.id = 'lesson-toc-panel';
+        btn.addEventListener('click', () => {
+          const collapsed = toc.classList.toggle('is-collapsed');
+          btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+          btn.textContent = collapsed ? 'Mostrar contenido de la lección' : 'Ocultar contenido';
+        });
+        toc.classList.add('is-collapsed');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = 'Mostrar contenido de la lección';
+      }
+    };
+
+    sync();
+    mq.addEventListener('change', sync);
+  }
+
   /* ---------- INIT ------------------------------------------------------ */
   document.addEventListener('DOMContentLoaded', () => {
     mountThemeToggle();
@@ -270,6 +309,7 @@
     addCopyButtons();
     bindSlidesCards();
     bindFullscreen();
+    bindMobileLessonToc();
     bindTocSpy();
     const lessonClass = document.body.getAttribute('data-lesson-class');
     if (lessonClass) paintLessonRail(lessonClass);
