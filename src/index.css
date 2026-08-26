@@ -1262,8 +1262,8 @@ pre.mermaid svg {
 
 @media (max-width: 720px) {
   .container {
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
   }
 
   .site-head .bar {
@@ -1445,6 +1445,31 @@ pre.mermaid svg {
   .grid--2,
   .grid--3 {
     grid-template-columns: 1fr;
+  }
+
+  /* Más padding interior en cards — el texto no debe pegarse al borde */
+  [data-slot='card'] {
+    --card-spacing: 1.5rem;
+  }
+
+  [data-slot='card'][data-size='sm'] {
+    --card-spacing: 1.25rem;
+  }
+
+  .card {
+    padding: 22px 24px;
+  }
+
+  .level {
+    padding: 18px 24px;
+  }
+
+  .curriculum-cta {
+    padding: 22px 24px;
+  }
+
+  .slides-card__preview-body {
+    padding: 28px 24px;
   }
 
   [id] {
