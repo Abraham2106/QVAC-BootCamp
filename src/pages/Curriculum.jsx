@@ -4,6 +4,7 @@ import Badge from '../components/Badge'
 import LinkButton from '../components/LinkButton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MODULES, CAPSTONE } from '../data/curriculum'
+import { getRecommendedClassHref } from '../hooks/useProgress'
 
 const TOC_LABELS = {
   m1: 'M1 · Primer token local',
@@ -14,6 +15,9 @@ const TOC_LABELS = {
 }
 
 export default function Curriculum() {
+  const allClasses = MODULES.flatMap((mod) => mod.classes)
+  const continueHref = getRecommendedClassHref(allClasses)
+
   return (
     <div className="container curriculum-page">
       <section className="section section--tight">
@@ -36,7 +40,7 @@ export default function Curriculum() {
       </section>
 
       {MODULES.map((mod, i) => (
-        <ModuleSection key={mod.id} module={mod} index={i} />
+        <ModuleSection key={mod.id} module={mod} index={i} continueHref={continueHref} />
       ))}
 
       <section className="module-block" id="capstone" aria-labelledby="capstone-title">

@@ -649,6 +649,7 @@ h2.stitle::after {
 }
 
 .course-card {
+  position: relative;
   min-height: 100%;
   background: var(--card-bg);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
@@ -664,6 +665,161 @@ h2.stitle::after {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+/* === Class cards: layout, badges, continue ============================= */
+.course-card--continue {
+  border-color: color-mix(in oklch, var(--blue) 45%, var(--border));
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.class-card__continue-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue);
+  background: color-mix(in oklch, var(--blue) 12%, var(--card-bg));
+  border: 1px solid color-mix(in oklch, var(--blue) 35%, var(--border));
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.class-card-layout {
+  position: relative;
+  padding-right: 68px;
+}
+
+.class-card-layout--continue {
+  padding-top: 26px;
+}
+
+.class-card__progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.class-no--lite {
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0 0 6px;
+  border: none;
+  background: none;
+  border-radius: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--ink-soft);
+  display: block;
+  line-height: 1;
+}
+
+.artifact-badge-row {
+  margin-top: 16px;
+  padding-top: 14px;
+  padding-bottom: 2px;
+}
+
+.artifact-badge-row__divider {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 12px;
+}
+
+.artifact-badge-row__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.artifact-badge-group__label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.artifact-badge-group__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.artifact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  border-radius: 999px;
+  padding: 5px 9px 5px 7px;
+  border: 1px solid transparent;
+}
+
+.artifact-badge__icon {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+.artifact-badge--content {
+  color: color-mix(in oklch, var(--blue) 85%, var(--ink));
+  background: color-mix(in oklch, var(--blue) 10%, var(--card-bg));
+  border-color: color-mix(in oklch, var(--blue) 22%, var(--border));
+}
+
+.artifact-badge--eval {
+  color: color-mix(in oklch, var(--green) 80%, var(--ink));
+  background: color-mix(in oklch, var(--green) 10%, var(--card-bg));
+  border-color: color-mix(in oklch, var(--green) 22%, var(--border));
+}
+
+.artifact-badge--meta {
+  color: var(--ink-soft);
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
+
+.artifact-badge-row__more {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--blue);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.artifact-badge-row__more:hover {
+  color: var(--ink);
+}
+
+.artifact-badge-row__more:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .course-card [data-slot='card-footer'] {

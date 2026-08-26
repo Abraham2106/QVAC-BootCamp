@@ -8,13 +8,14 @@ import LinkButton from '../components/LinkButton'
 import ClassPreviewCard from '../components/ClassPreviewCard'
 import useUiMode from '../hooks/useUiMode'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LEVELS, TEACHING } from '../data/curriculum'
-import { useContinueLink } from '../hooks/useProgress'
+import { LEVELS, MODULES, TEACHING } from '../data/curriculum'
+import { getRecommendedClassHref, useContinueLink } from '../hooks/useProgress'
 
 export default function HomeDocs() {
   const { href, label } = useContinueLink('/curriculum', 'Ver currículo completo')
   const { isNinja } = useUiMode()
   const reduceMotion = useReducedMotion()
+  const continueHref = getRecommendedClassHref(MODULES.flatMap((mod) => mod.classes))
 
   const ctaSpring =
     isNinja && !reduceMotion
@@ -109,9 +110,8 @@ export default function HomeDocs() {
             tag="Clase 01 · Disponible"
             title="Airplane-Mode Intelligence"
             body="¿Qué significa realmente que una app de IA sea local? Provisiona un modelo, ejecuta el Airplane-Mode Test y produce tu primera evidencia medible."
-            badges={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint'].map((b) => (
-              <Badge key={b}>{b}</Badge>
-            ))}
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/01'}
           />
           <ClassPreviewCard
             delay={120}
@@ -119,9 +119,8 @@ export default function HomeDocs() {
             tag="Clase 02 · Disponible"
             title="Models, GGUF and the QVAC Lifecycle"
             body="Abre la caja negra del modelo: pesos, tokenizer, cuantización, nombres de catálogo y el ciclo de vida completo medido en tu máquina."
-            badges={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint'].map((b) => (
-              <Badge key={b}>{b}</Badge>
-            ))}
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/02'}
           />
           <ClassPreviewCard
             delay={180}
@@ -129,9 +128,8 @@ export default function HomeDocs() {
             tag="Clase 03 · Disponible"
             title="Local Inference Fundamentals"
             body="Abre el motor: tokenización, bucle autoregresivo, streaming events/final, sampling, contexto, KV cache y TTFT vs throughput medidos en tu máquina."
-            badges={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint'].map((b) => (
-              <Badge key={b}>{b}</Badge>
-            ))}
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/03'}
           />
           <ClassPreviewCard
             delay={240}
@@ -139,9 +137,8 @@ export default function HomeDocs() {
             tag="Clase 04 · Disponible"
             title="Build the Offline Chat"
             body="Convierte inferencia aislada en aplicación confiable: historial multi-turno, streaming con commit boundary, cancelación, persistencia JSON y verificación offline tras restart."
-            badges={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint'].map((b) => (
-              <Badge key={b}>{b}</Badge>
-            ))}
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/04'}
           />
           <ClassPreviewCard
             delay={240}

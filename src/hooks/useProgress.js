@@ -124,3 +124,22 @@ export function getProgressPct(classId) {
   if (!vals.length) return 0
   return Math.round((vals.filter(Boolean).length / vals.length) * 100)
 }
+
+/** Href de la clase recomendada para continuar (incompleta, priorizando última visitada). */
+export function getRecommendedClassHref(classes = []) {
+  const available = classes.filter((c) => c.available && c.href && c.slug)
+  if (!available.length) return null
+
+  try {
+    const last = localStorage.getItem(LAST_KEY)
+    const target = normalizeVisitPath(last)
+    if (target) {
+      const path = target.split('#')[0]
+      const match = available.find((c) => c.href === path)
+      if (match && getProgressPct(match.slug) < 100) return match.href
+    }
+  } catch {}
+
+  const firstOpen = available.find((c) => getProgressPct(c.slug) < 100)
+  return firstOpen?.href ?? available[0]?.href ?? null
+}

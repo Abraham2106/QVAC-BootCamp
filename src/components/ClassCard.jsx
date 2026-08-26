@@ -1,32 +1,46 @@
 import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import Badge from './Badge'
+import ArtifactBadgeRow from './ArtifactBadgeRow'
 import ProgressDisplay from './ProgressDisplay'
 import { getProgressPct } from '../hooks/useProgress'
 import { cn } from '@/lib/utils'
 
-export default function ClassCard({ cls }) {
+export default function ClassCard({ cls, isContinueTarget = false }) {
   const pct = cls.available && cls.slug ? getProgressPct(cls.slug) : 0
 
   const content = (
-    <CardContent className="flex gap-5 items-start pt-(--card-spacing)">
-      <span className="class-no">{cls.no}</span>
-      <div className="class-card__body min-w-0 flex-1">
+    <CardContent className={cn('class-card-layout pt-(--card-spacing) pb-5', isContinueTarget && 'class-card-layout--continue')}>
+      {isContinueTarget && cls.available && (
+        <span className="class-card__continue-pill">Continuar aquí</span>
+      )}
+      {cls.available && (
+        <div className="class-card__progress">
+          <ProgressDisplay pct={pct} size={52} label={`Progreso ${cls.no}`} />
+        </div>
+      )}
+      <span className="class-no class-no--lite">{cls.no}</span>
+      <div className="class-card__body min-w-0">
         <h3 className="font-semibold text-base leading-snug tracking-tight">{cls.title}</h3>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{cls.desc}</p>
-        <div className="badge-row mt-3">
-          {cls.available && cls.badges
-            ? cls.badges.map((b) => <Badge key={b}>{b}</Badge>)
-            : <Badge soon>próximamente</Badge>}
-        </div>
+        {cls.available && cls.badges ? (
+          <ArtifactBadgeRow tags={cls.badges} />
+        ) : (
+          <div className="artifact-badge-row">
+            <div className="artifact-badge-row__divider" aria-hidden="true" />
+            <div className="badge-row">
+              <Badge soon>próximamente</Badge>
+            </div>
+          </div>
+        )}
       </div>
-      {cls.available && <ProgressDisplay pct={pct} label={`Progreso ${cls.no}`} />}
     </CardContent>
   )
 
   const cardClass = cn(
     'course-card h-full',
     !cls.available && 'soon opacity-90',
+    isContinueTarget && cls.available && 'course-card--continue',
   )
 
   if (cls.available && cls.href) {
