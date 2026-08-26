@@ -1,0 +1,138 @@
+/* ==========================================================================
+   SLIDES EMBED — card contenedora del deck alineada a la plataforma
+   Importado desde SlidesEmbed.jsx. Usa los tokens de la plataforma
+   (--bg/--card-bg/--border/--mono…) así que hereda docs claro/oscuro;
+   el modo ninja se ajusta vía [data-ui='ninja'] (tokens de ninja.css).
+   Nota: especificidad ligeramente mayor (.slides-card en <article>) para
+   ganar de forma estable a .slides-card definido en src/index.css.
+   ========================================================================== */
+
+article.slides-card {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+/* --- Preview (collapsed) ------------------------------------------------ */
+
+.slides-card .slides-card__preview {
+  background: var(--bg-subtle);
+  color: var(--ink);
+}
+
+.slides-card .slides-card__preview-grid {
+  opacity: 1;
+  background-image:
+    linear-gradient(to right, rgba(23, 23, 23, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(23, 23, 23, 0.045) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.slides-card .slides-card__preview-kicker {
+  color: var(--muted-foreground, var(--ink-soft));
+}
+
+.slides-card .slides-card__preview-title {
+  font-size: clamp(17px, 2.4vw, 22px);
+}
+
+.slides-card .slides-card__preview-meta {
+  color: var(--muted-foreground, var(--ink-soft));
+}
+
+[data-ui='ninja'] article.slides-card {
+  border-color: rgba(168, 85, 247, 0.15);
+  box-shadow:
+    radial-gradient(ellipse at 20% 0%, rgba(168, 85, 247, 0.05) 0%, transparent 55%),
+    var(--ninja-glow);
+}
+
+[data-ui='ninja'] .slides-card .slides-card__preview {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(168, 85, 247, 0.07) 0%, transparent 55%),
+    #0b0b0d;
+  color: #fafafa;
+}
+
+[data-ui='ninja'] .slides-card .slides-card__preview-grid {
+  background-image:
+    linear-gradient(to right, rgba(168, 85, 247, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(168, 85, 247, 0.08) 1px, transparent 1px);
+}
+
+[data-ui='ninja'] .slides-card .slides-card__preview-kicker {
+  color: var(--ninja-lavender-muted, #8b849e);
+}
+
+[data-ui='ninja'] .slides-card .slides-card__preview-meta {
+  color: var(--ninja-lavender-muted, #8b849e);
+}
+
+/* --- Deck expandido + overlay de carga ---------------------------------- */
+
+.slides-card .slides-card__deck {
+  border: 0;
+}
+
+.slides-card .embed-loading {
+  background: var(--bg-subtle);
+  color: var(--muted-foreground, var(--ink-soft));
+}
+
+[data-ui='ninja'] .slides-card .embed-loading {
+  background: #0b0b0d;
+  color: var(--ninja-lavender-muted, #8b849e);
+}
+
+/* --- Toolbar ------------------------------------------------------------ */
+
+.slides-card .slides-card__toolbar {
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.slides-card .embed-nav {
+  gap: 8px;
+  margin-right: auto;
+}
+
+.slides-card .embed-nav__count {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground, var(--ink-soft));
+}
+
+[data-ui='ninja'] .slides-card .slides-card__toolbar {
+  border-top-color: rgba(168, 85, 247, 0.12);
+  background: rgba(18, 18, 20, 0.6);
+}
+
+[data-ui='ninja'] .slides-card .embed-nav__count {
+  color: var(--ninja-lavender, #b4b0c4);
+}
+
+[data-ui='ninja'] .slides-card .embed-nav__btn:disabled {
+  opacity: 0.4;
+}
+
+/* --- Pantalla completa ---------------------------------------------------
+   goFullscreen() solicita FS sobre .slides-card__deck (wrapRef); el deck ya
+   escala su escenario 16:9 internamente y hace letterbox con --slide-stage,
+   así que aquí solo garantizamos fondo nativo sin tirones. */
+
+.slides-card .slides-card__deck:fullscreen {
+  background: var(--background, #000);
+}
+
+.slides-card .slides-card__deck:fullscreen iframe {
+  inset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  article.slides-card,
+  .slides-card .slides-card__preview,
+  .slides-card .slides-card__toolbar {
+    transition: none;
+  }
+}

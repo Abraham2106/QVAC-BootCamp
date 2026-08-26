@@ -1,0 +1,636 @@
+/* ==========================================================================
+   MODO NINJA — visual theme only, applied via [data-ui='ninja'] / html.ninja
+   Design system: 90/9/1 — dark cyberpunk ELEGANTE
+   · 90% base neutra:  #09090B bg · #131316 panel · #18181B elevado
+   · 9% texto:         #FAFAFA títulos · #A1A1AA secundario · #9D96B0 terciario
+   · 1% neón SOLO en:  CTA primario, una palabra del headline (.grad-word),
+                       barra de progreso, links activos y orbe decorativo.
+   ========================================================================== */
+
+/* --- Tokens -------------------------------------------------------------- */
+
+[data-ui='ninja'],
+html.ninja {
+  color-scheme: dark;
+}
+
+[data-ui='ninja'] {
+  /* Base neutra (90%) */
+  --nj-bg: #09090b;
+  --nj-panel: #131316;
+  --nj-panel-raised: #18181b;
+  --nj-border: rgba(255, 255, 255, 0.08);
+  --nj-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Texto (9%) */
+  --nj-text: #fafafa;
+  --nj-text-soft: #a1a1aa;
+  --nj-text-muted: #9d96b0;
+
+  /* Neón (1%) */
+  --nj-accent: #a855f7;
+  --nj-pink: #ec4899;
+  --nj-orange: #fb923c;
+  --nj-kicker: #a78bfa; /* AA sobre #09090B ≈ 7.4:1 */
+  --nj-cta-gradient: linear-gradient(135deg, #a855f7, #ec4899 55%, #fb923c);
+  --nj-cta-glow: 0 4px 24px rgba(168, 85, 247, 0.35), 0 0 48px rgba(236, 72, 153, 0.16);
+  --nj-cta-glow-hover: 0 6px 30px rgba(168, 85, 247, 0.5), 0 0 60px rgba(236, 72, 153, 0.24);
+
+  /* Legacy aliases (referenciados desde markdown.css y otros estilos) */
+  --ninja-bg: var(--nj-bg);
+  --ninja-purple: var(--nj-accent);
+  --ninja-pink: var(--nj-pink);
+  --ninja-violet: #7c3aed;
+  --ninja-orange: var(--nj-orange);
+  --ninja-purple-bright: #c084fc;
+  --ninja-lavender: var(--nj-text-muted);
+  --ninja-lavender-muted: var(--nj-kicker);
+  --ninja-btn-gradient: var(--nj-cta-gradient);
+  --ninja-card-bg: var(--nj-panel);
+
+  /* Semantic tokens (shadcn + legacy docs) */
+  --background: var(--nj-bg);
+  --foreground: var(--nj-text);
+  --card: var(--nj-panel);
+  --card-foreground: var(--nj-text);
+  --popover: var(--nj-panel);
+  --popover-foreground: var(--nj-text);
+  --primary: var(--nj-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--nj-panel-raised);
+  --secondary-foreground: #e4e4e7;
+  --muted: var(--nj-panel-raised);
+  --muted-foreground: var(--nj-text-soft);
+  --accent: rgba(168, 85, 247, 0.12);
+  --accent-foreground: #e9d5ff;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: var(--nj-border); /* bordes NEUTROS — el púrpura se reserva para el acento */
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: var(--nj-accent);
+  --radius: 1.5rem;
+
+  --bg: var(--background);
+  --bg-muted: var(--muted);
+  --bg-subtle: #0e0e11;
+  --ink: var(--foreground);
+  --ink-soft: var(--nj-text-soft);
+  --head-bg: rgba(9, 9, 11, 0.88);
+  --nav-bg: var(--nj-bg);
+  --card-bg: var(--card);
+  --border-strong: var(--nj-border-strong);
+  --hairline: var(--border);
+  --ring-track: var(--secondary);
+  --code-bg: #121216;
+  --blue: var(--nj-accent);
+  --blue-dark: #c084fc;
+  --green: #34d399;
+}
+
+[data-ui='ninja'] body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Tipografía ninja: sans geométrica (Geist Variable). Docs conserva Fira Sans/STIX. */
+  font-family: 'Geist Variable', 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+[data-ui='ninja'] h1.display,
+[data-ui='ninja'] h2.stitle,
+[data-ui='ninja'] .class-hero h1,
+[data-ui='ninja'] .module-name,
+[data-ui='ninja'] [data-slot='card-title'],
+[data-ui='ninja'] .card h3 {
+  font-family: 'Geist Variable', 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+[data-ui='ninja'] :focus-visible {
+  outline-color: var(--nj-accent);
+}
+
+/* --- Keyframes (solo lo compositable o contenido pequeño) ---------------- */
+
+@keyframes ninja-orb-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-10px, -16px) scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes ninja-orb-float-alt {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate(14px, 10px) scale(1.07);
+    opacity: 0.65;
+  }
+}
+
+@keyframes ninja-progress-shine {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* --- Orbe decorativo (único elemento ambiental animado) ------------------ */
+
+.ninja-orb {
+  pointer-events: none;
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(40px);
+  z-index: 0;
+  will-change: transform, opacity;
+}
+
+.ninja-orb--primary {
+  right: -60px;
+  bottom: -60px;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(
+    circle,
+    rgba(168, 85, 247, 0.32) 0%,
+    rgba(236, 72, 153, 0.14) 38%,
+    transparent 70%
+  );
+  animation: ninja-orb-float 10s ease-in-out infinite;
+}
+
+.ninja-orb--secondary {
+  right: 120px;
+  bottom: 40px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(
+    circle,
+    rgba(236, 72, 153, 0.2) 0%,
+    rgba(168, 85, 247, 0.08) 42%,
+    transparent 68%
+  );
+  filter: blur(32px);
+  animation: ninja-orb-float-alt 13s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+.ninja-orb--accent {
+  left: -40px;
+  top: 30%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.16) 0%,
+    rgba(168, 85, 247, 0.06) 45%,
+    transparent 70%
+  );
+  filter: blur(48px);
+  animation: ninja-orb-float-alt 15s ease-in-out infinite;
+  animation-delay: -7s;
+}
+
+/* --- Cards: borde neutro + hover con acento (SIN pulso infinito) --------- */
+
+[data-ui='ninja'] .course-card,
+[data-ui='ninja'] .card:not(.level),
+[data-ui='ninja'] [data-slot='card']:not(.level),
+[data-ui='ninja'] [data-slot='card'].level,
+[data-ui='ninja'] .level,
+[data-ui='ninja'] .capstone-card,
+[data-ui='ninja'] .card.artifact {
+  border-color: var(--nj-border);
+  background: var(--nj-panel);
+}
+
+[data-ui='ninja'] .course-card--interactive:hover,
+[data-ui='ninja'] .card--lift:hover,
+[data-ui='ninja'] .course-card--interactive:focus-visible {
+  border-color: rgba(168, 85, 247, 0.3);
+  background: var(--nj-panel-raised);
+}
+
+[data-ui='ninja'] [data-slot='card'].level:hover,
+[data-ui='ninja'] .level:hover {
+  border-color: rgba(168, 85, 247, 0.3);
+  background: var(--nj-panel-raised);
+}
+
+/* Section containers — neutros, sin glow */
+[data-ui='ninja'] .curriculum-cta,
+[data-ui='ninja'] .slides-card,
+[data-ui='ninja'] .block,
+[data-ui='ninja'] .embed-wrap,
+[data-ui='ninja'] .mermaid-wrap {
+  border-color: var(--nj-border);
+  background: var(--nj-panel);
+}
+
+[data-ui='ninja'] .curriculum-cta {
+  background: var(--nj-panel-raised);
+}
+
+/* --- CTA primario (hook estable: data-variant del Button shadcn) ---------- */
+
+[data-ui='ninja'] .btn--solid,
+[data-ui='ninja'] [data-slot='button'][data-variant='default'] {
+  background: var(--nj-cta-gradient);
+  border-color: transparent;
+  color: #fff;
+  border-radius: 999px;
+  box-shadow: var(--nj-cta-glow);
+  transition: filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-ui='ninja'] .btn--solid:hover,
+[data-ui='ninja'] [data-slot='button'][data-variant='default']:hover {
+  background: var(--nj-cta-gradient);
+  filter: brightness(1.08);
+  box-shadow: var(--nj-cta-glow-hover);
+}
+
+/* Botones outline / ghost */
+[data-ui='ninja'] [data-slot='button'][data-variant='outline'] {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-ui='ninja'] [data-slot='button'][data-variant='outline']:hover {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(168, 85, 247, 0.08);
+}
+
+/* --- Typography & links --------------------------------------------------- */
+
+[data-ui='ninja'] h1.display,
+[data-ui='ninja'] h2.stitle,
+[data-ui='ninja'] .module-name,
+[data-ui='ninja'] [data-slot='card-title'] {
+  color: var(--nj-text);
+}
+
+[data-ui='ninja'] .lede,
+[data-ui='ninja'] .card p,
+[data-ui='ninja'] [data-slot='card-description'],
+[data-ui='ninja'] .eq,
+[data-ui='ninja'] .artifact-desc {
+  color: var(--nj-text-soft);
+}
+
+/* Kickers AA (#A78BFA ≥ 4.5:1 sobre el fondo base) */
+[data-ui='ninja'] .kicker,
+[data-ui='ninja'] .card-kicker,
+[data-ui='ninja'] .module-no {
+  color: var(--nj-kicker);
+}
+
+[data-ui='ninja'] .lede strong,
+[data-ui='ninja'] .brand b {
+  color: var(--nj-accent);
+}
+
+[data-ui='ninja'] a:not([data-slot='button']):not(.btn):not(.brand):not(.site-nav a):not(.card--link) {
+  color: var(--nj-accent);
+}
+
+[data-ui='ninja'] a:not([data-slot='button']):not(.btn):not(.brand):not(.site-nav a):hover {
+  color: var(--nj-pink);
+}
+
+[data-ui='ninja'] .card--link:hover h3,
+[data-ui='ninja'] .class-card--link:hover h3 {
+  color: var(--nj-accent);
+}
+
+[data-ui='ninja'] .site-foot a,
+[data-ui='ninja'] .class-back a,
+[data-ui='ninja'] .artifact a {
+  color: var(--nj-accent);
+}
+
+/* Headline: UNA palabra con gradiente (solo ninja; docs la ve normal) */
+[data-ui='ninja'] .grad-word {
+  background: linear-gradient(92deg, #a855f7 0%, #ec4899 55%, #fb923c 110%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* --- List bullets: glow estático sutil ------------------------------------ */
+
+[data-ui='ninja'] .artifact ul {
+  list-style: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+[data-ui='ninja'] .artifact ul li {
+  position: relative;
+  padding-left: 1.15em;
+}
+
+[data-ui='ninja'] .artifact ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.58em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nj-accent);
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.45);
+}
+
+[data-ui='ninja'] .class-no {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.25);
+  color: var(--nj-accent);
+}
+
+/* --- Header & nav --------------------------------------------------------- */
+
+[data-ui='ninja'] .site-head {
+  background: var(--head-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom-color: var(--nj-border);
+}
+
+[data-ui='ninja'] .site-nav a.active {
+  color: var(--nj-accent);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+[data-ui='ninja'] .site-nav a:hover {
+  color: var(--nj-pink);
+  background: rgba(168, 85, 247, 0.08);
+}
+
+/* Indicador de tab activo (motion layoutId). Base neutra para docs mode. */
+.site-nav a {
+  position: relative;
+}
+
+.site-nav__indicator {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--ink);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+[data-ui='ninja'] .site-nav__indicator {
+  background: linear-gradient(90deg, var(--nj-accent), var(--nj-pink));
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-nav__indicator {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* --- Hero ------------------------------------------------------------------ */
+
+[data-ui='ninja'] .hero {
+  background:
+    radial-gradient(ellipse 60% 80% at 80% 0%, rgba(168, 85, 247, 0.05), transparent 60%),
+    linear-gradient(180deg, #101013 0%, var(--nj-bg) 55%);
+  border-bottom-color: var(--nj-border);
+}
+
+[data-ui='ninja'] .hero-mesh {
+  opacity: 0.22;
+  color: rgba(168, 85, 247, 0.35);
+}
+
+[data-ui='ninja'] .class-hero {
+  background: linear-gradient(180deg, #101013 0%, var(--nj-bg) 100%);
+  border-bottom-color: var(--nj-border);
+}
+
+/* --- Progress bar ----------------------------------------------------------- */
+
+[data-ui='ninja'] .ninja-progress [data-slot='progress-track'] {
+  height: 6px;
+  background: var(--nj-panel-raised);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+[data-ui='ninja'] .ninja-progress [data-slot='progress-indicator'] {
+  background: linear-gradient(
+    90deg,
+    #a855f7,
+    #ec4899,
+    #fb923c,
+    #a855f7
+  );
+  background-size: 200% 100%;
+  animation: ninja-progress-shine 5s linear infinite;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.55);
+  border-radius: 999px;
+}
+
+[data-ui='ninja'] .ninja-progress [data-slot='progress-value'] {
+  color: var(--nj-text-soft);
+}
+
+/* --- Pills / badges de estado ------------------------------------------------ */
+/* Punto de color + uppercase: Disponible = azul · próximamente = gris.
+   Solo en ninja; docs no cambia. */
+
+[data-ui='ninja'] .course-card--interactive .card-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-ui='ninja'] .course-card--interactive .card-kicker::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+}
+
+[data-ui='ninja'] .course-card--interactive.is-soon .card-kicker::before {
+  background: #71717a;
+  box-shadow: none;
+}
+
+[data-ui='ninja'] .badge,
+[data-ui='ninja'] [data-slot='badge'] {
+  border-color: var(--nj-border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--nj-text-soft);
+}
+
+[data-ui='ninja'] .badge[data-variant='secondary'],
+[data-ui='ninja'] [data-slot='badge'][data-variant='secondary'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+[data-ui='ninja'] .badge[data-variant='secondary']::before,
+[data-ui='ninja'] [data-slot='badge'][data-variant='secondary']::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #71717a;
+}
+
+/* --- Misc --------------------------------------------------------------------- */
+
+[data-ui='ninja'] .ring {
+  background: conic-gradient(var(--nj-accent) calc(var(--pct) * 1%), var(--ring-track) 0);
+}
+
+[data-ui='ninja'] .dod input[type='checkbox'] {
+  accent-color: var(--nj-accent);
+}
+
+[data-ui='ninja'] .anchor-tabs a:hover,
+[data-ui='ninja'] .anchor-tabs a:focus-visible {
+  color: var(--nj-accent);
+  border-color: rgba(168, 85, 247, 0.35);
+  background: rgba(168, 85, 247, 0.08);
+}
+
+[data-ui='ninja'] .artifact .tag {
+  background: var(--nj-cta-gradient);
+  color: #fff;
+}
+
+[data-ui='ninja'] .module-no {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.22);
+}
+
+[data-ui='ninja'] .site-foot {
+  border-top-color: var(--nj-border);
+  background: var(--head-bg);
+}
+
+/* --- UI mode toggle ------------------------------------------------------------- */
+
+.ui-mode-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--secondary, var(--bg-muted));
+  gap: 2px;
+}
+
+.ui-mode-toggle__btn {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted-foreground, var(--ink-soft));
+  transition: background 0.15s, color 0.15s;
+}
+
+.ui-mode-toggle__btn.is-active {
+  background: var(--primary, var(--ink));
+  color: var(--primary-foreground, var(--bg));
+}
+
+.ui-mode-toggle__pill {
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  vertical-align: middle;
+  background: rgba(168, 85, 247, 0.18);
+  color: #a855f7;
+}
+
+[data-ui='docs'] .ui-mode-toggle__btn.is-active {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+[data-ui='ninja'] .ui-mode-toggle {
+  border-color: var(--nj-border-strong);
+  background: rgba(24, 24, 27, 0.8);
+}
+
+[data-ui='ninja'] .ui-mode-toggle__btn.is-active {
+  background: var(--nj-cta-gradient);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(168, 85, 247, 0.35);
+}
+
+/* --- Transición docs ↔ ninja ------------------------------------------------------ */
+
+.ui-crossfade {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Transición suave de superficies al alternar modos/temas */
+body,
+[data-ui] .card,
+[data-ui] [data-slot='card'],
+[data-ui] .site-head,
+[data-ui] .hero,
+[data-ui] .class-hero {
+  transition-property: background-color, color, border-color;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* --- Reduced motion ----------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ninja-orb--primary,
+  .ninja-orb--secondary,
+  .ninja-orb--accent {
+    animation: none;
+  }
+
+  [data-ui='ninja'] .ninja-progress [data-slot='progress-indicator'] {
+    animation: none;
+    background: linear-gradient(90deg, #a855f7, #ec4899, #fb923c, #a855f7);
+  }
+
+  body,
+  [data-ui] .card,
+  [data-ui] [data-slot='card'],
+  [data-ui] .site-head,
+  [data-ui] .hero,
+  [data-ui] .class-hero {
+    transition: none;
+  }
+}

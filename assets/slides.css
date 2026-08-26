@@ -1,0 +1,321 @@
+/* ============================================================
+   QVAC BOOTCAMP · CAPA DE TEMA PARA SLIDES (class-0*/slides.html)
+   ------------------------------------------------------------
+   Hace que los decks Beamer se sientan nativos de la plataforma
+   en sus dos modos, sin tocar su HTML/CSS interno ni contenido.
+
+   CÓMO FUNCIONA
+   1. Se enlaza DESPUÉS del <style> inline del deck (antes de
+      </head>), así gana los empates de cascada.
+   2. Redefine las variables del deck (--paper, --ink, --blue…)
+      mapeándolas a los tokens --slide-* de esta capa: casi todo
+      el deck se retema solo.
+   3. Modos (clases en <html>, propagadas desde SlidesEmbed.jsx
+      vía ?ui=&theme= y postMessage {type:'qvac-ui'}):
+        · (default)        → DOCS claro  (flat/neutral MDN-like)
+        · html.slides-dark → DOCS oscuro (tema dark plataforma)
+        · html.ninja-slides→ NINJA (dark cyberpunk elegante)
+
+   RÉPLICA EN UNA CLASE NUEVA (2 líneas):
+     1) <link rel="stylesheet" href="../assets/slides.css"> antes
+        de </head>.
+     2) Snippet "Puente de modo UI" (script IIFE) antes de </body>.
+   ============================================================ */
+
+/* --- Tokens · DOCS claro (default, alineados a src/index.css) --- */
+:root {
+  --slide-bg: #ffffff;
+  --slide-card: #ffffff;
+  --slide-fg: #171717;
+  --slide-muted: #525252;
+  --slide-border: #e5e5e5;
+  --slide-border-strong: #d4d4d4;
+  --slide-accent: #1a56db;
+  --slide-accent-soft: #eff6ff;
+  --slide-accent-fg: #ffffff;
+  --slide-ok: #16a34a;
+  --slide-ok-soft: #f0fdf4;
+  --slide-warn: #dc2626;
+  --slide-warn-soft: #fef2f2;
+  --slide-code-bg: #f6f8fa;      /* GitHub light */
+  --slide-code-fg: #1f2328;
+  --slide-code-kw: #cf222e;
+  --slide-code-str: #0a3069;
+  --slide-code-cm: #6a737d;
+  --slide-stage: var(--slide-bg);
+}
+
+/* --- Tokens · DOCS oscuro (alineados a :root[data-theme='dark']) --- */
+:root.slides-dark {
+  --slide-bg: #0a0a0a;
+  --slide-card: #111111;
+  --slide-fg: #fafafa;
+  --slide-muted: #a3a3a3;
+  --slide-border: #262626;
+  --slide-border-strong: #404040;
+  --slide-accent: #60a5fa;
+  --slide-accent-soft: rgba(96, 165, 250, 0.14);
+  --slide-accent-fg: #0b1220;
+  --slide-ok: #4ade80;
+  --slide-ok-soft: rgba(74, 222, 128, 0.1);
+  --slide-warn: #f87171;
+  --slide-warn-soft: rgba(248, 113, 113, 0.12);
+  --slide-code-bg: #141414;      /* GitHub dark */
+  --slide-code-fg: #e6edf3;
+  --slide-code-kw: #ff7b72;
+  --slide-code-str: #a5d6ff;
+  --slide-code-cm: #8b949e;
+}
+
+/* --- Tokens · NINJA (alineados a src/styles/ninja.css) --- */
+:root.ninja-slides {
+  color-scheme: dark;
+  --slide-bg: #0b0b0d;
+  --slide-card: #121214;
+  --slide-fg: #fafafa;
+  --slide-muted: #8b849e;        /* lavender muted */
+  --slide-muted-strong: #b4b0c4; /* lavender */
+  --slide-border: rgba(168, 85, 247, 0.14);   /* neón muy sutil */
+  --slide-border-strong: rgba(168, 85, 247, 0.28);
+  --slide-accent: #a855f7;
+  --slide-accent-soft: rgba(168, 85, 247, 0.1);
+  --slide-accent-fg: #ffffff;
+  --slide-accent-gradient: linear-gradient(135deg, #b35dfb, #ec4899, #ff8e53);
+  --slide-ok: #34d399;
+  --slide-ok-soft: rgba(52, 211, 153, 0.09);
+  --slide-warn: #ec4899;
+  --slide-warn-soft: rgba(236, 72, 153, 0.1);
+  --slide-code-bg: #161618;
+  --slide-code-fg: #e6edf3;
+  --slide-code-kw: #ff7b72;
+  --slide-code-str: #a5d6ff;
+  --slide-code-cm: #8b949e;
+  /* bloom radial casi imperceptible (≈ ninja-card-glow) */
+  --slide-bloom: radial-gradient(ellipse at 20% 0%, rgba(168, 85, 247, 0.06) 0%, transparent 55%);
+}
+
+/* --- Puente de variables: tokens → variables del deck Beamer ---
+   El CSS inline del deck referencia --paper/--ink/--blue/--red/
+   --green/--hairline; al remapearlas aquí TODO el deck fluye por
+   esta capa sin editar una línea del estilo original. */
+:root {
+  --stage-bg: var(--slide-stage);
+  --paper: var(--slide-card);
+  --ink: var(--slide-fg);
+  --blue: var(--slide-accent);
+  --blue-tint: var(--slide-accent-soft);
+  --green: var(--slide-ok);
+  --green-tint: var(--slide-ok-soft);
+  --red: var(--slide-warn);
+  --red-tint: var(--slide-warn-soft);
+  --hairline: var(--slide-border);
+}
+
+/* ================= TIPOGRAFÍA =================
+   Sans legible en cuerpo (Fira Sans = --sans de la plataforma),
+   títulos sans semibold tracking-tight, código mono JetBrains. */
+.slide {
+  font-family: 'Fira Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+h2.frametitle,
+.block .block-title,
+.booktabs th,
+.title-main,
+.divider-title,
+.activity-word {
+  letter-spacing: -0.015em;
+}
+/* Tinta neutra para titulares: el acento vive en la barra/elementos,
+   no en cada heading (flat MDN/Linear). */
+h2.frametitle,
+.divider-title,
+.title-main {
+  color: var(--slide-fg);
+}
+em.term {
+  color: var(--slide-accent);
+}
+
+/* Texto secundario: el deck fija grises hardcodeados → tokens */
+.small,
+.title-sub,
+.title-meta,
+pre.diagram .dim,
+pre.verbatim .cm {
+  color: var(--slide-muted);
+}
+.ninja-slides .title-sub,
+.ninja-slides .title-meta,
+.ninja-slides pre.diagram .dim,
+.ninja-slides pre.verbatim .cm {
+  color: var(--slide-muted-strong);
+}
+.ninja-slides .small {
+  color: var(--slide-muted);
+}
+
+/* ================= ENTRADA DE DIAPOSITIVA =================
+   Fade + slide suave. prefers-reduced-motion ya está neutralizado
+   por la regla global del propio deck (duration ≈ 0). */
+@keyframes qvac-slide-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+.slide.active {
+  animation: qvac-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ================= CÓDIGO (highlight tipo GitHub) ================= */
+pre.verbatim {
+  background: var(--slide-code-bg);
+  border: 1px solid var(--slide-border);
+  border-left: 6px solid var(--slide-accent);
+  border-radius: 12px;
+  color: var(--slide-code-fg);
+}
+code.inline {
+  background: var(--slide-code-bg);
+  border: 1px solid var(--slide-border);
+  border-radius: 6px;
+  color: var(--slide-code-fg);
+}
+pre.verbatim .kw { color: var(--slide-code-kw); }
+pre.verbatim .str { color: var(--slide-code-str); }
+pre.verbatim .cm { color: var(--slide-code-cm); }
+
+/* ================= BLOQUES / TABLAS / LISTAS (pulido común) ====== */
+.block {
+  border-radius: 10px;
+  overflow: hidden;
+}
+table.booktabs th {
+  color: var(--slide-fg);
+}
+
+/* Footer con branding de plataforma (solo presentación, vía CSS) */
+.footline::before {
+  content: 'QVAC Bootcamp';
+  font-weight: 600;
+  font-size: 0.82em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* Kicker de portada: mono uppercase (convención plataforma) */
+.title-course {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--slide-accent);
+}
+
+/* ================= NINJA ========================================
+   Dark cyberpunk elegante: bloom sutil, bordes neón púrpura→rosa
+   MUY sutiles, gradientes reservados a momentos clave. */
+.ninja-slides .slide {
+  background: var(--slide-bloom), var(--slide-card);
+}
+.ninja-slides .slide--divider {
+  background: var(--slide-bloom), var(--slide-bg);
+}
+/* Barra de sección: accent gradiente */
+.ninja-slides h2.frametitle::after {
+  height: 3px;
+  background: var(--slide-accent-gradient);
+}
+/* Bullets neón sutiles */
+.ninja-slides ul.itemize li::before {
+  color: #c084fc;
+  text-shadow: 0 0 10px rgba(168, 85, 247, 0.55);
+}
+/* Círculos numerados con gradiente vibrante */
+.ninja-slides ol.enumerate li::before {
+  background: var(--slide-accent-gradient);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.35);
+}
+/* Cards/bloques: card bg + borde neón sutil + micro-bloom interno */
+.ninja-slides .block {
+  border-color: rgba(168, 85, 247, 0.18);
+  border-radius: 14px;
+  background-image: radial-gradient(ellipse at 20% 0%, rgba(168, 85, 247, 0.05) 0%, transparent 60%);
+}
+.ninja-slides .block .block-title {
+  background: rgba(168, 85, 247, 0.14);
+  color: #e9d5ff;
+}
+.ninja-slides .block.example .block-title {
+  background: rgba(52, 211, 153, 0.12);
+  color: #a7f3d0;
+}
+.ninja-slides .block.alert .block-title {
+  background: rgba(236, 72, 153, 0.13);
+  color: #fbcfe8;
+}
+/* Código: fondo #161618, borde sutil, sin barra lateral gruesa */
+.ninja-slides pre.verbatim {
+  border-left: 1px solid rgba(168, 85, 247, 0.16);
+  border-radius: 14px;
+}
+.ninja-slides code.inline {
+  background: #161618;
+  border-color: rgba(168, 85, 247, 0.22);
+  color: #e9d5ff;
+}
+/* Filas de tabla neutras (el púrpura queda para lo estructural) */
+.ninja-slides table.booktabs tbody tr + tr {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+.ninja-slides table.booktabs thead tr {
+  border-top-color: var(--slide-border-strong);
+  border-bottom-color: var(--slide-border-strong);
+}
+.ninja-slides table.booktabs tbody tr:last-child {
+  border-bottom-color: var(--slide-border-strong);
+}
+/* Momentos clave con texto en gradiente */
+.ninja-slides .title-main,
+.ninja-slides .activity-word,
+.ninja-slides .divider-num {
+  background: var(--slide-accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ninja-slides .divider-num {
+  opacity: 0.45;
+}
+.ninja-slides .title-rule {
+  width: 260px;
+  background: var(--slide-accent-gradient);
+}
+.ninja-slides .progress-bar {
+  background: linear-gradient(90deg, #b35dfb, #ec4899, #ff8e53, #b35dfb);
+  background-size: 200% 100%;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
+}
+.ninja-slides .edit-toggle {
+  background: var(--slide-accent-gradient);
+  border-radius: 999px;
+}
+.ninja-slides .edit-toggle.active {
+  background: var(--slide-warn);
+}
+.ninja-slides body.editing .slide [contenteditable='true'] {
+  outline-color: #c084fc;
+}
+
+/* Divisorias DOCS: numeral plano muted sobre card limpia */
+.divider-num {
+  color: var(--slide-border-strong);
+}
+
+/* La footline de las divisorias ya no vive sobre fondo azul sólido:
+   usa los tokens neutrales del modo activo. */
+.slide--divider .footline {
+  border-top-color: var(--slide-border);
+  color: var(--slide-muted);
+}
+.slide--divider .footline .sec {
+  color: var(--slide-fg);
+}

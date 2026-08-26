@@ -1,0 +1,167 @@
+/* Markdown viewer — GitHub-style prose + syntax highlighting */
+
+.markdown-page-hero {
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.markdown-page-hero h1 {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: clamp(28px, 3.8vw, 40px);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 12px;
+}
+
+.markdown-page-hero__path {
+  font-family: var(--mono);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.markdown-page {
+  padding: 28px 32px;
+}
+
+.markdown-viewer__state {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink-soft);
+  padding: 24px 0;
+}
+
+.markdown-viewer__state--error a {
+  color: var(--blue);
+}
+
+.markdown-viewer {
+  --tw-prose-body: var(--ink);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-lead: var(--ink-soft);
+  --tw-prose-links: var(--blue);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-counters: var(--ink-soft);
+  --tw-prose-bullets: var(--ink-soft);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--ink);
+  --tw-prose-quote-borders: var(--border-strong);
+  --tw-prose-captions: var(--ink-soft);
+  --tw-prose-code: var(--ink);
+  --tw-prose-pre-code: var(--ink);
+  --tw-prose-pre-bg: var(--code-bg);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.markdown-viewer :where(code):not(:where(pre *)) {
+  font-family: var(--mono);
+  font-size: 0.875em;
+  font-weight: 500;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.15em 0.35em;
+}
+
+.markdown-viewer :where(pre) {
+  font-family: var(--mono);
+  font-size: 0.875em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.markdown-viewer :where(pre code) {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-weight: 400;
+}
+
+.markdown-viewer :where(table) {
+  display: block;
+  overflow-x: auto;
+  font-size: 0.9375em;
+}
+
+.markdown-viewer :where(thead th) {
+  font-family: var(--sans);
+  font-weight: 600;
+}
+
+.markdown-viewer :where(blockquote) {
+  border-left-width: 3px;
+  font-style: normal;
+}
+
+.markdown-viewer :where(a):hover {
+  color: var(--blue-dark);
+}
+
+/* Docs light mode — explicit prose tokens (never rely on prose-invert) */
+:root[data-theme='light'] .markdown-viewer:not(.prose-invert),
+.markdown-viewer:not(.prose-invert) {
+  --tw-prose-body: var(--ink);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-lead: var(--ink-soft);
+  --tw-prose-links: var(--blue);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-counters: var(--ink-soft);
+  --tw-prose-bullets: var(--ink-soft);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--ink);
+  --tw-prose-quote-borders: var(--border-strong);
+  --tw-prose-captions: var(--ink-soft);
+  --tw-prose-code: var(--ink);
+  --tw-prose-pre-code: var(--ink);
+  --tw-prose-pre-bg: var(--code-bg);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+}
+
+/* highlight.js — align with site palette */
+.markdown-viewer .hljs {
+  background: var(--code-bg);
+  color: var(--ink);
+}
+
+[data-ui='ninja'] .markdown-viewer--ninja,
+:root[data-theme='dark'] .markdown-viewer.prose-invert {
+  --tw-prose-invert-body: var(--ink);
+  --tw-prose-invert-headings: var(--ink);
+  --tw-prose-invert-links: var(--blue);
+  --tw-prose-invert-code: var(--ink);
+  --tw-prose-invert-pre-bg: var(--code-bg);
+  --tw-prose-invert-th-borders: var(--border);
+  --tw-prose-invert-td-borders: var(--border);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .markdown-viewer.prose-invert {
+    --tw-prose-invert-body: var(--ink);
+    --tw-prose-invert-headings: var(--ink);
+    --tw-prose-invert-links: var(--blue);
+    --tw-prose-invert-code: var(--ink);
+    --tw-prose-invert-pre-bg: var(--code-bg);
+    --tw-prose-invert-th-borders: var(--border);
+    --tw-prose-invert-td-borders: var(--border);
+  }
+}
+
+[data-ui='ninja'] .markdown-viewer--ninja {
+  --tw-prose-links: var(--ninja-purple, #a855f7);
+}
+
+[data-ui='ninja'] .markdown-viewer--ninja :where(a):hover {
+  color: var(--ninja-pink, #ec4899);
+}
+
+@media (max-width: 720px) {
+  .markdown-page {
+    padding: 20px 18px;
+  }
+}
