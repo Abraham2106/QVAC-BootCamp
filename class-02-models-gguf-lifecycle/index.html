@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clase 2 · Models, GGUF and the QVAC Lifecycle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/01">Clase 1</a>
+      <a href="/class/02">Clase 2</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" data-class-page data-progress-class="class-02">
+
+<!-- ================= HERO ================= -->
+<section class="class-hero container">
+  <span class="kicker">Clase 02 · Módulo 1 — Your First Local Token</span>
+  <h1>Models, GGUF and the QVAC Lifecycle</h1>
+  <p class="eq">"¿Qué estamos cargando realmente cuando 'cargamos un modelo'?"</p>
+  <div style="display:flex; gap:26px; align-items:center; margin-top:28px; flex-wrap:wrap;">
+    <div class="ring" data-ring="class-02" style="--pct:0;"><i>0%</i></div>
+    <p class="small" style="font-family:var(--sans); font-size:15.5px;">Tu progreso se guarda en este navegador.
+      Marca tu avance en la Definition of Done al final.</p>
+  </div>
+
+  <nav class="anchor-tabs" aria-label="Secciones de la clase">
+    <a href="#slides">Slides</a>
+    <a href="#leccion">Lección</a>
+    <a href="#lab">Lab</a>
+    <a href="#artefactos">Artefactos</a>
+    <a href="#dod">Definition of Done</a>
+  </nav>
+</section>
+
+<!-- ================= SLIDES ================= -->
+<section class="section container" id="slides" aria-labelledby="slides-title">
+  <h2 class="stitle" id="slides-title">Presentación de la clase</h2>
+  <p class="lede" style="margin-top:14px;">26 diapositivas · anatomía → GGUF → cuantización → nombres →
+    catálogo y ciclo de vida → Predict/Demo → Break It/Measure It. Expande la card para navegar.</p>
+
+  <article class="slides-card" data-slides-card
+           data-slides-src="slides.html"
+           data-slides-title="Slides de la Clase 2: Models, GGUF and the QVAC Lifecycle"
+           data-slides-total="26">
+    <div class="slides-card__frame">
+      <div class="slides-card__preview" data-slides-preview>
+        <div class="slides-card__preview-grid" aria-hidden="true"></div>
+        <div class="slides-card__preview-body">
+          <p class="slides-card__preview-kicker">Presentación</p>
+          <p class="slides-card__preview-title">Models, GGUF and the QVAC Lifecycle</p>
+          <p class="slides-card__preview-meta">26 diapositivas · 16:9</p>
+          <button class="btn btn--solid slides-card__expand" type="button"
+                  data-slides-expand aria-expanded="false">Expandir presentación</button>
+        </div>
+      </div>
+      <div class="slides-card__deck embed-wrap" hidden data-slides-deck>
+        <iframe data-slides-iframe scrolling="no"></iframe>
+        <div class="embed-loading" hidden data-slides-loading><span>Cargando diapositivas…</span></div>
+      </div>
+    </div>
+    <div class="slides-card__toolbar embed-tools" hidden data-slides-toolbar>
+      <div class="embed-nav" role="group" aria-label="Navegación de diapositivas">
+        <button class="btn btn--ghost embed-nav__btn" type="button" data-slides-prev disabled aria-label="Diapositiva anterior">← Anterior</button>
+        <span class="embed-nav__count" data-slides-counter aria-live="polite">— / 26</span>
+        <button class="btn btn--ghost embed-nav__btn" type="button" data-slides-next aria-label="Diapositiva siguiente">Siguiente →</button>
+      </div>
+      <button class="btn btn--ghost" type="button" data-slides-collapse>Contraer</button>
+      <button class="btn btn--ghost" type="button" data-slides-fullscreen>⛶ Pantalla completa</button>
+      <a class="btn btn--solid" href="slides.html" target="_blank" rel="noopener">Abrir en pestaña nueva ↗</a>
+    </div>
+  </article>
+</section>
+
+<!-- ================= LECCIÓN ================= -->
+<section class="section container" id="leccion" aria-labelledby="leccion-title">
+  <h2 class="stitle" id="leccion-title">Lección canónica</h2>
+  <p class="lede" style="margin-top:14px;">Anatomía del modelo, GGUF vs checkpoint, cuantización,
+    lectura de nombres, matriz de decisión y el ciclo de vida completo — legible sin las diapositivas.</p>
+  <div class="cta-row">
+    <a class="btn btn--solid" href="../lessons/class-02.html">Leer la lección →</a>
+    <a class="btn btn--ghost" href="lesson.md">Ver Markdown fuente</a>
+  </div>
+
+  <div class="grid grid--3" style="margin-top:34px;">
+    <div class="card"><span class="num">Outcome 1–2</span>
+      <h3>Anatomía + GGUF</h3><p>Pesos, tensors, tokenizer, metadata — y por qué checkpoint ≠ formato de inferencia.</p></div>
+    <div class="card"><span class="num">Outcome 3–4</span>
+      <h3>Cuantización + nombres</h3><p>F32→Q4 con números de referencia, y la gramática de <code class="inline">QWEN3_4B_INST_Q4_K_M</code>.</p></div>
+    <div class="card"><span class="num">Outcome 5–6</span>
+      <h3>Ciclo de vida + decisión</h3><p>find→download→validate→load→infer→reuse→unload→close, medido y justificado.</p></div>
+  </div>
+</section>
+
+<!-- ================= LAB ================= -->
+<section class="section container" id="lab" aria-labelledby="lab-title">
+  <h2 class="stitle" id="lab-title">Lab guiado — Model Explorer</h2>
+  <p class="lede" style="margin-top:14px;">~60–75 min. CLI TypeScript: lista el catálogo, reporta metadata/caché,
+    mide carga, genera determinista (temp 0 · seed 42), descarga y compara dos variantes.</p>
+  <div class="artifact card" style="margin-top:24px;">
+    <span class="tag">LAB</span>
+    <div>
+      <h3>Ocho partes + regla de seguridad: unloadModel ENTRE intentos de Break It</h3>
+      <ul>
+        <li><a href="lab/README.md">lab/README.md</a> — guía con tabla frío/tibio + memoria</li>
+        <li><a href="lab/starter/model-explorer-starter.ts">lab/starter/model-explorer-starter.ts</a> — 6 TODO + auto-verificación ✔</li>
+        <li>Predicciones escritas ANTES de ejecutar (Parte 3)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ARTEFACTOS ================= -->
+<section class="section container" id="artefactos" aria-labelledby="art-title">
+  <h2 class="stitle" id="art-title">Artefactos de la clase</h2>
+  <div class="grid grid--2" style="margin-top:26px;">
+    <div class="card artifact"><span class="tag">EXAMPLES</span>
+      <div><h3>Ejemplos ejecutables mínimos</h3>
+        <ul>
+          <li><a href="examples/01-registry-explorer.ts">01-registry-explorer.ts</a> — catálogo + caché + recursos</li>
+          <li><a href="examples/02-compare-models.ts">02-compare-models.ts</a> — comparación determinista de 2 modelos</li>
+          <li><a href="examples/03-memory-report.ts">03-memory-report.ts</a> — ¿qué cabe en tu máquina?</li>
+        </ul></div></div>
+    <div class="card artifact"><span class="tag">CHALLENGE</span>
+      <div><h3>Model Selection Report</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">Tres contextos (kiosco 4 GB · consultor 16 GB ·
+        tu máquina), matriz de decisión y defensa. Sin starter.
+        <br><a href="challenge/challenge.md">challenge/challenge.md</a>
+        · <a href="solution/solution.md">solution/solution.md</a> (instructor)</p></div></div>
+    <div class="card artifact"><span class="tag">ASSESSMENT</span>
+      <div><h3>Checkpoint + rubric</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">8 preguntas (12.5% recall) y rúbrica 6 criterios.
+        <br><a href="assessment/checkpoint.md">assessment/checkpoint.md</a>
+        · <a href="assessment/rubric.md">assessment/rubric.md</a></p></div></div>
+    <div class="card artifact"><span class="tag">INSTRUCTOR</span>
+      <div><h3>Guía + NotebookLM</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">Timing 180 min, guion de demo, regla de seguridad
+        del Break It, y 4 prompts de repaso con fuentes enfocadas.
+        <br><a href="instructor/instructor-guide.md">instructor/instructor-guide.md</a>
+        · <a href="notebooklm/podcast-prompt.md">notebooklm/</a></p></div></div>
+  </div>
+</section>
+
+<!-- ================= DOD ================= -->
+<section class="section container" id="dod" aria-labelledby="dod-title">
+  <h2 class="stitle" id="dod-title">Definition of Done</h2>
+  <p class="lede" style="margin-top:14px;">Marca cada evidencia cuando la tengas. Se guarda en este navegador.</p>
+  <ul class="dod" style="max-width:860px;">
+    <li><label><input type="checkbox" data-item="anatomia"><span>Explicas las piezas internas de un GGUF sin mirar la lección</span></label></li>
+    <li><label><input type="checkbox" data-item="nombres"><span>Decodificas 3 nombres de catálogo (familia/escala/INST/cuant)</span></label></li>
+    <li><label><input type="checkbox" data-item="comparacion"><span>Comparación medida de 2 modelos (carga, TTFT, tok/s, memoria)</span></label></li>
+    <li><label><input type="checkbox" data-item="breakit"><span>Un Break It de recurso insuficiente diagnosticado por fase</span></label></li>
+    <li><label><input type="checkbox" data-item="report"><span>Model Selection Report con matriz + defensa oral de 3 minutos</span></label></li>
+  </ul>
+  <div class="block example" style="max-width:860px;">
+    <div class="block-title">Siguiente parada</div>
+    <div class="block-body">Clase 3 — Local Inference Fundamentals: qué ocurre DENTRO de la generación,
+    token a token. Hoy elegiste la máquina; mañana abrimos el motor.</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>The Local-First AI Systems Masterclass · QVAC SDK v0.18.x / v0.18.1 · verificado 2026-08-25</span>
+    <span><a href="/curriculum">← Currículo completo</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

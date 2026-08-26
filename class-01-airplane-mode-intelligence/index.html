@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clase 1 · Airplane-Mode Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="../index.html">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="../index.html">Inicio</a>
+      <a href="../curriculum.html">Currículo</a>
+      <a href="../class-01-airplane-mode-intelligence/">Clase 1</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" data-class-page data-progress-class="class-01">
+
+<!-- ================= HERO DE CLASE ================= -->
+<section class="class-hero container">
+  <span class="kicker">Clase 01 · Módulo 1 — Your First Local Token</span>
+  <h1>Airplane-Mode Intelligence</h1>
+  <p class="eq">"¿Qué significa realmente que una aplicación de IA sea local?"</p>
+  <div style="display:flex; gap:26px; align-items:center; margin-top:28px; flex-wrap:wrap;">
+    <div class="ring" data-ring="class-01" style="--pct:0;"><i>0%</i></div>
+    <p class="small" style="font-family:var(--sans); font-size:15.5px;">Tu progreso se guarda en este navegador
+      (localStorage). Marca tu avance en la checklist Definition of Done al final.</p>
+  </div>
+
+  <nav class="anchor-tabs" aria-label="Secciones de la clase">
+    <a href="#slides">Slides</a>
+    <a href="#leccion">Lección</a>
+    <a href="#lab">Lab</a>
+    <a href="#artefactos">Artefactos</a>
+    <a href="#dod">Definition of Done</a>
+  </nav>
+</section>
+
+<!-- ================= SLIDES ================= -->
+<section class="section container" id="slides" aria-labelledby="slides-title">
+  <h2 class="stitle" id="slides-title">Presentación de la clase</h2>
+  <p class="lede" style="margin-top:14px;">25 diapositivas · narrativa Predict → Demo → Break It → Measure It.
+    Expande la card para navegar con ← → o ábrela a pantalla completa.</p>
+
+  <article class="slides-card" data-slides-card
+           data-slides-src="slides.html"
+           data-slides-title="Slides de la Clase 1: Airplane-Mode Intelligence"
+           data-slides-total="25">
+    <div class="slides-card__frame">
+      <div class="slides-card__preview" data-slides-preview>
+        <div class="slides-card__preview-grid" aria-hidden="true"></div>
+        <div class="slides-card__preview-body">
+          <p class="slides-card__preview-kicker">Presentación</p>
+          <p class="slides-card__preview-title">Airplane-Mode Intelligence</p>
+          <p class="slides-card__preview-meta">25 diapositivas · 16:9</p>
+          <button class="btn btn--solid slides-card__expand" type="button"
+                  data-slides-expand aria-expanded="false">Expandir presentación</button>
+        </div>
+      </div>
+      <div class="slides-card__deck embed-wrap" hidden data-slides-deck>
+        <iframe data-slides-iframe scrolling="no"></iframe>
+        <div class="embed-loading" hidden data-slides-loading><span>Cargando diapositivas…</span></div>
+      </div>
+    </div>
+    <div class="slides-card__toolbar embed-tools" hidden data-slides-toolbar>
+      <div class="embed-nav" role="group" aria-label="Navegación de diapositivas">
+        <button class="btn btn--ghost embed-nav__btn" type="button" data-slides-prev disabled aria-label="Diapositiva anterior">← Anterior</button>
+        <span class="embed-nav__count" data-slides-counter aria-live="polite">— / 25</span>
+        <button class="btn btn--ghost embed-nav__btn" type="button" data-slides-next aria-label="Diapositiva siguiente">Siguiente →</button>
+      </div>
+      <button class="btn btn--ghost" type="button" data-slides-collapse>Contraer</button>
+      <button class="btn btn--ghost" type="button" data-slides-fullscreen>⛶ Pantalla completa</button>
+      <a class="btn btn--solid" href="slides.html" target="_blank" rel="noopener">Abrir en pestaña nueva ↗</a>
+    </div>
+  </article>
+</section>
+
+<!-- ================= LECCIÓN ================= -->
+<section class="section container" id="leccion" aria-labelledby="leccion-title">
+  <h2 class="stitle" id="leccion-title">Lección canónica</h2>
+  <p class="lede" style="margin-top:14px;">El artefacto más profundo: concepto, modelo mental,
+    Inside QVAC, Under the Hood, misconcepciones y checkpoint — legible sin las diapositivas.</p>
+  <div class="cta-row">
+    <a class="btn btn--solid" href="../lessons/class-01.html">Leer la lección →</a>
+    <a class="btn btn--ghost" href="lesson.md">Ver Markdown fuente</a>
+  </div>
+
+  <div class="grid grid--3" style="margin-top:34px;">
+    <div class="card"><span class="num">Outcome 1–2</span>
+      <h3>Concepto + ruta de datos</h3><p>Cuatro categorías de "local", cuatro fases, y el mapa App → SDK → worker Bare → modelo.</p></div>
+    <div class="card"><span class="num">Outcome 3–4</span>
+      <h3>Provisionar + offline</h3><p><code class="inline">downloadAsset()</code> con progreso reanudable y carga desde caché validada por checksum.</p></div>
+    <div class="card"><span class="num">Outcome 5–6</span>
+      <h3>Clasificar + medir</h3><p>Dependencias local vs red, y tus números: descarga, load time, TTFT, tok/s.</p></div>
+  </div>
+</section>
+
+<!-- ================= LAB ================= -->
+<section class="section container" id="lab" aria-labelledby="lab-title">
+  <h2 class="stitle" id="lab-title">Lab guiado — Airplane-Mode Proof</h2>
+  <p class="lede" style="margin-top:14px;">~60–75 min. CLI TypeScript real (no Jupyter): es una aplicación
+    con ciclo de vida completo, no un experimento iterativo.</p>
+  <div class="artifact card" style="margin-top:24px;">
+    <span class="tag">LAB</span>
+    <div>
+      <h3>Ocho partes: Worked Example → Modify → Predict → Run → Break It → Diagnose → Measure → Extension</h3>
+      <ul>
+        <li><a href="lab/README.md">lab/README.md</a> — guía paso a paso con tabla de métricas frío/tibio</li>
+        <li><a href="lab/starter/airplane-mode-starter.ts">lab/starter/airplane-mode-starter.ts</a> — esqueleto con 5 TODO y auto-verificación ✔</li>
+        <li>Predicciones escritas ANTES de ejecutar (Parte 3) — no negociable</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ARTEFACTOS ================= -->
+<section class="section container" id="artefactos" aria-labelledby="art-title">
+  <h2 class="stitle" id="art-title">Artefactos de la clase</h2>
+  <div class="grid grid--2" style="margin-top:26px;">
+    <div class="card artifact"><span class="tag">EXAMPLES</span>
+      <div><h3>Ejemplos ejecutables mínimos</h3>
+        <ul>
+          <li><a href="examples/01-provision.ts">01-provision.ts</a> — descarga con progreso (fase RED)</li>
+          <li><a href="examples/02-offline-inference.ts">02-offline-inference.ts</a> — inferencia offline desde caché</li>
+          <li><a href="examples/03-measure.ts">03-measure.ts</a> — instrumentación completa de métricas</li>
+        </ul></div></div>
+    <div class="card artifact"><span class="tag">CHALLENGE</span>
+      <div><h3>Reto independiente: field-provision</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">Sin starter ni pasos: provisioner de campo
+        con modo verify --offline que nunca toca la red. Defiéndelo oralmente.
+        <br><a href="challenge/challenge.md">challenge/challenge.md</a>
+        · <a href="solution/solution.md">solution/solution.md</a> (instructor)</p></div></div>
+    <div class="card artifact"><span class="tag">ASSESSMENT</span>
+      <div><h3>Checkpoint + rubric</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">8 preguntas (≤20% recall) y rúbrica 4 niveles
+        ligada a evidencia observable.
+        <br><a href="assessment/checkpoint.md">assessment/checkpoint.md</a>
+        · <a href="assessment/rubric.md">assessment/rubric.md</a></p></div></div>
+    <div class="card artifact"><span class="tag">INSTRUCTOR</span>
+      <div><h3>Guía + NotebookLM</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">Ritmo de 180 min, guion de demo, facilitación
+        del Break It, y 4 prompts de repaso con fuentes enfocadas.
+        <br><a href="instructor/instructor-guide.md">instructor/instructor-guide.md</a>
+        · <a href="notebooklm/podcast-prompt.md">notebooklm/</a></p></div></div>
+  </div>
+</section>
+
+<!-- ================= DEFINITION OF DONE ================= -->
+<section class="section container" id="dod" aria-labelledby="dod-title">
+  <h2 class="stitle" id="dod-title">Definition of Done</h2>
+  <p class="lede" style="margin-top:14px;">Marca cada evidencia cuando la tengas. Se guarda en este navegador.</p>
+  <ul class="dod" style="max-width:820px;">
+    <li><label><input type="checkbox" data-item="corridaA"><span>Corrida A (con red) documentada con salida completa</span></label></li>
+    <li><label><input type="checkbox" data-item="corridaB"><span>Corrida B (modo avión) generando texto desde caché</span></label></li>
+    <li><label><input type="checkbox" data-item="metricas"><span>Tabla frío/tibio con unidades: descarga, carga, TTFT, tok/s</span></label></li>
+    <li><label><input type="checkbox" data-item="breakit"><span>Los 4 escenarios Break It con predicción previa + diagnóstico</span></label></li>
+    <li><label><input type="checkbox" data-item="checkpoint"><span>Checkpoint respondido (nivel ≥3 en criterios 1–5 de la rúbrica)</span></label></li>
+  </ul>
+  <div class="block example" style="max-width:820px;">
+    <div class="block-title">Siguiente parada</div>
+    <div class="block-body">Clase 2 — Models, GGUF and the QVAC Lifecycle: abrimos la caja negra que descargaste hoy.</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>The Local-First AI Systems Masterclass · QVAC SDK v0.18.x / v0.18.1 · verificado 2026-08-25</span>
+    <span><a href="../curriculum.html">← Currículo completo</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

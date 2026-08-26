@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 4 — Build the Offline Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-04">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/04">Clase 4</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 04 · Módulo 1</span>
+      <h1 class="lesson-sidebar__name">Build the Offline Chat</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+    <span class="toc-head">Contenido</span>
+    <a href="#esencial">Pregunta esencial</a>
+    <a href="#outcomes">Resultados de aprendizaje</a>
+    <a href="#porque">Por qué importa</a>
+    <a href="#ciclos">Tres ciclos de vida</a>
+    <a href="#estado">Estado app vs QVAC</a>
+    <a href="#history">Conversation history</a>
+    <a href="#commit">Frontera de commit</a>
+    <a href="#cancel">Cancelación</a>
+    <a href="#persist">Persistencia</a>
+    <a href="#restart">Restart offline</a>
+    <a href="#shutdown">Graceful shutdown</a>
+    <a href="#predict">Predict</a>
+    <a href="#breakit">Break It</a>
+    <a href="#measure">Measure It</a>
+    <a href="#misconcepciones">Misconcepciones</a>
+    <a href="#conexiones">Conexiones</a>
+    <a href="#checkpoint">Checkpoint</a>
+    <a href="#takeaway">Takeaway</a>
+    <a href="#fuentes">Fuentes</a>
+  </nav>
+  </aside>
+
+  <article class="lesson">
+    <div class="block alert" style="margin-bottom:2rem;">
+      <div class="block-title">Contenido extendido en lesson.md</div>
+      <div class="block-body">
+        Esta página HTML es un índice resumido. La <strong>versión canónica completa</strong> — código, schemas JSON, acceptance tests y rúbrica — está en
+        <a href="/class-04-build-offline-chat/lesson.md"><code class="inline">class-04-build-offline-chat/lesson.md</code></a>
+        o en el <a href="/markdown/class-04-build-offline-chat/lesson.md">visor Markdown de la plataforma</a>.
+        Las diapositivas (<a href="/class-04-build-offline-chat/slides.html" target="_blank" rel="noopener">slides.html</a>) son complementarias, no duplicado.
+      </div>
+    </div>
+
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado 2026-08-26.</p>
+
+    <section id="esencial">
+      <h2>Pregunta esencial</h2>
+      <div class="block"><div class="block-body" style="font-size:20px;">
+        ¿Cómo convertimos la inferencia local en una aplicación de conversación confiable que preserve estado, maneje interrupciones y siga funcionando tras reinicio sin la nube?
+      </div></div>
+    </section>
+
+    <section id="outcomes">
+      <h2>Resultados de aprendizaje</h2>
+      <p>15 outcomes — ver lista completa en <a href="/class-04-build-offline-chat/lesson.md#resultados-de-aprendizaje">lesson.md</a>. Incluyen: distinguir estado de app vs runtime, history multi-turno, commit boundary, cancelación con <code class="inline">requestId</code>, persistencia JSON, restart offline y shutdown limpio.</p>
+    </section>
+
+    <section id="porque">
+      <h2>Por qué importa</h2>
+      <p>Un script que llama <code class="inline">completion()</code> una vez no es un chat. Falta arquitectura: model lifecycle + conversation state + request lifecycle + persistence + cancellation + metrics + shutdown.</p>
+    </section>
+
+    <section id="ciclos">
+      <h2>Tres ciclos de vida</h2>
+      <p>Model (load/reuse/unload), Request (completion/events/final/cancel), Conversation (load → user → generate → commit → persist). No mezclarlos.</p>
+    </section>
+
+    <section id="estado">
+      <h2>Application state vs QVAC state</h2>
+      <p>Tu app posee historial, transcript, política de commit. QVAC posee pesos, KV cache, inferencia en vuelo.</p>
+    </section>
+
+    <section id="history">
+      <h2>Conversation history</h2>
+      <p>Multi-turn = pasar <code class="inline">history[]</code> en cada call. El modelo no recuerda automáticamente entre llamadas aisladas.</p>
+    </section>
+
+    <section id="commit">
+      <h2>Frontera de commit</h2>
+      <p>Buffer provisional (stream) ≠ historial comprometido (durable). Commitear tras <code class="inline">final</code> con política explícita según <code class="inline">stopReason</code>.</p>
+    </section>
+
+    <section id="cancel">
+      <h2>Cancelación</h2>
+      <p><code class="inline">cancel({ requestId })</code> — acción de producto, no error genérico. Distinguir de <code class="inline">length</code>, <code class="inline">eos</code> y fallos reales.</p>
+    </section>
+
+    <section id="persist">
+      <h2>Persistencia</h2>
+      <p>JSON local con schema versionado, escritura atómica, validación al cargar. QVAC no provee chat database.</p>
+    </section>
+
+    <section id="restart">
+      <h2>Restart offline</h2>
+      <p>Close → disable network → restart → restore JSON → loadModel from cache → new completion. Precondición: modelo ya provisionado (Clase 1).</p>
+    </section>
+
+    <section id="shutdown">
+      <h2>Graceful shutdown</h2>
+      <p>cancel activo → persist → unloadModel → close().</p>
+    </section>
+
+    <section id="predict">
+      <h2>Predict</h2>
+      <p>¿Los 40 caracteres streamados antes de cancel deben persistir? Define política antes de implementar.</p>
+    </section>
+
+    <section id="breakit">
+      <h2>Break It</h2>
+      <p>Starter que persiste durante el stream — cancel a mitad, restart, inspecciona corrupción semántica.</p>
+    </section>
+
+    <section id="measure">
+      <h2>Measure It</h2>
+      <p>TTFT, duración, tok/s, stopReason por turno — de tu máquina, no benchmarks universales.</p>
+    </section>
+
+    <section id="misconcepciones">
+      <h2>Misconcepciones</h2>
+      <p>El modelo recuerda solo · streaming = durable · cancel = error · offline sin provisionar nunca.</p>
+    </section>
+
+    <section id="conexiones">
+      <h2>Conexiones</h2>
+      <p><strong>Backward:</strong> Clase 3 — primitivos <code class="inline">events</code>/<code class="inline">final</code>. <strong>Forward:</strong> Clase 5 embeddings · Clase 6 RAG.</p>
+    </section>
+
+    <section id="checkpoint">
+      <h2>Checkpoint</h2>
+      <p>7 preguntas en <a href="/class-04-build-offline-chat/assessment/checkpoint.md">assessment/checkpoint.md</a>.</p>
+    </section>
+
+    <section id="takeaway">
+      <h2>Takeaway</h2>
+      <div class="block"><div class="block-body" style="font-size:20px;">
+        Un chat confiable es una máquina de estados alrededor de inferencia, no un loop alrededor de una función prompt.
+      </div></div>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes</h2>
+      <p>QVAC Text Generation, API Summary, release notes — ver <a href="/class-04-build-offline-chat/lesson.md#fuentes-utilizadas">lesson.md</a>.</p>
+    </section>
+
+    <div class="cta-row" style="margin-top:3rem;">
+      <a class="btn btn--primary" href="/markdown/class-04-build-offline-chat/lesson.md">Leer lección canónica completa →</a>
+      <a class="btn btn--ghost" href="/class/04">Volver a la Clase 4</a>
+    </div>
+  </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Pregunta esencial</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Progreso</span>
+      <div class="rail-progress-row">
+        <div class="ring" data-ring-rail="class-04" style="--pct:0;"><i>0%</i></div>
+        <p class="rail-progress-text"><a href="/class/04#dod">Definition of Done</a></p>
+      </div>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/04">Clase</a></li>
+        <li><a href="/class-04-build-offline-chat/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-04-build-offline-chat/lab/README.md">Lab</a></li>
+        <li><a href="/class-04-build-offline-chat/challenge/challenge.md">Challenge</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 4 · Build the Offline Chat · The Local-First AI Systems Masterclass</span>
+    <span><a href="/class/04">← Volver a la página de la Clase 4</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

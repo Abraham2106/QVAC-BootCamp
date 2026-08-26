@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 2 — Models, GGUF and the QVAC Lifecycle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-02">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/02">Clase 2</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 02 · Módulo 1</span>
+      <h1 class="lesson-sidebar__name">Models, GGUF and the QVAC Lifecycle</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+    <span class="toc-head">Contenido</span>
+    <a href="#esencial">Pregunta esencial</a>
+    <a href="#outcomes">Resultados de aprendizaje</a>
+    <a href="#porque">Por qué importa</a>
+    <a href="#concepto">Concepto</a>
+    <a href="#modelo">Modelo mental</a>
+    <a href="#inside">Inside QVAC</a>
+    <a href="#hood">Under the Hood</a>
+    <a href="#worked">Worked Example</a>
+    <a href="#predict">Predict</a>
+    <a href="#build">Build</a>
+    <a href="#breakit">Break It</a>
+    <a href="#measure">Measure It</a>
+    <a href="#misconcepciones">Misconcepciones</a>
+    <a href="#conexiones">Conexiones</a>
+    <a href="#checkpoint">Checkpoint</a>
+    <a href="#takeaway">Takeaway</a>
+    <a href="#fuentes">Fuentes</a>
+  </nav>
+  </aside>
+
+  <!-- ================= ARTÍCULO ================= -->
+  <article class="lesson">
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm el 2026-08-25.</p>
+
+    <section id="esencial">
+      <h2>Pregunta esencial</h2>
+      <div class="block"><div class="block-body" style="font-size:20px;">
+        ¿Qué estamos cargando realmente cuando "cargamos un modelo"?
+      </div></div>
+    </section>
+
+    <section id="outcomes">
+      <h2>Resultados de aprendizaje</h2>
+      <ol>
+        <li><strong>Explicar</strong> qué contiene un modelo: arquitectura, tensors, pesos, tokenizer, metadata y chat template.</li>
+        <li><strong>Explicar</strong> el papel de GGUF como formato de inferencia, distinguiéndolo de un checkpoint de entrenamiento.</li>
+        <li><strong>Razonar</strong> sobre cuantización: qué se gana en memoria/velocidad y qué se arriesga en calidad.</li>
+        <li><strong>Interpretar</strong> nombres de catálogo: familia, escala, INST/base, variante de cuantización.</li>
+        <li><strong>Gestionar</strong> el ciclo de vida: find → download → validate → load → infer → reuse → unload → close.</li>
+        <li><strong>Comparar</strong> variantes con mediciones propias y <strong>justificar</strong> una elección con la matriz de decisión.</li>
+      </ol>
+    </section>
+
+    <section id="porque">
+      <h2>Por qué importa esto</h2>
+      <p>La Clase 1 trató el modelo como una caja negra: <code class="inline">downloadAsset()</code> trajo
+      ~0.6 GB y <code class="inline">loadModel()</code> los puso en memoria. Funcionó — pero quedaron preguntas:
+      ¿por qué 0.6 GB y no 6? ¿Qué diferencia hay entre <code class="inline">Q4_0</code> y <code class="inline">Q4_K_M</code>?
+      ¿Qué significa <code class="inline">INST</code>?</p>
+      <p>Estas preguntas no son académicas. Elegir el modelo equivocado produce una de dos fallas garantizadas:
+      la aplicación que <strong>no carga</strong> (memoria insuficiente) o la que <strong>decepciona</strong>
+      (calidad por debajo de la tarea). Y a diferencia de la nube, en local la elección de modelo
+      <strong>ES</strong> la decisión de arquitectura.</p>
+      <p>Hoy abrimos la caja negra. Al cerrarla, un nombre como <code class="inline">QWEN3_4B_INST_Q4_K_M</code>
+      será un contrato que puedes leer, evaluar contra tu hardware y defender.</p>
+    </section>
+
+    <section id="concepto">
+      <h2>Concepto</h2>
+
+      <h3>Anatomía: qué hay dentro de un "modelo"</h3>
+      <table class="booktabs">
+        <thead><tr><th>Pieza</th><th>Qué es</th><th>Por qué importa</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Arquitectura</strong></td><td>el diseño de la red (capas, atención, dimensiones)</td><td>define CÓMO se computa; sin ella los pesos son números sueltos</td></tr>
+          <tr><td><strong>Tensors</strong></td><td>arreglos multi-dimensionales que organizan los números</td><td>unidad de almacenamiento y cómputo</td></tr>
+          <tr><td><strong>Pesos aprendidos</strong></td><td>los valores ajustados durante el entrenamiento</td><td>el "conocimiento"; casi todo el tamaño del archivo</td></tr>
+          <tr><td><strong>Tokenizer</strong></td><td>vocabulario + reglas para partir texto en tokens</td><td>sin el correcto, la entrada no coincide con lo aprendido</td></tr>
+          <tr><td><strong>Metadata</strong></td><td>contexto máximo, chat template, cuantización, versión</td><td>lo que el runtime necesita para usar el resto</td></tr>
+          <tr><td><strong>Chat template</strong></td><td>formato exacto de conversación del entrenamiento</td><td>prompt mal formateado = respuestas malas</td></tr>
+        </tbody>
+      </table>
+      <p>En sistemas multimodales hay piezas adicionales (adapters, projection models) — quedan para su clase.</p>
+
+      <h3>Checkpoint ≠ formato de inferencia</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart TB
+  ckpt["Training checkpoint&lt;br/&gt;PyTorch / Safetensors"]
+  conv["Conversión"]
+  gguf["GGUF"]
+  quant["Cuantización opcional"]
+  infer["Inferencia local"]
+  ckpt --> conv --> gguf --> quant --> infer</pre>
+</div>
+
+      <h3>GGUF: el formato del ecosistema GGML/llama.cpp</h3>
+      <p><strong>GGUF</strong> es un formato binario que empaqueta en UN solo archivo todo lo que el runtime
+      necesita: tensors (con cuantizaciones posiblemente mixtas), tokenizer y metadata rica. El motor de
+      texto de QVAC (<code class="inline">qvac-fabric-llm.cpp</code>) consume exactamente este formato.</p>
+      <p>La propiedad clave para local-first: <strong>un GGUF es autocontenido y portable</strong> — un archivo,
+      validado por checksum, listo para correr sin dependencias adicionales.</p>
+
+      <h3>Cuantización: la negociación central</h3>
+      <p>Los pesos se entrenan en precisión alta (F32/BF16/F16). La <strong>cuantización</strong> los
+      re-expresa en menos bits: Q8, Q6, Q5, Q4, o esquemas mixtos (como Q4_K_M).</p>
+<pre class="diagram">menos bits por peso
+   ↓
+menos almacenamiento + menos memoria + típicamente más velocidad
+   ↓
+posible pérdida de calidad (tarea-dependiente)</pre>
+      <table class="booktabs">
+        <thead><tr><th>Precisión</th><th>Bits/peso</th><th>Tamaño aprox. por 1B parámetros</th></tr></thead>
+        <tbody>
+          <tr><td>F32</td><td>32</td><td>~4.0 GB</td></tr>
+          <tr><td>F16</td><td>16</td><td>~2.0 GB</td></tr>
+          <tr><td>Q8</td><td>8</td><td>~1.0 GB</td></tr>
+          <tr><td><strong>Q4</strong></td><td><strong>4</strong></td><td><strong>~0.5–0.6 GB</strong></td></tr>
+        </tbody>
+      </table>
+      <p>Órdenes de magnitud para razonar, no promesas. <strong>Siempre mide el archivo real.</strong></p>
+
+      <h3>Leer nombres de modelo</h3>
+<pre class="diagram">QWEN3   → familia (arquitectura + linaje)
+4B      → escala: ~4 mil millones de parámetros
+INST    → instruction-tuned (sin esto: "base", completador crudo)
+Q4_K_M  → cuantización: 4 bits, K-quants, variante mixta M</pre>
+      <p>El nombre te dice ANTES de descargar: cuánta memoria necesitarás, qué tarea espera, y qué tan
+      agresiva fue la compresión.</p>
+
+      <h3>La matriz de decisión</h3>
+<pre class="diagram">calidad  ×  ajuste a la tarea  ×  memoria  ×  almacenamiento
+   ×  latencia  ×  contexto  ×  hardware  ×  modalidad</pre>
+      <p>No existe "el mejor modelo": existe el mejor modelo PARA una tarea EN un hardware CON una
+      restricción. La matriz se evalúa con evidencia.</p>
+    </section>
+
+    <section id="modelo">
+      <h2>Modelo mental</h2>
+      <ul>
+        <li><strong>El GGUF es el contenedor de envío; el modelo cargado es la máquina desplegada.</strong>
+        El archivo en disco no "hace" nada. <code class="inline">loadModel()</code> lo despliega en RAM/VRAM.</li>
+        <li><strong>Un worker, muchos modelos.</strong> QVAC usa un worker compartido por aplicación. Los
+        modelos cargados permanecen disponibles hasta que los descargas.</li>
+      </ul>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart LR
+  find --> download --> validate --> load --> infer --> reuse --> unload --> close</pre>
+</div>
+    </section>
+
+    <section id="inside">
+      <h2>Inside QVAC</h2>
+
+      <h3>Tres fuentes de modelos (documentadas)</h3>
+      <ol>
+        <li><strong>Registro distribuido</strong> vía constantes del SDK. Las constantes son <strong>punteros
+        al registro</strong> — el paquete npm NO trae pesos embebidos.</li>
+        <li><strong>URL HTTP</strong> directa, con <code class="inline">fallbackSrc</code> solo para constantes.</li>
+        <li><strong>Ruta local</strong> con <code class="inline">modelType</code> explícito — sin validación de
+        checksum de catálogo: la integridad es responsabilidad de tu aplicación.</li>
+      </ol>
+
+      <h3>Explorar el registro y el estado de caché</h3>
+<pre class="codebox"><code>import {
+  getModelInfo, getSystemResources,
+  modelRegistryList, modelRegistrySearch,
+} from "@qvac/sdk";
+
+const all = await modelRegistryList();
+const found = await modelRegistrySearch({ /* tipo · engine · cuantización */ });
+const info = await getModelInfo({ /* según .d.ts de tu versión */ });
+const res = await getSystemResources({ sample: true });</code></pre>
+      <div class="block alert">
+        <div class="block-title">Nota honesta de versiones</div>
+        <div class="block-body">Verifica los nombres exactos de parámetros contra el <code class="inline">.d.ts</code>
+        de tu versión instalada — la página API Summary es un índice de alto nivel.</div>
+      </div>
+
+      <h3>Requisitos duros del host (documentados)</h3>
+      <table class="booktabs">
+        <thead><tr><th>Requisito</th><th>Valor</th><th>Consecuencia</th></tr></thead>
+        <tbody>
+          <tr><td>RAM total</td><td>≥ 2 GB (recom. ≥ 4 GB)</td><td>"por debajo de 4 GB, la mayoría de los LLMs fallan al cargar"</td></tr>
+          <tr><td>RAM disponible al cargar</td><td>≥ 2 GB</td><td>verificado vía <code class="inline">os.availableMemory()</code></td></tr>
+          <tr><td>Disco libre</td><td>≥ 5 GB</td><td>los modelos son multi-GB</td></tr>
+          <tr><td>GPU API</td><td>Metal (macOS) · Vulkan ≥ 1.4 (Win/Linux)</td><td>en Windows se exige Vulkan incluso para CPU-only</td></tr>
+          <tr><td>Node</td><td>≥ 18 (preferible ≥ 20)</td><td><code class="inline">engines</code> del CLI/SDK</td></tr>
+        </tbody>
+      </table>
+      <p>Validación: <strong><code class="inline">qvac doctor</code></strong> (con <code class="inline">--json</code> para CI).</p>
+    </section>
+
+    <section id="hood">
+      <h2>Under the Hood</h2>
+      <ul>
+        <li><strong>Al cargar se reservan dos cosas:</strong> los pesos (≈ tamaño del archivo) y la reserva de
+        contexto (<code class="inline">ctx_size</code>), que alimenta el KV-cache. Por eso
+        <code class="inline">ctx_size: 8192</code> en una máquina justa falla aunque los pesos "caben".</li>
+        <li><strong>Por qué Q4 cabe donde F16 no:</strong> mismos pesos, 4× menos bits por peso.</li>
+        <li><strong>El backend importa:</strong> Metal/Vulkan. Sin Vulkan en Windows no hay fallback CPU.</li>
+        <li><strong>La calidad de Q4 es tarea-dependiente:</strong> chat general → degradación pequeña;
+        razonamiento fino/código → puede notarse. Se mide con TU tarea.</li>
+      </ul>
+    </section>
+
+    <section id="worked">
+      <h2>Worked Example</h2>
+      <p>Comparar dos modelos con el MISMO prompt determinista:</p>
+<pre class="codebox"><code>import {
+  close, completion, loadModel,
+  LLAMA_3_2_1B_INST_Q4_0, QWEN3_600M_INST_Q4, unloadModel,
+} from "@qvac/sdk";
+
+const PROMPT = "Enumera tres ventajas de la inferencia local.";
+const GEN = { temp: 0, seed: 42, predict: 128 };
+
+for (const modelSrc of [QWEN3_600M_INST_Q4, LLAMA_3_2_1B_INST_Q4_0]) {
+  const t0 = performance.now();
+  const modelId = await loadModel({ modelSrc, modelConfig: { ctx_size: 2048 } });
+  const loadMs = performance.now() - t0;
+
+  const sentAt = performance.now();
+  let ttft = null;
+  const run = completion({ modelId,
+    history: [{ role: "user", content: PROMPT }], stream: true,
+    generationParams: GEN });
+  for await (const ev of run.events) {
+    if (ev.type === "contentDelta" && ttft === null) ttft = performance.now() - sentAt;
+  }
+  const final = await run.final;
+  console.log({ loadMs, ttft, tps: final.stats?.tokensPerSecond });
+  await unloadModel({ modelId, clearStorage: false });
+}
+void close();</code></pre>
+      <p>Ejecutables completos en <a href="../class-02-models-gguf-lifecycle/examples/">examples/</a>.</p>
+    </section>
+
+    <section id="predict">
+      <h2>Predict</h2>
+      <ol>
+        <li><code class="inline">QWEN3_600M_INST_Q4</code> vs <code class="inline">LLAMA_3_2_1B_INST_Q4_0</code>: ¿cuál carga más rápido y cuál genera con más tok/s? ¿Por qué?</li>
+        <li>El mismo modelo cargado dos veces (frío vs tibio): ¿qué fase cambia y cuál no?</li>
+        <li><code class="inline">ctx_size: 32768</code> con 8 GB libres: ¿dónde falla?</li>
+        <li>Registro caído pero caché válida: ¿funciona <code class="inline">loadModel()</code> con constante? ¿Y <code class="inline">modelRegistryList()</code>?</li>
+      </ol>
+    </section>
+
+    <section id="build">
+      <h2>Build — Model Explorer</h2>
+      <p>La utilidad del currículo (§4.10) que lista el registro, muestra metadata/caché, mide carga,
+      genera determinista, descarga, repite con segunda variante e imprime la comparativa. Guía completa
+      en <a href="../class-02-models-gguf-lifecycle/lab/README.md">lab/README.md</a>.</p>
+    </section>
+
+    <section id="breakit">
+      <h2>Break It</h2>
+      <p>Predice primero. Regla de seguridad: <strong>descarga el modelo entre intentos</strong> para no tumbar
+      la infraestructura compartida del worker.</p>
+      <table class="booktabs">
+        <thead><tr><th>Escenario</th><th>Predicción antes</th></tr></thead>
+        <tbody>
+          <tr><td>Cargar un modelo mayor a la RAM disponible</td><td>¿en qué fase muere? ¿qué mensaje?</td></tr>
+          <tr><td><code class="inline">ctx_size: 32768</code> con memoria justa</td><td>¿carga y falla al inferir, o falla al cargar?</td></tr>
+          <tr><td>Registro no disponible + constante SIN caché</td><td>¿se distingue del error con caché válida?</td></tr>
+          <tr><td>Ruta local a un archivo truncado/corrupto</td><td>¿quién valida aquí?</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="measure">
+      <h2>Measure It</h2>
+      <table class="booktabs">
+        <thead><tr><th>Métrica</th><th>Cómo</th></tr></thead>
+        <tbody>
+          <tr><td>Tamaño en disco</td><td><code class="inline">getModelInfo</code> (expected/actual) o <code class="inline">fs.stat</code></td></tr>
+          <tr><td>Tiempo de carga</td><td><code class="inline">performance.now()</code> alrededor de <code class="inline">loadModel()</code></td></tr>
+          <tr><td>Memoria observable</td><td><code class="inline">getSystemResources({ sample: true })</code> antes/durante/después</td></tr>
+          <tr><td>TTFT</td><td>primer <code class="inline">contentDelta</code> − envío del prompt</td></tr>
+          <tr><td>Tokens/segundo</td><td><code class="inline">run.final.stats.tokensPerSecond</code></td></tr>
+        </tbody>
+      </table>
+      <p>Frío y tibio por modelo. La calidad se evalúa leyendo las salidas a ciegas.</p>
+    </section>
+
+    <section id="misconcepciones">
+      <h2>Misconcepciones comunes</h2>
+      <div class="block alert"><div class="block-title">1</div><div class="block-body">
+        <strong>"Más parámetros siempre es mejor."</strong> Un 7B mal ajustado pierde contra un 1B bien elegido;
+        y en hardware modesto el 7B no carga. La matriz es multi-factor.</div></div>
+      <div class="block alert"><div class="block-title">2</div><div class="block-body">
+        <strong>"Q4 destruye la calidad."</strong> La degradación existe, es tarea-dependiente y suele ser
+        pequeña en chat general. Se compara a ciegas con TU caso de uso.</div></div>
+      <div class="block alert"><div class="block-title">3</div><div class="block-body">
+        <strong>"El GGUF se ejecuta solo."</strong> Es datos + metadata: sin runtime, tokenizer y memoria no es nada.</div></div>
+      <div class="block alert"><div class="block-title">4</div><div class="block-body">
+        <strong>"El SDK trae los modelos incluidos."</strong> Las constantes son punteros al registro; los pesos
+        se descargan, validan y cachean aparte.</div></div>
+    </section>
+
+    <section id="conexiones">
+      <h2>Conexiones de arquitectura</h2>
+      <ul>
+        <li><strong>Clase 1:</strong> la caja negra de hoy era el asset de ayer; el Airplane-Mode Test sigue vigente (ahora con dos modelos).</li>
+        <li><strong>Clase 3:</strong> TTFT y tok/s se descomponen en tokenización, prefill y decodificación con KV-cache.</li>
+        <li><strong>Clase 10:</strong> la matriz de decisión se formaliza como Architecture Decision Record.</li>
+      </ul>
+    </section>
+
+    <section id="checkpoint">
+      <h2>Checkpoint</h2>
+      <ol>
+        <li><em>(Recall)</em> ¿Qué significan <code class="inline">INST</code> y <code class="inline">Q4_K_M</code> en <code class="inline">QWEN3_4B_INST_Q4_K_M</code>?</li>
+        <li><em>(Explicación)</em> ¿Por qué checkpoint y GGUF no son lo mismo? Dos diferencias.</li>
+        <li><em>(Explicación)</em> "Bajé a Q4 y ahora es 4× más inteligente porque es más rápido": dos errores en esa frase.</li>
+        <li><em>(Aplicación)</em> 6 GB disponibles, chat general offline: ¿escala y cuantización primero?</li>
+        <li><em>(Aplicación)</em> 7B Q4 (~4 GB) con 3 GB disponibles: ¿en qué fase falla y qué mensaje esperas?</li>
+        <li><em>(Diagnóstico)</em> <code class="inline">modelRegistryList()</code> falla por red pero la app carga por constante: explica el flujo.</li>
+        <li><em>(Diagnóstico)</em> GGUF por ruta local produce tokens basura: ¿qué pieza sospechas y por qué la validación de catálogo no ayudó?</li>
+        <li><em>(Evaluación)</em> TU máquina + "resumir documentos offline": matriz (≥5 factores) + riesgo + detección, en 5 líneas.</li>
+      </ol>
+    </section>
+
+    <section id="takeaway">
+      <h2>Takeaway</h2>
+      <div class="block example"><div class="block-body" style="font-size:19px;">
+        "Cargar un modelo" = desplegar a memoria un GGUF validado: pesos cuantizados + tokenizer + metadata,
+        elegidos con la matriz de decisión y confirmados con mediciones. El nombre del modelo es un contrato;
+        tu hardware es la contraparte. <strong>Lee ambos antes de prometer nada.</strong>
+      </div></div>
+      <p><strong>Siguiente clase:</strong> qué ocurre DENTRO de la inferencia — tokens, sampling, KV-cache,
+      TTFT vs throughput.</p>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes usadas</h2>
+      <ul>
+        <li>QVAC — Download lifecycle · docs.qvac.tether.io</li>
+        <li>QVAC — Text generation · docs.qvac.tether.io</li>
+        <li>QVAC — System requirements (RAM/disco/Vulkan, qvac doctor)</li>
+        <li>QVAC — API Summary v0.18.x · Release Notes v0.18.x</li>
+        <li>npm @qvac/sdk 0.18.1 · llama.cpp/GGUF — github.com/ggml-org/llama.cpp</li>
+        <li>Currículo canónico: QVAC_Course_Expanded_Learning_Edition.md, Cap. 4 §4.1–4.10</li>
+      </ul>
+    </section>
+  </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Pregunta esencial</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Progreso</span>
+      <div class="rail-progress-row">
+        <div class="ring" data-ring-rail="class-02" style="--pct:0;"><i>0%</i></div>
+        <p class="rail-progress-text"><a href="/class/02#dod">Definition of Done</a></p>
+      </div>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/02">Clase</a></li>
+        <li><a href="/class-02-models-gguf-lifecycle/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-02-models-gguf-lifecycle/lab/README.md">Lab</a></li>
+        <li><a href="/class-02-models-gguf-lifecycle/challenge/challenge.md">Challenge</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 2 · The Local-First AI Systems Masterclass</span>
+    <span><a href="/class/02">← Volver a la página de la Clase 2</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

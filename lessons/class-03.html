@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 3 — Local Inference Fundamentals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-03">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/03">Clase 3</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 03 · Módulo 1</span>
+      <h1 class="lesson-sidebar__name">Local Inference Fundamentals</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+    <span class="toc-head">Contenido</span>
+    <a href="#esencial">Pregunta esencial</a>
+    <a href="#outcomes">Resultados de aprendizaje</a>
+    <a href="#porque">Por qué importa</a>
+    <a href="#tokens">Tokens ≠ palabras</a>
+    <a href="#autoregresivo">Generación autoregresiva</a>
+    <a href="#modelo">Modelo mental</a>
+    <a href="#completion">completion() events/final</a>
+    <a href="#streaming">Streaming</a>
+    <a href="#stopreason">Stop reasons</a>
+    <a href="#sampling">Sampling</a>
+    <a href="#contexto">Presión de contexto</a>
+    <a href="#ttft">TTFT y tok/s</a>
+    <a href="#kvcache">KV cache</a>
+    <a href="#profiler">Profiler</a>
+    <a href="#worked">Worked Example</a>
+    <a href="#breakit">Break It</a>
+    <a href="#measure">Measure It</a>
+    <a href="#misconcepciones">Misconcepciones</a>
+    <a href="#conexiones">Conexiones</a>
+    <a href="#checkpoint">Checkpoint</a>
+    <a href="#takeaway">Takeaway</a>
+    <a href="#fuentes">Fuentes</a>
+  </nav>
+  </aside>
+
+  <!-- ================= ARTÍCULO ================= -->
+  <article class="lesson">
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm el 2026-08-25.</p>
+
+    <section id="esencial">
+      <h2>Pregunta esencial</h2>
+      <div class="block"><div class="block-body" style="font-size:20px;">
+        ¿Qué ocurre entre un prompt y el siguiente token generado, y cómo podemos observar las consecuencias?
+      </div></div>
+    </section>
+
+    <section id="outcomes">
+      <h2>Resultados de aprendizaje</h2>
+      <ol>
+        <li><strong>Explicar</strong> tokenización sin confundir tokens con palabras.</li>
+        <li><strong>Explicar</strong> generación autoregresiva y el bucle token a token.</li>
+        <li><strong>Distinguir</strong> prompt processing (prefill) de token decoding.</li>
+        <li><strong>Explicar</strong> sampling y mapearlo a <code class="inline">generationParams</code> actuales (<code class="inline">temp</code>, <code class="inline">top_k</code>, <code class="inline">top_p</code>, <code class="inline">seed</code>, <code class="inline">predict</code>).</li>
+        <li><strong>Ejecutar</strong> <code class="inline">completion()</code> con <code class="inline">events</code> + <code class="inline">final</code> como superficie canónica.</li>
+        <li><strong>Interpretar</strong> <code class="inline">contentDelta</code>, <code class="inline">completionStats</code>, <code class="inline">completionDone</code> y campos de <code class="inline">final</code>.</li>
+        <li><strong>Interpretar</strong> <code class="inline">stopReason</code>.</li>
+        <li><strong>Explicar</strong> presión de contexto: qué entra en la ventana finita.</li>
+        <li><strong>Usar</strong> KV cache y razonar cuándo puede ayudar un follow-up compatible.</li>
+        <li><strong>Distinguir</strong> TTFT, latencia total y throughput.</li>
+        <li><strong>Usar</strong> el profiler para evidencia de operaciones.</li>
+        <li><strong>Diagnosticar</strong> generación limitada con evidencia observable.</li>
+        <li><strong>Diseñar</strong> experimentos controlados antes de afirmar rendimiento.</li>
+      </ol>
+    </section>
+
+    <section id="porque">
+      <h2>Por qué importa esto</h2>
+      <p>Imagina dos configuraciones en la misma laptop:</p>
+      <ul>
+        <li><strong>Config A:</strong> el modelo empieza a streamar a los 200 ms pero decodifica a 15 tok/s.</li>
+        <li><strong>Config B:</strong> tarda 2 s en el primer token pero luego decodifica a 40 tok/s.</li>
+      </ul>
+      <p>¿Cuál "se siente" más rápida para el usuario? Depende de qué parte de la experiencia midas. Si solo miras tok/s, Config B parece ganadora; si el usuario espera en silencio antes del primer carácter, Config A puede sentirse mucho mejor aunque decodifique más lento.</p>
+      <p>Las Clases 1 y 2 respondieron <em>dónde</em> vive el modelo y <em>qué</em> contiene el artefacto. Hoy respondemos <strong>qué ocurre mientras infiere</strong> y <strong>cómo observarlo</strong> sin tratar la API como caja negra.</p>
+      <p>La transferencia que buscamos no es memorizar nombres de parámetros. Es poder recibir una configuración de generación y <strong>predecir</strong> qué mecanismo toca, <strong>medir</strong> qué métrica lo revela, y <strong>explicar</strong> lo observado con evidencia.</p>
+    </section>
+
+    <section id="tokens">
+      <h2>Tokens ≠ palabras</h2>
+      <p>Antes de hablar de <code class="inline">temp</code> o KV cache, necesitas una imagen mental correcta del input.</p>
+      <p>Un LLM no consume "palabras" directamente. El <strong>tokenizer</strong> convierte texto en una secuencia de <strong>tokens</strong> — unidades sub-palabra que el vocabulario del modelo puede representar. Una palabra común puede ser un token; una palabra rara puede partirse en varios; la puntuación y los espacios también cuentan.</p>
+      <p>Implicaciones prácticas:</p>
+      <ul>
+        <li><strong>No equipes tokens con palabras.</strong> "Hola" puede ser 1 token; un término técnico compuesto puede ser 3.</li>
+        <li><strong>No adivines conteos exactos</strong> sin medir con el tokenizer del modelo concreto. En QVAC, si no tienes API de conteo verificada, usa proxies de aplicación (caracteres, mensajes) y etiquétalos honestamente.</li>
+        <li><strong>El costo de contexto escala con tokens procesados</strong>, no con "número de frases" de forma lineal simple.</li>
+      </ul>
+    </section>
+
+    <section id="autoregresivo">
+      <h2>Generación autoregresiva</h2>
+      <p>Un LLM de texto no escribe la respuesta completa en una sola operación matricial gigante visible al usuario. El flujo normal es <strong>autoregresivo</strong>:</p>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart TB
+  hist["history / prompt"]
+  tok["tokenización"]
+  pre["evaluación del prompt (prefill)"]
+  dist["distribución del siguiente token"]
+  samp["sampling / selección"]
+  append["append al contexto"]
+  stop{"¿condición de parada?"}
+  hist --> tok --> pre --> dist --> samp --> append --> stop
+  stop -->|"no"| pre
+  stop -->|"sí"| done["fin"]
+</pre>
+</div>
+      <p>Cada token nuevo depende de todo lo anterior — incluidos los tokens que el propio modelo acaba de generar. Por eso la generación es incremental y por eso el streaming tiene sentido: puedes <strong>observar</strong> el bucle mientras ocurre.</p>
+    </section>
+
+    <section id="modelo">
+      <h2>Modelo mental</h2>
+      <p>Consolida la cadena causal que usarás en todo el bootcamp:</p>
+<pre class="diagram">history
+   ↓
+tokenization / prompt processing
+   ↓
+model state (incl. attention state)
+   ↓
+next-token distribution
+   ↓
+sampling
+   ↓
+token
+   ↓
+streamed event (contentDelta)
+   ↓
+repeat until stop condition</pre>
+      <p>Cuando cambies un parámetro, pregúntate: <strong>¿en qué eslabón de esta cadena actúa?</strong></p>
+    </section>
+
+    <section id="completion">
+      <h2>Dentro de QVAC: <code class="inline">completion()</code></h2>
+      <p>En QVAC SDK v0.18.x, <code class="inline">completion()</code> devuelve un <strong><code class="inline">CompletionRun</code></strong> con dos superficies principales:</p>
+      <table class="booktabs">
+        <thead><tr><th>Superficie</th><th>Qué es</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">events</code></td><td><code class="inline">AsyncIterable&lt;CompletionEvent&gt;</code> ordenado, tipado por <code class="inline">type</code></td></tr>
+          <tr><td><code class="inline">final</code></td><td><code class="inline">Promise&lt;CompletionFinal&gt;</code> con texto agregado, stats y stopReason</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Código nuevo:</strong> preferir <code class="inline">events</code> + <code class="inline">final</code>.</p>
+      <p>Superficies legacy (<code class="inline">tokenStream</code>, <code class="inline">text</code>, <code class="inline">stats</code> sueltos) pueden seguir existiendo por compatibilidad, pero no son el contrato canónico que enseñamos.</p>
+<pre class="codebox"><code>const run = completion({
+  modelId,
+  history: [{ role: "user", content: "Hola" }],
+  stream: true,
+  generationParams: { temp: 0.7, seed: 42, predict: 128 },
+});
+
+for await (const event of run.events) {
+  if (event.type === "contentDelta") process.stdout.write(event.text);
+}
+
+const final = await run.final;
+console.log(final.stopReason, final.stats?.tokensPerSecond);</code></pre>
+    </section>
+
+    <section id="streaming">
+      <h2>Streaming</h2>
+      <p>El streaming expone progreso al cliente. <strong>No acelera intrínsecamente el motor de inferencia</strong> — cambia cuándo el usuario ve output.</p>
+      <table class="booktabs">
+        <thead><tr><th>Evento</th><th>Rol pedagógico</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">contentDelta</code></td><td>Fragmento de texto visible; primer evento útil para TTFT observado</td></tr>
+          <tr><td><code class="inline">completionStats</code></td><td>Stats del runtime (p. ej. tok/s) durante o al final</td></tr>
+          <tr><td><code class="inline">completionDone</code></td><td>Señal de cierre del stream; puede incluir stopReason</td></tr>
+        </tbody>
+      </table>
+      <p>Otros eventos existen (<code class="inline">thinkingDelta</code>, <code class="inline">toolCall</code>, <code class="inline">toolError</code>, <code class="inline">rawDelta</code>) — relevantes en clases posteriores de agentes y tool calling; aquí solo los reconocemos.</p>
+<pre class="codebox"><code>for await (const event of run.events) {
+  switch (event.type) {
+    case "contentDelta": /* texto */ break;
+    case "completionStats": /* métricas */ break;
+    case "completionDone": /* terminal */ break;
+  }
+}
+const final = await run.final;</code></pre>
+    </section>
+
+    <section id="stopreason">
+      <h2>Stop reasons</h2>
+      <p>La generación termina por una razón documentada. Valores habituales en el contrato actual:</p>
+      <table class="booktabs">
+        <thead><tr><th>stopReason</th><th>Significado típico</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">"eos"</code></td><td>Fin natural (end-of-sequence)</td></tr>
+          <tr><td><code class="inline">"length"</code></td><td>Alcanzó límite de tokens nuevos (<code class="inline">predict</code>)</td></tr>
+          <tr><td><code class="inline">"stopSequence"</code></td><td>Encontró secuencia de parada configurada</td></tr>
+          <tr><td><code class="inline">"cancelled"</code></td><td>Cancelación (<code class="inline">cancel({ requestId })</code>)</td></tr>
+          <tr><td><code class="inline">"error"</code></td><td>Fallo mid-stream (distinto de parada intencional)</td></tr>
+        </tbody>
+      </table>
+      <div class="block alert">
+        <div class="block-title">Diagnóstico</div>
+        <div class="block-body"><code class="inline">stopReason: "length"</code> no es "el modelo falló" — es el runtime obedeciendo un límite que <strong>tú</strong> configuraste. La evidencia está en <code class="inline">final.stopReason</code>, contenido parcial y stats.</div>
+      </div>
+    </section>
+
+    <section id="sampling">
+      <h2>Sampling</h2>
+      <p>El modelo calcula una distribución sobre candidatos al siguiente token. <strong>Sampling</strong> es la regla que elige uno.</p>
+<pre class="diagram">modelo predice posibles next tokens
+        ↓
+necesitamos una regla de selección
+        ↓
+sampling controla esa selección
+        ↓
+distintos settings → distinto comportamiento de salida</pre>
+      <table class="booktabs">
+        <thead><tr><th>Campo</th><th>Rol conceptual</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">temp</code></td><td>Escala la distribución; 0 tiende a greedy/determinista</td></tr>
+          <tr><td><code class="inline">top_k</code></td><td>Limita candidatos a los K más probables</td></tr>
+          <tr><td><code class="inline">top_p</code></td><td>Nucleus sampling — masa acumulada de probabilidad</td></tr>
+          <tr><td><code class="inline">seed</code></td><td>Semilla para reproducibilidad cuando el backend la respeta</td></tr>
+          <tr><td><code class="inline">predict</code></td><td>Máximo de tokens nuevos a generar</td></tr>
+        </tbody>
+      </table>
+      <p><strong>No confundas:</strong> cambiar <code class="inline">temp</code> altera <strong>selección</strong>, no el conocimiento almacenado en los pesos. Tampoco prometas reproducibilidad total sin controlar todos los factores relevantes. Usa <code class="inline">temp</code>, no <code class="inline">temperature</code>.</p>
+      <h3>Experimento predictivo</h3>
+      <p>Antes de correr <code class="inline">examples/02-sampling-experiment.ts</code>, escribe:</p>
+      <ol>
+        <li>Mismo prompt, <code class="inline">seed: 42</code>, <code class="inline">temp: 0</code> vs <code class="inline">temp: 1.0</code> — ¿salida idéntica?</li>
+        <li>Si tok/s es similar, ¿qué cambió realmente?</li>
+        <li>¿Qué variable mantuviste constante además de temp?</li>
+      </ol>
+    </section>
+
+    <section id="contexto">
+      <h2>Presión de contexto</h2>
+      <p><code class="inline">history</code> en <code class="inline">completion()</code> no es decoración — <strong>es parte del input de inferencia</strong>. Todo lo que entra en la ventana debe procesarse antes de generar la respuesta a la última pregunta:</p>
+<pre class="diagram">system / template (interno al runtime)
++
+conversation history
++
+retrieved context (RAG — Clase 6)
++
+tool results (clases posteriores)
++
+current user message
++
+generation budget (predict)
+=
+presión finita de contexto</pre>
+      <p>History más larga implica más trabajo de <strong>prompt processing</strong> antes del primer token de respuesta. Eso puede aumentar TTFT aunque el tok/s de decode se mantenga similar. <strong>No afirmes una relación lineal universal</strong> — mide en tu caso.</p>
+      <p>En <code class="inline">examples/03-context-experiment.ts</code> comparamos proxy de aplicación (message count, character count) porque no inventamos APIs de token count.</p>
+    </section>
+
+    <section id="ttft">
+      <h2>TTFT, tok/s y latencia total</h2>
+
+      <h3>TTFT</h3>
+      <p><strong>Time To First Token</strong> — tiempo desde que inicias la request hasta el primer output visible (<code class="inline">contentDelta</code>).</p>
+      <p>Antes del primer token ocurre, entre otras cosas:</p>
+      <ul>
+        <li>serialización/envío al worker (cliente)</li>
+        <li>tokenización del prompt</li>
+        <li>evaluación del prompt (prefill / attention sobre el contexto existente)</li>
+        <li>primer paso de decode + sampling</li>
+      </ul>
+      <p>TTFT explica la "espera en silencio" del usuario. Es la métrica clave de <strong>responsividad percibida</strong> al inicio.</p>
+
+      <h3>Tokens por segundo</h3>
+      <p><strong>Throughput de decode</strong> — qué tan rápido llegan tokens <em>después</em> del primero. QVAC expone esto vía <code class="inline">final.stats.tokensPerSecond</code> y eventos <code class="inline">completionStats</code>. Describe la fase de <strong>generación sostenida</strong>, no la espera inicial.</p>
+
+      <h3>Latencia total</h3>
+<pre class="diagram">TTFT + (tokens generados / throughput efectivo) + overhead de cliente/stream</pre>
+      <p>Dos configs con el mismo tok/s pueden tener latencia total muy distinta si difieren en TTFT o en cuántos tokens producen (<code class="inline">predict</code>, stop temprano por <code class="inline">eos</code>).</p>
+      <div class="block">
+        <div class="block-title">Regla de oro</div>
+        <div class="block-body"><strong>TTFT ≠ total latency ≠ tokens/sec</strong></div>
+      </div>
+    </section>
+
+    <section id="kvcache">
+      <h2>KV cache</h2>
+      <p>En conversaciones multi-turn, re-evaluar todo el history desde cero en cada mensaje es costoso. El <strong>KV cache</strong> guarda <strong>attention state</strong> (keys/values) ya computado para prefijos compatibles, para que el follow-up procese principalmente material nuevo.</p>
+<pre class="diagram">Turn 1 history
+    ↓
+attention state computed
+    ↓
+cache stored
+    ↓
+Turn 2 extiende history
+    ↓
+reuse compatible previous state
+    ↓
+process primarily new tokens</pre>
+      <p><strong>KV cache NO es:</strong></p>
+      <ul>
+        <li>una base de datos de memoria conversacional semántica;</li>
+        <li>RAG ni almacenamiento de largo plazo;</li>
+        <li>garantía de speedup dramático en prompts diminutos.</li>
+      </ul>
+
+      <h3>Modos en QVAC (v0.18.x)</h3>
+      <table class="booktabs">
+        <thead><tr><th>Valor de <code class="inline">kvCache</code></th><th>Comportamiento</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">false</code> / <code class="inline">undefined</code></td><td>Sin cache (default)</td></tr>
+          <tr><td><code class="inline">true</code></td><td>Auto-cache gestionado por SDK (clave derivada del history)</td></tr>
+          <tr><td><code class="inline">"mi-sesion-123"</code></td><td>Cache caller-managed; identidad de sesión explícita</td></tr>
+        </tbody>
+      </table>
+      <p>Caches auto: retención documentada (24 h idle, cuotas de disco). Caches con clave string: limpiables con <code class="inline">deleteCache({ kvCacheKey })</code>.</p>
+      <p>Para follow-ups, construye <code class="inline">history</code> incluyendo turnos previos; usa <code class="inline">final.cacheableAssistantContent</code> cuando el runtime lo exponga para contenido cacheable.</p>
+
+      <h3>Caller-managed vs SDK-managed</h3>
+      <p><strong>SDK-managed (<code class="inline">kvCache: true</code>):</strong> conveniente para una sesión; no controlas la clave para cleanup manual.</p>
+      <p><strong>Caller-managed (string):</strong> tú defines identidad de sesión — crítico si multiplexas usuarios o reinicias conversaciones. Permite <code class="inline">deleteCache({ kvCacheKey, modelId? })</code>.</p>
+      <p>Error común: reutilizar clave de sesión con history incompatible → comportamiento inesperado o cache miss.</p>
+    </section>
+
+    <section id="profiler">
+      <h2>Profiler</h2>
+      <p>QVAC expone un <strong>profiler process-wide</strong> del SDK:</p>
+<pre class="codebox"><code>import { profiler } from "@qvac/sdk";
+
+profiler.enable({
+  mode: "verbose",
+  includeServerBreakdown: true,
+  includeResourceGauges: true,
+  operationFilters: ["completion"],
+});
+// ... operaciones ...
+console.log(profiler.exportSummary());
+profiler.disable();
+profiler.clear();</code></pre>
+      <p>Tres capas de evidencia — no las mezcles:</p>
+      <table class="booktabs">
+        <thead><tr><th>Fuente</th><th>Qué mide</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">completionStats</code> / <code class="inline">final.stats</code></td><td>Stats de esa generación (tok/s, tokens)</td></tr>
+          <tr><td>Profiler (<code class="inline">exportTable</code>, <code class="inline">exportJSON</code>)</td><td>Timing agregado por operación RPC/handler</td></tr>
+          <tr><td>Resource gauges (opt-in)</td><td>Señales de recursos cuando el backend las soporta</td></tr>
+        </tbody>
+      </table>
+      <p>El profiler añade overhead diagnóstico. Es evidencia <strong>local y contextual</strong>, no benchmark universal de QVAC.</p>
+    </section>
+
+    <section id="worked">
+      <h2>Worked Example</h2>
+      <p>Corre mentalmente <code class="inline">examples/01-streaming-events.ts</code>:</p>
+      <ol>
+        <li><code class="inline">loadModel</code> — modelo residente.</li>
+        <li><code class="inline">completion({ stream: true })</code> — inicia run.</li>
+        <li>Primer <code class="inline">contentDelta</code> — marca TTFT observado.</li>
+        <li>Más <code class="inline">contentDelta</code> — decode en curso.</li>
+        <li><code class="inline">completionStats</code> — runtime reporta tok/s.</li>
+        <li><code class="inline">completionDone</code> — stream cerrado.</li>
+        <li><code class="inline">await run.final</code> — texto completo + stopReason + stats agregadas.</li>
+      </ol>
+      <p>Pregunta de checkpoint: ¿qué pasó <strong>antes</strong> del primer <code class="inline">contentDelta</code>?</p>
+      <p>Ejecutables completos en <a href="../class-03-local-inference-fundamentals/examples/">examples/</a>.</p>
+    </section>
+
+    <section id="breakit">
+      <h2>Break It</h2>
+      <p><strong>Escenario:</strong> prompt pide respuesta larga; <code class="inline">generationParams.predict</code> es intencionalmente bajo (p. ej. 8).</p>
+      <p><strong>Predicción antes de ejecutar:</strong></p>
+      <ul>
+        <li>¿Qué evento confirma el fin?</li>
+        <li>¿Qué <code class="inline">stopReason</code> esperas?</li>
+      </ul>
+      <p><strong>Evidencia:</strong></p>
+      <ul>
+        <li><code class="inline">completionDone</code></li>
+        <li><code class="inline">final.stopReason</code> (típicamente <code class="inline">"length"</code>)</li>
+        <li>contenido parcial truncado</li>
+        <li>stats</li>
+      </ul>
+      <p><strong>Transferencia:</strong> contrasta con <code class="inline">"eos"</code> (fin natural), <code class="inline">"cancelled"</code> (cancel explícito) y <code class="inline">"error"</code> (fallo real).</p>
+    </section>
+
+    <section id="measure">
+      <h2>Measure It</h2>
+      <p>Mínimo en tu Inference Experiment Report:</p>
+      <table class="booktabs">
+        <thead><tr><th>Medición</th><th>Cómo obtenerla</th></tr></thead>
+        <tbody>
+          <tr><td>TTFT</td><td>wall-clock al primer <code class="inline">contentDelta</code></td></tr>
+          <tr><td>Duración total</td><td>wall-clock request start → <code class="inline">final</code></td></tr>
+          <tr><td>tok/s</td><td><code class="inline">final.stats.tokensPerSecond</code></td></tr>
+          <tr><td>stopReason</td><td><code class="inline">final.stopReason</code></td></tr>
+          <tr><td>Condición history</td><td>message/char proxy o conteo verificado</td></tr>
+          <tr><td>Modo cache</td><td><code class="inline">kvCache</code> usado</td></tr>
+        </tbody>
+      </table>
+      <p>Etiqueta siempre resultados como <strong>de tu máquina</strong>.</p>
+      <p>Lab completo en <a href="../class-03-local-inference-fundamentals/lab/README.md">lab/README.md</a>.</p>
+    </section>
+
+    <section id="misconcepciones">
+      <h2>Misconcepciones comunes</h2>
+      <div class="block alert"><div class="block-title">1</div><div class="block-body">
+        <strong>"Streaming hace que el modelo genere más rápido."</strong> No; expone progreso. tok/s del runtime puede ser idéntico con o sin streaming UX.</div></div>
+      <div class="block alert"><div class="block-title">2</div><div class="block-body">
+        <strong>"tok/s cuenta toda la historia de latencia."</strong> No; ignora TTFT y tiempo de prefill.</div></div>
+      <div class="block alert"><div class="block-title">3</div><div class="block-body">
+        <strong>"Subir temperature cambia lo que el modelo sabe."</strong> No; cambia cómo elige entre tokens probables.</div></div>
+      <div class="block alert"><div class="block-title">4</div><div class="block-body">
+        <strong>"Si cabe en contexto, es gratis."</strong> No; más contexto = más trabajo de procesamiento.</div></div>
+      <div class="block alert"><div class="block-title">5</div><div class="block-body">
+        <strong>"KV cache = el modelo recuerda toda la conversación para siempre."</strong> No; reutiliza estado de atención compatible, con límites de retención y cuota.</div></div>
+      <div class="block alert"><div class="block-title">6</div><div class="block-body">
+        <strong>"Mismo modelo = misma velocidad en todos los dispositivos."</strong> Falso; backend, RAM, GPU/CPU y carga del sistema cambian todo.</div></div>
+    </section>
+
+    <section id="conexiones">
+      <h2>Conexiones de arquitectura</h2>
+      <ul>
+        <li><strong>Clase 2:</strong> el modelo cargado es un artefacto GGUF con lifecycle; hoy observamos qué hace <strong>residente en memoria</strong>.</li>
+        <li><strong>Clase 4 — Offline Chat:</strong> convierte estos primitivos en app persistente con history y UX.</li>
+        <li><strong>Clase 6 — RAG:</strong> consume presupuesto de contexto con chunks recuperados; la misma ventana finita de hoy.</li>
+      </ul>
+    </section>
+
+    <section id="checkpoint">
+      <h2>Checkpoint</h2>
+      <ol>
+        <li><em>(Explicación)</em> ¿Por qué TTFT no es lo mismo que tok/s?</li>
+        <li><em>(Aplicación)</em> Stream a los 800 ms, luego decode lento — ¿qué métrica describe cada fase?</li>
+        <li><em>(Explicación)</em> ¿Por qué streaming puede hacer sentir la app más rápida sin cambiar tok/s?</li>
+        <li><em>(Aplicación)</em> ¿Cuándo puede ayudar KV cache en un follow-up?</li>
+        <li><em>(Explicación)</em> ¿Por qué KV cache no es RAG ni memoria de largo plazo?</li>
+        <li><em>(Diagnóstico)</em> <code class="inline">stopReason: "length"</code> — ¿falló necesariamente el modelo?</li>
+        <li><em>(Diagnóstico)</em> Mismo tok/s, TTFT muy distinto — dos causas plausibles a investigar.</li>
+        <li><em>(Evaluación)</em> Diseña un experimento controlado para probar si el tamaño de contexto afecta responsividad.</li>
+      </ol>
+    </section>
+
+    <section id="takeaway">
+      <h2>Takeaway</h2>
+      <div class="block example"><div class="block-body" style="font-size:19px;">
+        <strong>La inferencia es un proceso con fases observables, no una llamada API opaca.</strong>
+        Sales de esta clase cuando puedes separar prompt latency de decode throughput, leer el event stream,
+        razonar sobre contexto y KV cache, diagnosticar stop reasons, y <strong>diseñar un experimento antes de afirmar rendimiento</strong>.
+      </div></div>
+      <p><strong>Siguiente clase:</strong> Clase 4 — Build the Offline Chat.</p>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes utilizadas</h2>
+      <ul>
+        <li>QVAC Text Generation: <a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">docs.qvac.tether.io/ai-capabilities/text-generation/</a></li>
+        <li>QVAC API Summary v0.18.x: <a href="https://docs.qvac.tether.io/reference/api/">docs.qvac.tether.io/reference/api/</a></li>
+        <li>QVAC Profiler: <a href="https://docs.qvac.tether.io/runtime/profiler/">docs.qvac.tether.io/runtime/profiler/</a></li>
+        <li>QVAC How It Works: <a href="https://docs.qvac.tether.io/about/how-it-works/">docs.qvac.tether.io/about/how-it-works/</a></li>
+        <li>QVAC Release Notes: <a href="https://docs.qvac.tether.io/reference/release-notes/">docs.qvac.tether.io/reference/release-notes/</a></li>
+        <li>llama.cpp (contexto general): <a href="https://github.com/ggml-org/llama.cpp">github.com/ggml-org/llama.cpp</a></li>
+      </ul>
+      <p>Superficie canónica: <code class="inline">events</code> + <code class="inline">final</code>. Parámetros de generación: <code class="inline">temp</code>, <code class="inline">top_k</code>, <code class="inline">top_p</code>, <code class="inline">seed</code>, <code class="inline">predict</code>.</p>
+    </section>
+  </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Pregunta esencial</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Progreso</span>
+      <div class="rail-progress-row">
+        <div class="ring" data-ring-rail="class-03" style="--pct:0;"><i>0%</i></div>
+        <p class="rail-progress-text"><a href="/class/03#dod">Definition of Done</a></p>
+      </div>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/03">Clase</a></li>
+        <li><a href="/class-03-local-inference-fundamentals/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-03-local-inference-fundamentals/lab/README.md">Lab</a></li>
+        <li><a href="/class-03-local-inference-fundamentals/challenge/challenge.md">Challenge</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 3 · The Local-First AI Systems Masterclass</span>
+    <span><a href="/class/03">← Volver a la página de la Clase 3</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

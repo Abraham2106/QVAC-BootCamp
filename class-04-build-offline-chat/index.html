@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clase 4 · Build the Offline Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/01">Clase 1</a>
+      <a href="/class/02">Clase 2</a>
+      <a href="/class/04">Clase 4</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" data-class-page data-progress-class="class-04">
+
+<!-- ================= HERO ================= -->
+<section class="class-hero container">
+  <span class="kicker">Clase 04 · Módulo 1 — Your First Local Token</span>
+  <h1>Build the Offline Chat</h1>
+  <p class="eq">"¿Qué ocurre entre un prompt y el siguiente token generado, y cómo podemos observar las consecuencias?"</p>
+  <div style="display:flex; gap:26px; align-items:center; margin-top:28px; flex-wrap:wrap;">
+    <div class="ring" data-ring="class-04" style="--pct:0;"><i>0%</i></div>
+    <p class="small" style="font-family:var(--sans); font-size:15.5px;">Tu progreso se guarda en este navegador.
+      Marca tu avance en la Definition of Done al final.</p>
+  </div>
+
+  <nav class="anchor-tabs" aria-label="Secciones de la clase">
+    <a href="#slides">Slides</a>
+    <a href="#leccion">Lección</a>
+    <a href="#lab">Lab</a>
+    <a href="#artefactos">Artefactos</a>
+    <a href="#dod">Definition of Done</a>
+  </nav>
+</section>
+
+<!-- ================= SLIDES ================= -->
+<section class="section container" id="slides" aria-labelledby="slides-title">
+  <h2 class="stitle" id="slides-title">Presentación de la clase</h2>
+  <p class="lede" style="margin-top:14px;">24 diapositivas · tokens → autoregresivo → events/final → streaming →
+    sampling → contexto → TTFT/tok/s → KV cache → profiler → Predict/Demo → Break It/Measure It. Expande la card para navegar.</p>
+
+  <article class="slides-card" data-slides-card
+           data-slides-src="slides.html"
+           data-slides-title="Slides de la Clase 4: Build the Offline Chat"
+           data-slides-total="24">
+    <div class="slides-card__frame">
+      <div class="slides-card__preview" data-slides-preview>
+        <div class="slides-card__preview-grid" aria-hidden="true"></div>
+        <div class="slides-card__preview-body">
+          <p class="slides-card__preview-kicker">Presentación</p>
+          <p class="slides-card__preview-title">Build the Offline Chat</p>
+          <p class="slides-card__preview-meta">24 diapositivas · 16:9</p>
+          <button class="btn btn--solid slides-card__expand" type="button"
+                  data-slides-expand aria-expanded="false">Expandir presentación</button>
+        </div>
+      </div>
+      <div class="slides-card__deck embed-wrap" hidden data-slides-deck>
+        <iframe data-slides-iframe scrolling="no"></iframe>
+        <div class="embed-loading" hidden data-slides-loading><span>Cargando diapositivas…</span></div>
+      </div>
+    </div>
+    <div class="slides-card__toolbar embed-tools" hidden data-slides-toolbar>
+      <div class="embed-nav" role="group" aria-label="Navegación de diapositivas">
+        <button class="btn btn--ghost embed-nav__btn" type="button" data-slides-prev disabled aria-label="Diapositiva anterior">← Anterior</button>
+        <span class="embed-nav__count" data-slides-counter aria-live="polite">— / 24</span>
+        <button class="btn btn--ghost embed-nav__btn" type="button" data-slides-next aria-label="Diapositiva siguiente">Siguiente →</button>
+      </div>
+      <button class="btn btn--ghost" type="button" data-slides-collapse>Contraer</button>
+      <button class="btn btn--ghost" type="button" data-slides-fullscreen>⛶ Pantalla completa</button>
+      <a class="btn btn--solid" href="slides.html" target="_blank" rel="noopener">Abrir en pestaña nueva ↗</a>
+    </div>
+  </article>
+</section>
+
+<!-- ================= LECCIÓN ================= -->
+<section class="section container" id="leccion" aria-labelledby="leccion-title">
+  <h2 class="stitle" id="leccion-title">Lección canónica</h2>
+  <p class="lede" style="margin-top:14px;">Tokenización, bucle autoregresivo, superficie <code class="inline">events</code> + <code class="inline">final</code>,
+    streaming, sampling, presión de contexto, KV cache, profiler y medición — legible sin las diapositivas.</p>
+  <div class="cta-row">
+    <a class="btn btn--solid" href="../lessons/class-04.html">Leer la lección →</a>
+    <a class="btn btn--ghost" href="lesson.md">Ver Markdown fuente</a>
+  </div>
+
+  <div class="grid grid--3" style="margin-top:34px;">
+    <div class="card"><span class="num">Outcome 1–4</span>
+      <h3>Tokens + autoregresivo</h3><p>Tokens ≠ palabras, bucle token a token, prefill vs decode, sampling mapeado a <code class="inline">generationParams</code>.</p></div>
+    <div class="card"><span class="num">Outcome 5–8</span>
+      <h3>events/final + contexto</h3><p><code class="inline">contentDelta</code>, stats, <code class="inline">stopReason</code>, y qué compone la ventana finita de contexto.</p></div>
+    <div class="card"><span class="num">Outcome 9–13</span>
+      <h3>KV cache + medición</h3><p>TTFT vs tok/s vs latencia total, profiler, Break It diagnosticado, experimentos controlados.</p></div>
+  </div>
+</section>
+
+<!-- ================= LAB ================= -->
+<section class="section container" id="lab" aria-labelledby="lab-title">
+  <h2 class="stitle" id="lab-title">Lab guiado — Offline Chat Application Lab</h2>
+  <p class="lede" style="margin-top:14px;">~60–75 min. CLI TypeScript: baseline streaming medido, comparación de sampling,
+    contexto corto vs largo, KV cache on/off, Break It con <code class="inline">predict</code> limitado, reporte JSON.</p>
+  <div class="artifact card" style="margin-top:24px;">
+    <span class="tag">LAB</span>
+    <div>
+      <h3>Ocho partes + regla: <code class="inline">unloadModel</code> + <code class="inline">close()</code> al terminar sesiones de medición</h3>
+      <ul>
+        <li><a href="lab/README.md">lab/README.md</a> — guía con tabla TTFT/tok/s/stopReason</li>
+        <li><a href="lab/starter/app/src/index.ts">lab/starter/app/src/index.ts</a> — 6 TODO + auto-verificación ✔</li>
+        <li>Predicciones escritas ANTES de ejecutar (Parte 3)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ARTEFACTOS ================= -->
+<section class="section container" id="artefactos" aria-labelledby="art-title">
+  <h2 class="stitle" id="art-title">Artefactos de la clase</h2>
+  <div class="grid grid--2" style="margin-top:26px;">
+    <div class="card artifact"><span class="tag">EXAMPLES</span>
+      <div><h3>Ejemplos ejecutables mínimos</h3>
+        <ul>
+          <li><a href="examples/01-single-turn.ts">01-single-turn.ts</a> — event stream canónico + TTFT</li>
+          <li><a href="examples/02-multi-turn.ts">02-multi-turn.ts</a> — temp/seed controlado</li>
+          <li><a href="examples/03-streaming.ts">03-streaming.ts</a> — history corta vs larga</li>
+          <li><a href="examples/04-cancellation.ts">04-cancellation.ts</a> — follow-up cached vs uncached</li>
+          <li><a href="examples/05-persistence.ts">05-persistence.ts</a> — evidencia de timing con profiler</li>
+        </ul></div></div>
+    <div class="card artifact"><span class="tag">CHALLENGE</span>
+      <div><h3>Design a Responsive Local Generation Configuration</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">Un modelo, usuarios que se quejan de lentitud.
+        Define qué significa "lento", mide baseline, cambia UNA variable, compara y recomienda. Sin starter.
+        <br><a href="challenge/challenge.md">challenge/challenge.md</a>
+        · <a href="solution/solution.md">solution/solution.md</a> (instructor)</p></div></div>
+    <div class="card artifact"><span class="tag">ASSESSMENT</span>
+      <div><h3>Checkpoint + rubric</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">8 preguntas (12.5% recall) y rúbrica 6 criterios.
+        <br><a href="assessment/checkpoint.md">assessment/checkpoint.md</a>
+        · <a href="assessment/rubric.md">assessment/rubric.md</a></p></div></div>
+    <div class="card artifact"><span class="tag">INSTRUCTOR</span>
+      <div><h3>Guía + NotebookLM</h3>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:8px;">Timing 180 min, guion de demo del event stream,
+        regla de seguridad del Break It, y 4 prompts de repaso con fuentes enfocadas.
+        <br><a href="instructor/instructor-guide.md">instructor/instructor-guide.md</a>
+        · <a href="notebooklm/podcast-prompt.md">notebooklm/</a></p></div></div>
+  </div>
+</section>
+
+<!-- ================= DOD ================= -->
+<section class="section container" id="dod" aria-labelledby="dod-title">
+  <h2 class="stitle" id="dod-title">Definition of Done</h2>
+  <p class="lede" style="margin-top:14px;">Marca cada evidencia cuando la tengas. Se guarda en este navegador.</p>
+  <ul class="dod" style="max-width:860px;">
+    <li><label><input type="checkbox" data-item="streaming"><span>Una corrida streaming interpretando contentDelta → completionStats → completionDone</span></label></li>
+    <li><label><input type="checkbox" data-item="sampling"><span>Comparación de sampling (mismo prompt, variable controlada)</span></label></li>
+    <li><label><input type="checkbox" data-item="contexto"><span>Experimento de contexto (history corta vs larga)</span></label></li>
+    <li><label><input type="checkbox" data-item="kvcache"><span>Comparación KV cache on vs off en follow-up</span></label></li>
+    <li><label><input type="checkbox" data-item="breakit"><span>Diagnóstico Break It con evidencia (stopReason, stats, contenido parcial)</span></label></li>
+    <li><label><input type="checkbox" data-item="medicion"><span>Conclusión basada en medición — sin benchmarks universales fabricados</span></label></li>
+  </ul>
+  <div class="block example" style="max-width:860px;">
+    <div class="block-title">Siguiente parada</div>
+    <div class="block-body">Clase 4 — Build the Offline Chat: convierte estos primitivos en app persistente
+    con history, UX de streaming y sesión offline.</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>The Local-First AI Systems Masterclass · QVAC SDK v0.18.x / v0.18.1 · verificado 2026-08-25</span>
+    <span><a href="/curriculum">← Currículo completo</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

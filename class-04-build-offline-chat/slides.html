@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clase 4 — Build the Offline Chat</title>
+
+<!-- ============================================================
+     CLASE 4 · BUILD THE OFFLINE CHAT
+     ------------------------------------------------------------
+     FILOSOFÍA slides-vs-lesson (ver docs/slides-vs-lesson.md):
+     Complementarias a lesson.md — visual, hooks, una idea/slide.
+     NO copiar párrafos del canónico. Detalle, código y rúbrica
+     viven en la lección; aquí: modelo mental, demo beats, anti-patrones.
+
+     Narrativa: Hook app → 3 ciclos → estado vs runtime → commit →
+     cancel → persist → restart offline → Predict/Demo → Break/Measure
+     → DoD → Puente Clase 5.
+     Baseline: QVAC SDK v0.18.x · 22 diapositivas · 1920×1080.
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --stage-bg: #101010;
+    --paper: #FBFAF6;
+    --ink: #1A1A1A;
+    --blue: #1E4B8F;
+    --blue-tint: #EDF2F9;
+    --red: #B22222;
+    --red-tint: #F9EDED;
+    --green: #2E7D46;
+    --green-tint: #EEF6F0;
+    --hairline: rgba(26,26,26,.22);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    overflow: hidden; transform-origin: 0 0; background: var(--paper);
+}
+.slide {
+    position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden;
+    display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--paper);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative; display: block !important; visibility: visible !important;
+        opacity: 1 !important; pointer-events: auto !important;
+        width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .progress-bar, .edit-toggle, .edit-hotzone, .footline { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+.slide { font-family: 'STIX Two Text', Georgia, serif; color: var(--ink); }
+.frame { position: absolute; inset: 70px 110px 130px; display: flex; flex-direction: column; font-size: 31px; line-height: 1.5; }
+h2.frametitle {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 58px;
+    letter-spacing: -.01em; color: var(--blue); line-height: 1.08;
+}
+h2.frametitle::after {
+    content: ""; display: block; width: 100%; height: 2.5px; margin-top: 12px;
+    background: linear-gradient(90deg, var(--blue) 0 38%, var(--hairline) 38% 100%);
+}
+.body { margin-top: 30px; font-size: 31px; line-height: 1.55; flex: 1; min-height: 0; }
+em.term { font-style: italic; color: var(--blue); }
+.small { font-size: 25px; color: rgba(26,26,26,.65); }
+ul.itemize { list-style: none; }
+ul.itemize li { position: relative; padding-left: 42px; margin-top: 20px; }
+ul.itemize li::before {
+    content: "•"; position: absolute; left: 10px; top: 0;
+    color: var(--blue); font-size: inherit; line-height: inherit;
+}
+ol.enumerate { list-style: none; counter-reset: enum; }
+ol.enumerate li {
+    counter-increment: enum; position: relative; padding-left: 62px;
+    margin-top: 14px; margin-bottom: 22px; line-height: 1.5;
+}
+ol.enumerate li:last-child { margin-bottom: 0; }
+ol.enumerate li::before {
+    content: counter(enum); position: absolute; left: 0; top: 2px;
+    width: 42px; height: 42px; border-radius: 50%; background: var(--blue); color: var(--paper);
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 23px;
+    display: flex; align-items: center; justify-content: center;
+}
+.block { margin-top: 26px; border: 1px solid var(--hairline); background: var(--blue-tint); }
+.block .block-title {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 27px;
+    background: var(--blue); color: var(--paper); padding: 12px 28px;
+}
+.block .block-body { padding: 22px 28px; font-size: 28px; line-height: 1.5; }
+.block.example { background: var(--green-tint); }
+.block.example .block-title { background: var(--green); }
+.block.alert { background: var(--red-tint); }
+.block.alert .block-title { background: var(--red); }
+table.booktabs { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: 27px; }
+.booktabs thead tr { border-top: 3px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.booktabs th { font-family: 'Fira Sans', sans-serif; font-weight: 600; text-align: left; padding: 15px 20px; font-size: 25px; }
+.booktabs tbody tr:last-child { border-bottom: 3px solid var(--ink); }
+.booktabs td { padding: 14px 20px; line-height: 1.35; }
+.booktabs tbody tr + tr { border-top: 1px solid var(--hairline); }
+.booktabs code { font-size: 23px; }
+pre.verbatim {
+    margin-top: 26px; background: #F3F1EA; border: 1px solid var(--hairline);
+    border-left: 6px solid var(--blue); padding: 24px 30px;
+    font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.52;
+    white-space: pre-wrap; color: #14304f;
+}
+pre.verbatim .cm { color: #7a8899; }
+pre.verbatim .kw { color: var(--blue); font-weight: 700; }
+pre.verbatim .str { color: var(--green); }
+code.inline { font-family: 'JetBrains Mono', monospace; font-size: .82em;
+    background: #F3F1EA; border: 1px solid var(--hairline); padding: 2px 8px; color: #14304f; }
+pre.diagram { font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.45;
+    color: var(--ink); padding: 10px 0 0; margin-top: 22px; white-space: pre; }
+pre.diagram b { color: var(--blue); }
+pre.diagram .dim { color: #7a8899; }
+.footline {
+    position: absolute; left: 110px; right: 110px; bottom: 44px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'Fira Sans', sans-serif; font-size: 20px; color: rgba(26,26,26,.55);
+    border-top: 1.5px solid var(--hairline); padding-top: 14px;
+}
+.footline .sec { color: var(--blue); font-weight: 500; }
+.footline .pageno { font-variant-numeric: tabular-nums; }
+.slide--divider { background: var(--blue); }
+.slide--divider .frame { justify-content: center; align-items: flex-start; }
+.divider-kicker { font-family: 'Fira Sans', sans-serif; font-size: 30px; letter-spacing: .28em;
+    text-transform: uppercase; color: rgba(251,250,246,.75); }
+.divider-num { font-family: 'STIX Two Text', serif; font-size: 300px; font-weight: 700;
+    color: rgba(251,250,246,.28); line-height: 1; }
+.divider-title { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 96px;
+    color: var(--paper); line-height: 1.02; letter-spacing: -.01em; margin-top: -40px; }
+.slide--divider .footline { border-top-color: rgba(251,250,246,.3); color: rgba(251,250,246,.7); }
+.slide--divider .footline .sec { color: var(--paper); }
+.activity-word { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 150px;
+    color: var(--blue); letter-spacing: -.02em; line-height: 1; }
+.activity-sub { font-size: 33px; margin-top: 26px; max-width: 1450px; line-height: 1.5; }
+.title-slide .frame { justify-content: center; align-items: center; text-align: center; }
+.title-course { font-family: 'Fira Sans', sans-serif; font-size: 29px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--red); font-weight: 600; }
+.title-main { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 104px;
+    color: var(--blue); letter-spacing: -.015em; line-height: 1.04; margin-top: 34px; }
+.title-sub { font-size: 41px; margin-top: 30px; font-style: italic; color: rgba(26,26,26,.8); max-width: 1400px; }
+.title-meta { margin-top: 66px; font-family: 'Fira Sans', sans-serif; font-size: 26px;
+    color: rgba(26,26,26,.65); display: flex; gap: 26px; align-items: baseline; flex-wrap: wrap; justify-content: center; }
+.title-meta .dot { color: var(--blue); }
+.title-rule { width: 220px; height: 3px; background: var(--blue); margin-top: 48px; }
+.reveal { opacity: 0; transform: translateY(26px);
+    transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.d1 { transition-delay: .07s; } .d2 { transition-delay: .15s; } .d3 { transition-delay: .23s; }
+.d4 { transition-delay: .31s; } .d5 { transition-delay: .39s; } .d6 { transition-delay: .47s; }
+.d7 { transition-delay: .55s; } .d8 { transition-delay: .63s; }
+.progress-bar { position: fixed; top: 0; left: 0; height: 6px; width: 0%; background: var(--blue); z-index: 1200; transition: width .4s ease; }
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 18px; right: 18px; opacity: 0; pointer-events: none;
+    transition: opacity .3s ease; z-index: 10001; background: var(--blue); color: var(--paper);
+    border: none; font-family: 'Fira Sans', sans-serif; font-size: 16px;
+    padding: 11px 20px; cursor: pointer;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { background: var(--red); }
+body.editing .slide [contenteditable="true"] { outline: 1.5px dashed var(--blue); outline-offset: 3px; min-width: 24px; }
+body.editing .slide--divider [contenteditable="true"] { outline-color: var(--paper); }
+.checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 50px; margin-top: 28px; }
+.checklist li { list-style: none; position: relative; padding-left: 48px; font-size: 28px; }
+.checklist li::before { content: "☐"; position: absolute; left: 0; color: var(--blue); font-size: 32px; line-height: 1; }
+</style>
+<link rel="stylesheet" href="../assets/slides.css">
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- SLIDE 01 · PORTADA -->
+<section class="slide title-slide">
+  <div class="frame">
+    <div class="title-course reveal d1">The Local-First AI Systems Masterclass</div>
+    <div class="title-main reveal d2">De script<br>a conversación</div>
+    <div class="title-sub reveal d3">Hoy construyes la máquina de estados — no otro demo de tokens.</div>
+    <div class="title-rule reveal d4"></div>
+    <div class="title-meta reveal d5">
+      <span>Módulo 1</span><span class="dot">·</span>
+      <span>Clase 4 de 12</span><span class="dot">·</span>
+      <span>Build the Offline Chat</span><span class="dot">·</span>
+      <span>2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 02 · PREGUNTA ESENCIAL -->
+<section class="slide">
+  <div class="frame">
+    <p class="small reveal d1" style="font-family:'Fira Sans';letter-spacing:.2em;text-transform:uppercase;">Pregunta esencial</p>
+    <h2 class="frametitle reveal d2" style="font-size:72px; max-width:1600px;">¿Cómo conviertes inferencia local en un chat <em class="term">confiable</em>?</h2>
+    <p class="body reveal d3" style="flex:none; margin-top:40px; font-size:34px;">Estado · interrupciones · restart · modo avión.<br>No basta con llamar <code class="inline">completion()</code> otra vez.</p>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Intro</span><span class="pageno">02 / 22</span></div>
+</section>
+
+<!-- SLIDE 03 · POR QUÉ IMPORTA -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Un script no es un producto</h2>
+    <div class="body" style="display:grid; grid-template-columns:1fr 1fr; gap:50px;">
+<pre class="diagram reveal d2"><b>SCRIPT (Clase 1–3)</b>
+
+prompt → completion
+→ imprimir → fin
+
+<b>una llamada</b>
+<b>sin memoria</b>
+<b>sin política</b></pre>
+<pre class="diagram reveal d3"><b>CHAT (Clase 4)</b>
+
+historial + request
++ buffer + commit
++ persist + restart
+
+<b>máquina de estados</b>
+<b>alrededor de inferencia</b></pre>
+    </div>
+    <div class="block example reveal d4">
+      <div class="block-title">Analogía de cabina</div>
+      <div class="block-body">El piloto no pregunta "¿funciona el motor?" — pregunta "¿sobrevive el <b>vuelo completo</b> si corto comunicaciones?" Tu chat debe sobrevivir cancelaciones y reinicios.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Por qué</span><span class="pageno">03 / 22</span></div>
+</section>
+
+<!-- SLIDE 04 · DIVIDER §1 -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 1</div>
+    <div class="divider-num reveal d2">01</div>
+    <div class="divider-title reveal d3">Tres ciclos de vida</div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Arquitectura</span><span class="pageno">04 / 22</span></div>
+</section>
+
+<!-- SLIDE 05 · MODELO MENTAL -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Tres relojes — no los mezcles</h2>
+<pre class="diagram reveal d2" style="font-size:24px;"><b>MODELO</b>     find → load → reuse → unload → close
+             <span class="dim">(activo pesado · una carga)</span>
+
+<b>REQUEST</b>    completion → events → final / cancel
+             <span class="dim">(un turno · requestId propio)</span>
+
+<b>CONVERSACIÓN</b>  load history → user → generate → commit → persist
+             <span class="dim">(sobrevive requests · estado producto)</span></pre>
+    <p class="small reveal d3" style="margin-top:24px;">Generar es el eslabón donde los tres se encuentran — pero cada uno tiene reglas distintas.</p>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§1 Ciclos</span><span class="pageno">05 / 22</span></div>
+</section>
+
+<!-- SLIDE 06 · APP VS QVAC STATE -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">¿Quién posee qué?</h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th>Tu aplicación</th><th>QVAC / runtime</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td>historial de chat</td><td>pesos cargados</td></tr>
+        <tr class="reveal d4"><td>transcript en disco</td><td>KV cache</td></tr>
+        <tr class="reveal d5"><td>requestId activo</td><td>inferencia en vuelo</td></tr>
+        <tr class="reveal d6"><td>política de commit</td><td>stats por completion</td></tr>
+      </tbody>
+    </table>
+    <div class="block alert reveal d7">
+      <div class="block-title">Test mental</div>
+      <div class="block-body">Borra el JSON del chat pero deja el modelo: pierdes conversación, puedes inferir. Borra el modelo pero deja el JSON: tienes texto muerto.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§1 Ciclos</span><span class="pageno">06 / 22</span></div>
+</section>
+
+<!-- SLIDE 07 · HISTORY -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">El modelo no recuerda solo</h2>
+    <ul class="itemize">
+      <li class="reveal d2">Multi-turn = pasas <code class="inline">history[]</code> en cada call</li>
+      <li class="reveal d3">Sin historial explícito → amnesia entre turnos</li>
+      <li class="reveal d4">Historial = <b>estado de producto</b>, no memoria mágica</li>
+    </ul>
+    <div class="block reveal d5">
+      <div class="block-title">Anti-patrón en rojo</div>
+      <div class="block-body">Confiar en que "el modelo ya sabe" lo del turno anterior. Eso es bug de arquitectura, no feature.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§1 Ciclos</span><span class="pageno">07 / 22</span></div>
+</section>
+
+<!-- SLIDE 08 · DIVIDER §2 -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 2</div>
+    <div class="divider-num reveal d2">02</div>
+    <div class="divider-title reveal d3">Stream vs commit</div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Commit</span><span class="pageno">08 / 22</span></div>
+</section>
+
+<!-- SLIDE 09 · PROVISIONAL VS COMMITTED -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Dos capas de verdad</h2>
+<pre class="diagram reveal d2" style="font-size:28px;">events / contentDelta
+        ↓
+<b>BUFFER PROVISIONAL</b>  ← pantalla · crece en vivo
+        ↓
+   await final
+        ↓
+<b>TURNO COMPROMETIDO</b>  ← history[] · JSON · restart</pre>
+    <p class="body reveal d3" style="flex:none; margin-top:20px;">Renderizar ≠ persistir. La UX ve el buffer; la conversación solo avanza tras commit.</p>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§2 Commit</span><span class="pageno">09 / 22</span></div>
+</section>
+
+<!-- SLIDE 10 · COMMIT BOUNDARY -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Árbol de commit</h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th><code class="inline">stopReason</code></th><th>¿Al historial?</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td><code class="inline">eos</code> · <code class="inline">length</code> · <code class="inline">stopSequence</code></td><td style="color:var(--green)"><b>Sí</b></td></tr>
+        <tr class="reveal d4"><td><code class="inline">cancelled</code></td><td style="color:var(--red)"><b>No</b> (política tuya)</td></tr>
+        <tr class="reveal d5"><td>error mid-stream</td><td style="color:var(--red)"><b>No</b></td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d6" style="margin-top:22px;">Defiende tu política por escrito antes de codificar — no hay respuesta universal.</p>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§2 Commit</span><span class="pageno">10 / 22</span></div>
+</section>
+
+<!-- SLIDE 11 · CANCELACIÓN -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Cancelar no es fallar</h2>
+    <ul class="itemize">
+      <li class="reveal d2"><code class="inline">cancel({ requestId })</code> — acción de producto</li>
+      <li class="reveal d3">Usuario pulsa stop → normal, no excepción genérica</li>
+      <li class="reveal d4"><code class="inline">length</code> ≠ cancel · <code class="inline">error</code> ≠ cancel</li>
+    </ul>
+    <div class="block alert reveal d5">
+      <div class="block-title">Pregunta de aula</div>
+      <div class="block-body">Cancelaste tras 40 caracteres streamados. ¿Van al JSON? <b>Tú decides</b> — pero debe ser consistente y documentado.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§2 Commit</span><span class="pageno">11 / 22</span></div>
+</section>
+
+<!-- SLIDE 12 · DIVIDER §3 -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 3</div>
+    <div class="divider-num reveal d2">03</div>
+    <div class="divider-title reveal d3">Persistir y volver</div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Persistencia</span><span class="pageno">12 / 22</span></div>
+</section>
+
+<!-- SLIDE 13 · PERSISTENCIA -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">QVAC no guarda tu chat</h2>
+    <ul class="itemize">
+      <li class="reveal d2">JSON local · schema versionado</li>
+      <li class="reveal d3">Escritura atómica: temp + rename</li>
+      <li class="reveal d4">Validar al cargar · corrupción = mensaje claro</li>
+    </ul>
+    <div class="block example reveal d5">
+      <div class="block-title">Solo lo committed</div>
+      <div class="block-body">El archivo refleja turnos completos — nunca el buffer a medias del stream.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§3 Persistencia</span><span class="pageno">13 / 22</span></div>
+</section>
+
+<!-- SLIDE 14 · RESTART OFFLINE -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Prueba modo avión (Clase 4)</h2>
+<pre class="diagram reveal d2" style="font-size:27px;">1. close app
+2. <b>desconectar red</b>
+3. restart → cargar JSON
+4. loadModel desde caché
+5. nuevo completion → ¿texto?
+
+<span class="dim">Precondición: modelo ya provisionado (Clase 1)</span></pre>
+    <p class="small reveal d3" style="margin-top:20px;">Offline ≠ nunca necesité red. Reutilizas lo que ya está en disco.</p>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§3 Persistencia</span><span class="pageno">14 / 22</span></div>
+</section>
+
+<!-- SLIDE 15 · SHUTDOWN -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Apagar con gracia</h2>
+<pre class="diagram reveal d2" style="font-size:28px;">cancel request activo (si hay)
+    → commit / persist pendiente
+    → unloadModel
+    → close()</pre>
+    <ul class="itemize" style="margin-top:16px;">
+      <li class="reveal d3">Métricas por turno: TTFT · duración · tok/s · stopReason</li>
+      <li class="reveal d4">Etiqueta: <b>de tu máquina</b>, no benchmark universal</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§3 Persistencia</span><span class="pageno">15 / 22</span></div>
+</section>
+
+<!-- SLIDE 16 · DIVIDER §4 -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 4</div>
+    <div class="divider-num reveal d2">04</div>
+    <div class="divider-title reveal d3">Predict · Demo</div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Experimento</span><span class="pageno">16 / 22</span></div>
+</section>
+
+<!-- SLIDE 17 · PREDICT -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1"># Predict</div>
+    <p class="activity-sub reveal d2">Escribe antes de ejecutar — compromiso con tu política de estado.</p>
+    <ol class="enumerate" style="margin-top:20px;">
+      <li class="reveal d3">Cancel a mitad de stream — ¿persisten los 40 chars?</li>
+      <li class="reveal d4">Restart sin red sin JSON — ¿qué falla primero?</li>
+      <li class="reveal d5">Escribes al JSON durante el stream — ¿qué ves tras cancel?</li>
+      <li class="reveal d6">Segundo turno sin append user — ¿por qué "olvida"?</li>
+    </ol>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§4 Predict</span><span class="pageno">17 / 22</span></div>
+</section>
+
+<!-- SLIDE 18 · LIVE DEMO BEATS -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Live demo — siete beats</h2>
+    <ol class="enumerate" style="font-size:28px;">
+      <li class="reveal d2"><code class="inline">01-single-turn</code> — baseline · pregunta: ¿history vacía?</li>
+      <li class="reveal d3"><code class="inline">02-multi-turn</code> — ¿recuerda sin history explícita?</li>
+      <li class="reveal d4"><code class="inline">03-streaming</code> — señala buffer vs commit</li>
+      <li class="reveal d5"><code class="inline">04-cancellation</code> — <code class="inline">requestId</code> + stopReason</li>
+      <li class="reveal d6"><code class="inline">05-persistence</code> — inspecciona JSON en disco</li>
+      <li class="reveal d7"><code class="inline">06-restart-offline</code> — Wi-Fi off · ¿genera?</li>
+      <li class="reveal d8">Integra en <code class="inline">app/src/</code> — loop modular</li>
+    </ol>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§4 Demo</span><span class="pageno">18 / 22</span></div>
+</section>
+
+<!-- SLIDE 19 · DIVIDER §5 -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 5</div>
+    <div class="divider-num reveal d2">05</div>
+    <div class="divider-title reveal d3">Break · Measure</div>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Experimento</span><span class="pageno">19 / 22</span></div>
+</section>
+
+<!-- SLIDE 20 · BREAK IT -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:100px;"># Break It</div>
+    <p class="activity-sub reveal d2">Starter defectuoso: persiste output <b>durante</b> el stream.</p>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Paso</th><th>Qué observar</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>Cancel a mitad</td><td>JSON con texto truncado fantasma</td></tr>
+        <tr class="reveal d5"><td>Restart</td><td>Historial corrupto semánticamente</td></tr>
+        <tr class="reveal d6"><td>Fix</td><td>Commit boundary explícita post-<code class="inline">final</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">§5 Break</span><span class="pageno">20 / 22</span></div>
+</section>
+
+<!-- SLIDE 21 · DOD PREVIEW -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Definition of Done — preview</h2>
+    <ul class="checklist itemize reveal d2">
+      <li>Multi-turn con history explícita</li>
+      <li>Streaming con buffer provisional</li>
+      <li>Cancel vía requestId</li>
+      <li>Commit solo tras terminal válido</li>
+      <li>JSON persist + atomic write</li>
+      <li>Restart offline verificado</li>
+      <li>Métricas por turno registradas</li>
+      <li>Shutdown limpio unload + close</li>
+    </ul>
+    <p class="small reveal d3" style="margin-top:28px;">Detalle completo: acceptance tests A–G en lab/README · rúbrica en assessment/</p>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">DoD</span><span class="pageno">21 / 22</span></div>
+</section>
+
+<!-- SLIDE 22 · PUENTE + TAKEAWAY -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Takeaway + puente</h2>
+    <div class="block reveal d2" style="max-width:1600px;">
+      <div class="block-title">Una frase</div>
+      <div class="block-body">Un chat confiable es una <b>máquina de estados</b> alrededor de inferencia — no un loop alrededor de <code class="inline">prompt</code>.</div>
+    </div>
+    <div class="block example reveal d3" style="max-width:1600px; margin-top:30px;">
+      <div class="block-title">Siguiente · Clase 5</div>
+      <div class="block-body">Embeddings — significado como geometría <b>fuera</b> de los pesos. Tu chat de hoy será el contenedor donde RAG (Clase 6) inyecta conocimiento privado.</div>
+    </div>
+    <p class="small reveal d4" style="margin-top:28px;">Lección completa · código · schemas: <code class="inline">lesson.md</code> (canónico)</p>
+  </div>
+  <div class="footline"><span>Offline Chat</span><span class="sec">Cierre</span><span class="pageno">22 / 22</span></div>
+</section>
+
+</main>
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Modo edición (E)">✏ EDITAR</button>
+
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.currentSlide = 0;
+        this.stage = document.getElementById('deckStage');
+        this.progressBar = document.getElementById('progressBar');
+        this.wheelLock = false;
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupEmbedBridge();
+        this.showSlide(0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(innerWidth / 1920, innerHeight / 1080);
+            this.stage.style.transform =
+                'translate(' + ((innerWidth - 1920 * f) / 2) + 'px,' + ((innerHeight - 1080 * f) / 2) + 'px) scale(' + f + ')';
+        };
+        scale();
+        addEventListener('resize', scale);
+    }
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true') return;
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide + 1); }
+            if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide - 1); }
+            if (e.key === 'Home') this.showSlide(0);
+            if (e.key === 'End') this.showSlide(this.slides.length - 1);
+        });
+    }
+    setupTouchNav() {
+        let x0 = null;
+        addEventListener('touchstart', (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+        addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 60) this.showSlide(this.currentSlide + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+    setupWheelNav() {
+        addEventListener('wheel', (e) => {
+            if (this.wheelLock || Math.abs(e.deltaY) < 30) return;
+            this.wheelLock = true;
+            this.showSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => { this.wheelLock = false; }, 700);
+        }, { passive: true });
+    }
+    setupEmbedBridge() {
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d || d.type !== 'qvac-slides') return;
+            if (d.action === 'next') this.showSlide(this.currentSlide + 1);
+            if (d.action === 'prev') this.showSlide(this.currentSlide - 1);
+            if (d.action === 'go' && typeof d.index === 'number') this.showSlide(d.index - 1);
+        });
+    }
+    notifyParent() {
+        if (window.parent === window) return;
+        window.parent.postMessage({
+            type: 'qvac-slides',
+            current: this.currentSlide + 1,
+            total: this.slides.length
+        }, '*');
+    }
+    showSlide(index) {
+        this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
+        this.slides.forEach((s, i) => {
+            s.classList.toggle('active', i === this.currentSlide);
+            s.classList.toggle('visible', i === this.currentSlide);
+        });
+        this.progressBar.style.width = ((this.currentSlide + 1) / this.slides.length * 100) + '%';
+        this.notifyParent();
+    }
+}
+
+class InlineEditor {
+    constructor(deckKey) {
+        this.deckKey = deckKey;
+        this.isActive = false;
+        this.hideTimeout = null;
+        this.toggleBtn = document.getElementById('editToggle');
+        this.bindChrome();
+        this.bindKeys();
+        this.restore();
+    }
+    targets() {
+        return document.querySelectorAll(
+            '.slide h2, .slide p, .slide td, .slide th, .slide li, .slide .block-body, .slide .block-title, .slide .title-sub, .slide .title-meta span, .slide .activity-sub'
+        );
+    }
+    bindChrome() {
+        const hotzone = document.querySelector('.edit-hotzone');
+        const showBtn = () => { clearTimeout(this.hideTimeout); this.toggleBtn.classList.add('show'); };
+        const hideBtn = () => {
+            this.hideTimeout = setTimeout(() => { if (!this.isActive) this.toggleBtn.classList.remove('show'); }, 400);
+        };
+        hotzone.addEventListener('mouseenter', showBtn);
+        hotzone.addEventListener('mouseleave', hideBtn);
+        this.toggleBtn.addEventListener('mouseenter', () => clearTimeout(this.hideTimeout));
+        this.toggleBtn.addEventListener('mouseleave', hideBtn);
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        this.toggleBtn.addEventListener('click', () => this.toggleEditMode());
+    }
+    bindKeys() {
+        document.addEventListener('keydown', (e) => {
+            const editingText = e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true';
+            if ((e.key === 'e' || e.key === 'E') && !editingText) this.toggleEditMode();
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); this.exportFile(); }
+        });
+    }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        this.toggleBtn.classList.toggle('active', this.isActive);
+        this.toggleBtn.textContent = this.isActive ? '✓ EDITANDO' : '✏ EDITAR';
+        this.targets().forEach((el) => { el.contentEditable = this.isActive ? 'true' : 'false'; });
+        if (!this.isActive) this.save();
+    }
+    save() {
+        const data = {};
+        this.targets().forEach((el, i) => { data[i] = el.innerHTML; });
+        try { localStorage.setItem('frontend-slides-' + this.deckKey, JSON.stringify(data)); } catch (err) {}
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem('frontend-slides-' + this.deckKey) || '{}');
+            this.targets().forEach((el, i) => { if (typeof data[i] === 'string') el.innerHTML = data[i]; });
+        } catch (err) {}
+    }
+    exportFile() {
+        this.save();
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = this.deckKey + '.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+new SlidePresentation();
+new InlineEditor('class-04-build-offline-chat-slides');
+
+(function () {
+    var root = document.documentElement;
+    function readLS(key) { try { return localStorage.getItem(key); } catch (err) { return null; } }
+    function apply(ui, theme) {
+        var ninja = ui === 'ninja';
+        root.classList.toggle('ninja-slides', ninja);
+        root.classList.toggle('slides-dark', !ninja && (theme || readLS('bootcamp.theme')) === 'dark');
+    }
+    var params = new URLSearchParams(location.search);
+    apply(params.get('ui') || readLS('bootcamp.uiMode'), params.get('theme'));
+    window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (!d || d.type !== 'qvac-ui') return;
+        if (window.parent !== window && e.source !== window.parent) return;
+        apply(d.ui, d.theme);
+    });
+})();
+</script>
+</body>
+</html>

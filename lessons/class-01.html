@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 1 — Airplane-Mode Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-01">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/01">Clase 1</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 01 · Módulo 1</span>
+      <h1 class="lesson-sidebar__name">Airplane-Mode Intelligence</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+    <span class="toc-head">Contenido</span>
+    <a href="#esencial">Pregunta esencial</a>
+    <a href="#outcomes">Resultados de aprendizaje</a>
+    <a href="#porque">Por qué importa</a>
+    <a href="#concepto">Concepto</a>
+    <a href="#modelo">Modelo mental</a>
+    <a href="#inside">Inside QVAC</a>
+    <a href="#hood">Under the Hood</a>
+    <a href="#worked">Worked Example</a>
+    <a href="#predict">Predict</a>
+    <a href="#build">Build</a>
+    <a href="#breakit">Break It</a>
+    <a href="#measure">Measure It</a>
+    <a href="#misconcepciones">Misconcepciones</a>
+    <a href="#conexiones">Conexiones</a>
+    <a href="#checkpoint">Checkpoint</a>
+    <a href="#takeaway">Takeaway</a>
+    <a href="#fuentes">Fuentes</a>
+  </nav>
+  </aside>
+
+  <!-- ================= ARTÍCULO ================= -->
+  <article class="lesson">
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm el 2026-08-25.
+      Revisa las release notes antes de impartir.</p>
+
+    <!-- ========== PREGUNTA ESENCIAL ========== -->
+    <section id="esencial">
+      <h2>Pregunta esencial</h2>
+      <div class="block"><div class="block-body" style="font-size:20px;">
+        ¿Qué significa <em>realmente</em> que una aplicación de IA sea local?
+      </div></div>
+      <p>No "que tiene un modo offline", no "que guarda respuestas en caché". ¿Qué tiene que estar
+      ocurriendo — y dónde — para que un modelo genere texto con el cable de red desconectado?</p>
+    </section>
+
+    <!-- ========== OUTCOMES ========== -->
+    <section id="outcomes">
+      <h2>Resultados de aprendizaje</h2>
+      <p>Al terminar esta clase puedes:</p>
+      <ol>
+        <li><strong>Distinguir</strong> entre modelo local, inferencia local, aplicación local-first y una app que solo cachea respuestas.</li>
+        <li><strong>Trazar</strong> la ruta de datos de QVAC (aplicación → SDK → worker → modelo → tokens) y ubicar cada etapa en tu máquina.</li>
+        <li><strong>Provisionar</strong> un asset de catálogo con <code class="inline">downloadAsset()</code> y reutilizarlo desde caché.</li>
+        <li><strong>Ejecutar</strong> una inferencia completamente offline después del aprovisionamiento.</li>
+        <li><strong>Clasificar</strong> las dependencias de una app de IA en locales vs. de red.</li>
+        <li><strong>Medir</strong> tamaño de descarga, tiempo de carga, latencia hasta el primer token (TTFT) y tokens/segundo.</li>
+      </ol>
+    </section>
+
+    <!-- ========== POR QUÉ IMPORTA ========== -->
+    <section id="porque">
+      <h2>Por qué importa esto</h2>
+      <p>Casi todas las aplicaciones de IA que has usado dependen del mismo patrón: tu texto viaja por
+      Internet hacia una API, una máquina remota ejecuta el modelo, y la respuesta regresa por el mismo
+      camino. Ese patrón implica autenticación, latencia de red, costos por token, límites de tasa y una
+      pregunta incómoda: <strong>¿dónde están tus datos?</strong></p>
+      <p>La IA local invierte ese patrón: los pesos del modelo viven en tu disco, la inferencia ocurre en
+      tu CPU/GPU y ningún byte de tu prompt sale del equipo. Pero "local" es una afirmación de
+      arquitectura, no una etiqueta de marketing — y como toda afirmación de arquitectura, debe poder
+      <strong>demostrarse</strong>.</p>
+      <p>Esta clase te da la demostración más pura que existe: el <em>Airplane-Mode Test</em>. Si tu
+      aplicación genera tokens con la red desactivada, era local. Si falla, tenías una dependencia oculta.</p>
+    </section>
+
+    <!-- ========== CONCEPTO ========== -->
+    <section id="concepto">
+      <h2>Concepto</h2>
+
+      <h3>Las cuatro cosas que la gente confunde con "IA local"</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Qué significa</th><th>¿Sobrevive sin red?</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Modelo local</strong></td><td>los pesos (los archivos) están en el disco del dispositivo</td><td>solo si además cargas e infieres localmente</td></tr>
+          <tr><td><strong>Inferencia local</strong></td><td>la computación que produce tokens ocurre en el dispositivo</td><td>sí — es la definición operativa</td></tr>
+          <tr><td><strong>Aplicación local-first</strong></td><td>diseñada para que su funcionalidad núcleo sobreviva sin conectividad</td><td>sí, por diseño</td></tr>
+          <tr><td><strong>App que cachea</strong></td><td>descarga assets o respuestas pero sigue dependiendo de un servicio remoto de inferencia</td><td>no</td></tr>
+        </tbody>
+      </table>
+      <p>Un <strong>modelo local</strong> sin inferencia local es solo un archivo grande. La combinación
+      completa — pesos en disco + runtime + memoria + pipeline de salida en la misma máquina — es lo que
+      hace posible el modo avión.</p>
+
+      <h3>Entrenamiento ≠ descarga ≠ carga ≠ inferencia</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart TB
+  train["ENTRENAMIENTO&lt;br/&gt;(una vez · datacenter · hace meses)"]
+  gguf["Pesos → GGUF"]
+  dl["DESCARGA&lt;br/&gt;(una vez · cuando hay red)"]
+  load["CARGA&lt;br/&gt;(cada sesión · disco → RAM/VRAM)"]
+  infer["INFERENCIA&lt;br/&gt;(por cada prompt · tokens en memoria)"]
+  train --> gguf --> dl --> load --> infer</pre>
+</div>
+      <p>Solo la <strong>descarga</strong> requiere red. Carga e inferencia son operaciones puramente
+      locales sobre archivos que ya tienes. Esta distinción es la clave de todo el curso.</p>
+
+      <h3>El Airplane-Mode Test</h3>
+      <p>Una definición práctica de IA local debe ser <em>testeable</em>:</p>
+      <ol>
+        <li>Con red disponible, descarga/provisiona el modelo.</li>
+        <li>Cárgalo y ejecútalo una vez (verifica que funciona).</li>
+        <li>Cierra la aplicación.</li>
+        <li><strong>Desconecta la red del dispositivo.</strong></li>
+        <li>Reinicia la aplicación.</li>
+        <li>Carga el modelo ya provisionado.</li>
+        <li>Genera una nueva respuesta.</li>
+      </ol>
+      <div class="block example">
+        <div class="block-title">Si el paso 7 produce texto…</div>
+        <div class="block-body">acabas de <strong>demostrar</strong> inferencia 100% local. Este test será
+        tu herramienta de verificación durante todo el bootcamp.</div>
+      </div>
+    </section>
+
+    <!-- ========== MODELO MENTAL ========== -->
+    <section id="modelo">
+      <h2>Modelo mental</h2>
+      <p>Antes de tocar código, fija este mapa mental de QVAC:</p>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart TB
+  subgraph proc["TU PROCESO"]
+    app["Tu aplicación (JS/TS)"]
+    sdk["QVAC SDK (cliente)"]
+    worker["Worker Bare (runtime de inferencia)"]
+    model["Modelo en memoria&lt;br/&gt;(pesos desde disco/caché)"]
+    app -->|"llamadas"| sdk -->|"RPC"| worker -->|"carga"| model
+  end
+  model -->|"tokens / eventos"| app</pre>
+</div>
+      <ul>
+        <li><strong>Perezoso (<em>lazy</em>):</strong> fuera del runtime Bare, el SDK arranca el worker Bare solo en la primera operación que lo necesita — no al importar.</li>
+        <li><strong>Compartido (<em>shared</em>):</strong> el mismo worker se reutiliza para operaciones subsecuentes. En Bare mismo, las peticiones corren in-process.</li>
+        <li><strong>Residente:</strong> los modelos pueden permanecer cargados hasta que tú los descargas explícitamente. Cargar es caro; hacerlo una vez y reutilizar es la estrategia normal.</li>
+      </ul>
+    </section>
+
+    <!-- ========== INSIDE QVAC ========== -->
+    <section id="inside">
+      <h2>Inside QVAC</h2>
+      <p>Las cuatro funciones que gobiernan esta clase (todas DOCUMENTADAS en v0.18.x):</p>
+
+      <h3><code class="inline">downloadAsset()</code> — provisionar sin cargar</h3>
+<pre class="codebox"><code>import { downloadAsset, LLAMA_3_2_1B_INST_Q4_0 } from "@qvac/sdk";
+
+const op = downloadAsset({
+  assetSrc: LLAMA_3_2_1B_INST_Q4_0,
+  onProgress: (p) => console.log(`${p.percentage.toFixed(0)}%`),
+});
+// op.requestId está disponible sincrónicamente (para pausar con cancel()).
+const assetId = await op;</code></pre>
+      <ul>
+        <li>Descarga el asset <strong>sin</strong> cargarlo en memoria: la forma explícita de preparar offline.</li>
+        <li>Acepta constantes de catálogo, URLs o rutas <code class="inline">pear://</code>.</li>
+        <li>Las descargas son <strong>reanudables por defecto</strong>: los parciales van al disco y la próxima llamada continúa donde quedó.</li>
+      </ul>
+
+      <h3><code class="inline">loadModel()</code> — del caché a la memoria</h3>
+<pre class="codebox"><code>import { loadModel, LLAMA_3_2_1B_INST_Q4_0 } from "@qvac/sdk";
+
+const modelId = await loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});</code></pre>
+      <div class="block">
+        <div class="block-title">Por qué esto funciona offline</div>
+        <div class="block-body">Cuando <code class="inline">modelSrc</code> es una constante de catálogo,
+        <code class="inline">loadModel()</code> consulta primero el caché configurado, valida los archivos
+        contra tamaño y checksum empaquetados en el catálogo, y si son válidos carga <strong>sin contactar
+        el registro</strong>. Detalle crítico: quien descarga y quien carga deben usar el mismo
+        <code class="inline">cacheDirectory</code>.</div>
+      </div>
+
+      <h3><code class="inline">completion()</code> — producir tokens</h3>
+<pre class="codebox"><code>const run = completion({
+  modelId,
+  history: [{ role: "user", content: "Hola" }],
+  stream: true,
+});
+for await (const event of run.events) {
+  if (event.type === "contentDelta") process.stdout.write(event.text);
+}
+const final = await run.final; // .contentText, .stats, .stopReason...</code></pre>
+      <p>Superficie canónica v0.18.x: iterable <code class="inline">events</code> (tipados:
+      <code class="inline">contentDelta</code>, <code class="inline">thinkingDelta</code>,
+      <code class="inline">toolCall</code>, <code class="inline">completionStats</code>,
+      <code class="inline">completionDone</code>, <code class="inline">rawDelta</code>) más promesa
+      agregada <code class="inline">final</code>. El campo legacy
+      <code class="inline">tokenStream</code> sigue funcionando, pero el código nuevo debe preferir
+      <code class="inline">events</code>/<code class="inline">final</code>.</p>
+
+      <h3><code class="inline">unloadModel()</code> y cierre del proceso</h3>
+<pre class="codebox"><code>await unloadModel({ modelId, clearStorage: false });</code></pre>
+      <p>Descargar el último modelo cierra automáticamente la conexión RPC en Node/Electron y permite que
+      el proceso termine naturalmente. Para cierre explícito, el SDK exporta <code class="inline">close()</code>
+      (así lo usa el ejemplo oficial de download lifecycle).</p>
+      <div class="block alert">
+        <div class="block-title">Nota de versión</div>
+        <div class="block-body">Material previo del curso mencionaba un <code class="inline">close()</code>
+        obligatorio. En v0.18.x el cierre automático al descargar el último modelo es comportamiento
+        documentado; <code class="inline">close()</code> queda como cierre explícito opcional.</div>
+      </div>
+    </section>
+
+    <!-- ========== UNDER THE HOOD ========== -->
+    <section id="hood">
+      <h2>Under the Hood</h2>
+      <ul>
+        <li><strong>Los pesos son el modelo.</strong> Un GGUF cuantizado a 4 bits (~Q4_0) ocupa aproximadamente 0.5–0.6 GB por mil millones de parámetros. Nuestro 1B ronda ~0.6–0.7 GB en disco.</li>
+        <li><strong>Cargar = mover bytes del disco a memoria.</strong> Depende de la velocidad de almacenamiento y del ancho de banda de memoria. Es I/O, no cómputo.</li>
+        <li><strong>Inferir = aritmética intensiva en memoria.</strong> El cuello de botella típico en CPU es el ancho de banda de memoria, no la frecuencia.</li>
+        <li><strong>TTFT vs throughput.</strong> <span class="mono">TTFT = t(primer token) − t(prompt)</span> incluye procesar el prompt (prefill); los tokens/segundo miden la decodificación posterior.</li>
+        <li><strong>Sin red, nada de esto cambia.</strong> Ni la carga ni la decodificación tocan la pila de red.</li>
+      </ul>
+      <table class="booktabs">
+        <thead><tr><th>Desaparece con la red</th><th>Sigue disponible localmente</th></tr></thead>
+        <tbody>
+          <tr><td>Resolución DNS · gateways · autenticación · rate limits remotos · registro remoto de modelos · telemetría / cloud storage</td>
+              <td>Assets cacheados del modelo · archivos locales · runtime de inferencia · historial on-device · lógica de tu aplicación</td></tr>
+        </tbody>
+      </table>
+      <p>Por eso cualquier fallo en modo avión señala una dependencia de red mal clasificada — no
+      "un problema del modelo".</p>
+    </section>
+
+    <!-- ========== WORKED EXAMPLE ========== -->
+    <section id="worked">
+      <h2>Worked Example</h2>
+      <p>El flujo completo de provisionar → inferir → limpiar, en su forma mínima:</p>
+<pre class="codebox"><code>import {
+  close, completion, downloadAsset, loadModel,
+  LLAMA_3_2_1B_INST_Q4_0, unloadModel,
+} from "@qvac/sdk";
+
+// FASE RED (solo esta necesita conexión)
+await downloadAsset({ assetSrc: LLAMA_3_2_1B_INST_Q4_0 });
+
+// FASE LOCAL (funciona offline si la fase anterior completó)
+const modelId = await loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});
+
+const run = completion({
+  modelId,
+  history: [{ role: "user", content: "Di hola en una palabra." }],
+  stream: true,
+});
+for await (const ev of run.events) {
+  if (ev.type === "contentDelta") process.stdout.write(ev.text);
+}
+
+// LIMPIEZA (nunca la omitas)
+await unloadModel({ modelId, clearStorage: false });
+void close();</code></pre>
+      <p>Ejemplos ejecutables completos en <a href="../class-01-airplane-mode-intelligence/examples/">examples/</a> — cada uno enseña exactamente un concepto.</p>
+    </section>
+
+    <!-- ========== PREDICT ========== -->
+    <section id="predict">
+      <h2>Predict</h2>
+      <p>Antes de ejecutar el laboratorio, <strong>escribe tus respuestas</strong> (las verificarás con evidencia):</p>
+      <ol>
+        <li>Ejecutas el programa dos veces seguidas <strong>con</strong> red. ¿En cuál esperas mayor tiempo de descarga? ¿Por qué?</li>
+        <li>Borras la caché y corres <strong>sin</strong> red desde el inicio. ¿Qué error esperas y en qué fase?</li>
+        <li>Provisionas con red, luego cortas la red y cargas. ¿Fallará <code class="inline">loadModel()</code>? Justifica usando el modelo mental del worker.</li>
+        <li>Durante la generación offline, ¿algún byte de tu prompt cruza la pila de red? ¿Cómo podrías demostrarlo?</li>
+      </ol>
+      <div class="block alert">
+        <div class="block-title">Regla de la casa</div>
+        <div class="block-body"><strong>Comprometerse con una predicción antes de ejecutar</strong> es lo que
+        convierte una observación en aprendizaje. Una predicción incorrecta verificada vale más que diez demos miradas en silencio.</div>
+      </div>
+    </section>
+
+    <!-- ========== BUILD ========== -->
+    <section id="build">
+      <h2>Build — Prove It Works Offline</h2>
+      <ol>
+        <li>Descarga un modelo de catálogo reportando progreso.</li>
+        <li>Cárgalo y realiza una completación.</li>
+        <li>Descarga el modelo (<code class="inline">unloadModel</code>) y cierra (<code class="inline">close</code>).</li>
+        <li>Desconecta la red.</li>
+        <li>Vuelve a ejecutar la inferencia desde el caché.</li>
+        <li>Registra evidencia: capturas de salida con timestamps.</li>
+      </ol>
+      <p>Entregable: <strong>Airplane-Mode Proof</strong> — la evidencia de ambos ciclos (con y sin red) más
+      la explicación de la ruta de datos escrita con tus palabras. Guía completa en
+      <a href="../class-01-airplane-mode-intelligence/lab/README.md">lab/README.md</a>.</p>
+    </section>
+
+    <!-- ========== BREAK IT ========== -->
+    <section id="breakit">
+      <h2>Break It</h2>
+      <p>Rompe el sistema de forma controlada y <strong>predice antes de romper</strong>:</p>
+      <table class="booktabs">
+        <thead><tr><th>Escenario</th><th>Predicción a escribir antes</th></tr></thead>
+        <tbody>
+          <tr><td>Borrar el archivo(s) del modelo cacheado y correr offline</td><td>¿En qué fase falla? ¿Qué mensaje esperas?</td></tr>
+          <tr><td>Mover el asset cacheado a otra carpeta</td><td>¿Lo detecta la validación? ¿Con qué error?</td></tr>
+          <tr><td>Arrancar sin haber provisionado nunca, sin red</td><td>¿Se distingue este error del anterior?</td></tr>
+          <tr><td>Provisionar un modelo mayor a la memoria libre disponible</td><td>¿Falla en descarga, en carga o durante inferencia?</td></tr>
+        </tbody>
+      </table>
+      <p>Después de cada rotura, diagnostica: ¿qué fase del pipeline intentó tocar la red o el disco, y cómo
+      lo sabes por el mensaje de error?</p>
+    </section>
+
+    <!-- ========== MEASURE IT ========== -->
+    <section id="measure">
+      <h2>Measure It</h2>
+      <p>Captura estas métricas en tu máquina. Son <strong>de tu equipo</strong>: no existen valores universales.</p>
+      <table class="booktabs">
+        <thead><tr><th>Métrica</th><th>Cómo se obtiene</th></tr></thead>
+        <tbody>
+          <tr><td>Tamaño de descarga</td><td>Campos <code class="inline">downloaded</code>/<code class="inline">total</code> de <code class="inline">onProgress</code></td></tr>
+          <tr><td>Tiempo de carga</td><td><code class="inline">performance.now()</code> alrededor de <code class="inline">loadModel()</code></td></tr>
+          <tr><td>TTFT</td><td>Timestamp del primer evento <code class="inline">contentDelta</code> menos timestamp de envío del prompt</td></tr>
+          <tr><td>Tokens/segundo</td><td><code class="inline">run.final.stats.tokensPerSecond</code> (reportado por el runtime)</td></tr>
+          <tr><td>Memoria pico del proceso</td><td><code class="inline">process.memoryUsage().heapUsed</code> muestreado, o monitor del sistema</td></tr>
+        </tbody>
+      </table>
+      <p>Corre cada medición al menos dos veces (primera carga vs. carga tibia): el sistema no se comporta
+      igual frío que caliente.</p>
+    </section>
+
+    <!-- ========== MISCONCEPCIONES ========== -->
+    <section id="misconcepciones">
+      <h2>Misconcepciones comunes</h2>
+      <div class="block alert"><div class="block-title">1</div>
+        <div class="block-body"><strong>"Descargué el modelo, entonces mi app es local."</strong> No: descargar
+        es solo copiar bytes. Local es donde ocurre la <em>inferencia</em>.</div></div>
+      <div class="block alert"><div class="block-title">2</div>
+        <div class="block-body"><strong>"Offline significa que la app entera funciona sin red."</strong>
+        Local-first significa que la funcionalidad <em>prometida como local</em> funciona sin red. Saber y declarar cuáles no, es parte del diseño.</div></div>
+      <div class="block alert"><div class="block-title">3</div>
+        <div class="block-body"><strong>"El modelo se 'abre' cada vez que genero texto."</strong> No: cargar es
+        una fase aparte, cara, y el modelo permanece residente hasta <code class="inline">unloadModel()</code>.</div></div>
+      <div class="block alert"><div class="block-title">4</div>
+        <div class="block-body"><strong>"Si falla en modo avión, el SDK no sirve para offline."</strong> Casi
+        siempre indica una dependencia mal clasificada (registro, telemetría, ruta absoluta ajena).</div></div>
+    </section>
+
+    <!-- ========== CONEXIONES ========== -->
+    <section id="conexiones">
+      <h2>Conexiones de arquitectura</h2>
+      <ul>
+        <li><strong>Clase 2 (Modelos y GGUF):</strong> hoy el asset es una caja negra; allí se abre — pesos, tensors, tokenizer, cuantización.</li>
+        <li><strong>Clase 3 (Fundamentos de inferencia):</strong> el TTFT que mediste se descompone en tokenización + prefill; el tok/s en decodificación autoregresiva y KV cache.</li>
+        <li><strong>Clase 10 (Arquitecturas local-first):</strong> el Airplane-Mode Test se convierte en criterio formal ("Offline Capability") del capstone.</li>
+      </ul>
+    </section>
+
+    <!-- ========== CHECKPOINT ========== -->
+    <section id="checkpoint">
+      <h2>Checkpoint</h2>
+      <p>Responde sin mirar la documentación:</p>
+      <ol>
+        <li><em>(Recall)</em> ¿Qué función descarga un asset sin cargarlo en memoria?</li>
+        <li><em>(Explicación)</em> Explica modelo local vs inferencia local usando la ruta de datos. ¿Puede existir una sin la otra?</li>
+        <li><em>(Predicción)</em> Provisionaste con red y luego borraste solo el caché del navegador; la app falla en modo avión. ¿Por qué este escenario es una trampa?</li>
+        <li><em>(Diagnóstico)</em> Error en <code class="inline">loadModel()</code> offline: lista tres causas probables y cómo distinguirlas.</li>
+        <li><em>(Juicio arquitectónico)</em> Cliente: "nuestra app debe funcionar en aviones". ¿Qué prometerías exactamente y qué test instalarías en CI?</li>
+      </ol>
+    </section>
+
+    <!-- ========== TAKEAWAY ========== -->
+    <section id="takeaway">
+      <h2>Takeaway</h2>
+      <div class="block example"><div class="block-body" style="font-size:19px;">
+        La IA local no es una etiqueta: es una propiedad <strong>verificable</strong> de la arquitectura.
+        Provisionas cuando hay red; cargas, infieres y mides cuando no la hay. El Airplane-Mode Test convierte
+        la promesa en evidencia — y esa disciplina es el hilo conductor de todo el bootcamp.
+      </div></div>
+      <p><strong>Siguiente clase:</strong> abrimos el archivo GGUF — pesos, tokenización y cuantización.</p>
+    </section>
+
+    <!-- ========== FUENTES ========== -->
+    <section id="fuentes">
+      <h2>Fuentes usadas</h2>
+      <ul>
+        <li>QVAC — Introduction &amp; How it works · docs.qvac.tether.io</li>
+        <li>QVAC — Download lifecycle (provisión offline, resumable downloads, fallbackSrc)</li>
+        <li>QVAC — Text generation (superficie events/final de completion)</li>
+        <li>QVAC — API Summary v0.18.x · Release Notes v0.18.x</li>
+        <li>npm @qvac/sdk 0.18.1 — quickstart oficial</li>
+        <li>Currículo canónico: QVAC_Course_Expanded_Learning_Edition.md, Cap. 1 §1.1–1.8</li>
+      </ul>
+    </section>
+  </article>
+
+  <!-- ================= RAIL DERECHO ================= -->
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Pregunta esencial</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Progreso</span>
+      <div class="rail-progress-row">
+        <div class="ring" data-ring-rail="class-01" style="--pct:0;"><i>0%</i></div>
+        <p class="rail-progress-text"><a href="/class/01#dod">Definition of Done</a></p>
+      </div>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/01">Clase</a></li>
+        <li><a href="/class-01-airplane-mode-intelligence/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-01-airplane-mode-intelligence/lab/README.md">Lab</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 1 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-01-airplane-mode-intelligence/">← Volver a la página de la Clase 1</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

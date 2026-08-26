@@ -1,0 +1,937 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clase 1 — Airplane-Mode Intelligence</title>
+
+<!-- ============================================================
+     CLASE 1 · AIRPLANE-MODE INTELLIGENCE
+     The Local-First AI Systems Masterclass
+     ------------------------------------------------------------
+     Estilo: BEAMER ACADÉMICO — estética de presentación LaTeX:
+     papel marfil, azul estructura Beamer, bloques Definición/
+     Ejemplo/Alerta, tablas booktabs, footline con progreso,
+     tipografía serif tipo Computer Modern + mono para código.
+     FILOSOFÍA slides-vs-lesson (docs/slides-vs-lesson.md):
+     Complementarias a lesson.md — visual, hooks, una idea/slide.
+     NO copiar párrafos del canónico; detalle y código en la lección.
+
+     Narrativa: Hook → Concepto → Ruta de datos → Predict/Demo →
+     Break It/Measure It → Misconcepciones → Your Turn → Cierre.
+     Baseline técnico: QVAC SDK v0.18.x / v0.18.1 (verificado).
+     Escenario fijo 1920×1080 escalado como unidad.
+
+     CONTADOR DE PÁGINA: único escritor = footline derecho
+     (.pageno, estático por diapositiva, convención Beamer).
+     La barra central de navegación NO duplica el contador.
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   VARIABLES DEL TEMA BEAMER
+   Cambia aquí los colores institucionales.
+   =========================================== */
+:root {
+    --stage-bg: #101010;
+    --paper: #FBFAF6;
+    --ink: #1A1A1A;
+    --blue: #1E4B8F;        /* color de estructura Beamer */
+    --blue-tint: #EDF2F9;
+    --red: #B22222;         /* alert */
+    --red-tint: #F9EDED;
+    --green: #2E7D46;       /* example */
+    --green-tint: #EEF6F0;
+    --hairline: rgba(26,26,26,.22);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: BASE OBLIGATORIA
+   =========================================== */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    overflow: hidden; transform-origin: 0 0; background: var(--paper);
+}
+.slide {
+    position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden;
+    display: block; visibility: hidden; opacity: 0; pointer-events: none;
+    background: var(--paper);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative; display: block !important; visibility: visible !important;
+        opacity: 1 !important; pointer-events: auto !important;
+        width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls, .progress-bar, .edit-toggle, .edit-hotzone, .footline { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   TIPOGRAFÍA ACADÉMICA
+   Serif tipo Computer Modern para cuerpo; Fira Sans para
+   titulares (convención Beamer); JetBrains Mono para verbatim.
+   =========================================== */
+.slide { font-family: 'STIX Two Text', Georgia, serif; color: var(--ink); }
+
+/* ===========================================
+   FRAME COMÚN DE DIAPOSITIVA
+   =========================================== */
+.frame { position: absolute; inset: 70px 110px 130px; display: flex; flex-direction: column;
+    /* Base tipográfica del contenido: los hijos directos (listas, tablas)
+       heredan este tamaño en lugar del default de 16px del navegador. */
+    font-size: 31px; line-height: 1.5; }
+h2.frametitle {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 58px;
+    letter-spacing: -.01em; color: var(--blue); line-height: 1.08;
+}
+h2.frametitle::after {
+    content: ""; display: block; width: 100%; height: 2.5px; margin-top: 12px;
+    background: linear-gradient(90deg, var(--blue) 0 38%, var(--hairline) 38% 100%);
+}
+.body { margin-top: 30px; font-size: 31px; line-height: 1.55; flex: 1; min-height: 0; }
+.body p + p { margin-top: 16px; }
+
+em.term { font-style: italic; color: var(--blue); }
+.small { font-size: 25px; color: rgba(26,26,26,.65); }
+
+/* Listas académicas — viñeta alineada ópticamente con la primera línea
+   (hereda font-size/line-height del texto para que la base del glifo
+   coincida con la línea, en vez de flotar por encima) */
+ul.itemize { list-style: none; }
+ul.itemize li { position: relative; padding-left: 42px; margin-top: 20px; }
+ul.itemize li::before {
+    content: "•"; position: absolute; left: 10px; top: 0;
+    color: var(--blue); font-size: inherit; line-height: inherit;
+}
+
+/* Listas numeradas con círculo: separación vertical garantizada
+   entre círculos ≥ 20px (margin-bottom 22px + margin-top 14px,
+   colapsan a 22px entre ítems consecutivos). */
+ol.enumerate { list-style: none; counter-reset: enum; }
+ol.enumerate li {
+    counter-increment: enum; position: relative; padding-left: 62px;
+    margin-top: 14px; margin-bottom: 22px; line-height: 1.5;
+}
+ol.enumerate li:last-child { margin-bottom: 0; }
+ol.enumerate li::before {
+    content: counter(enum); position: absolute; left: 0; top: 2px;
+    width: 42px; height: 42px; border-radius: 50%; background: var(--blue); color: var(--paper);
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 23px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* Bloques Beamer: Definición (azul) / Ejemplo (verde) / Alerta (rojo) */
+.block { margin-top: 26px; border: 1px solid var(--hairline); background: var(--blue-tint); }
+.block .block-title {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 27px;
+    background: var(--blue); color: var(--paper); padding: 12px 28px;
+}
+.block .block-body { padding: 22px 28px; font-size: 28px; line-height: 1.5; }
+.block.example { background: var(--green-tint); }
+.block.example .block-title { background: var(--green); }
+.block.alert { background: var(--red-tint); }
+.block.alert .block-title { background: var(--red); }
+
+/* Tablas booktabs: filetes horizontales, sin verticales */
+table.booktabs { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: 27px; }
+.booktabs thead tr { border-top: 3px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.booktabs th { font-family: 'Fira Sans', sans-serif; font-weight: 600; text-align: left; padding: 15px 20px; font-size: 25px; }
+.booktabs tbody tr:last-child { border-bottom: 3px solid var(--ink); }
+.booktabs td { padding: 14px 20px; line-height: 1.35; }
+.booktabs tbody tr + tr { border-top: 1px solid var(--hairline); }
+.booktabs code { font-size: 23px; }
+
+/* Código verbatim */
+pre.verbatim {
+    margin-top: 26px; background: #F3F1EA; border: 1px solid var(--hairline);
+    border-left: 6px solid var(--blue); padding: 24px 30px;
+    font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.52;
+    white-space: pre-wrap; color: #14304f;
+}
+pre.verbatim .cm { color: #7a8899; }
+pre.verbatim .kw { color: var(--blue); font-weight: 700; }
+pre.verbatim .str { color: var(--green); }
+code.inline { font-family: 'JetBrains Mono', monospace; font-size: .82em;
+    background: #F3F1EA; border: 1px solid var(--hairline); padding: 2px 8px; color: #14304f; }
+
+/* Diagramas ASCII técnicos */
+pre.diagram { font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.45;
+    color: var(--ink); background: transparent; border-left: none; border: none;
+    padding: 10px 0 0; margin-top: 22px; white-space: pre; }
+pre.diagram b { color: var(--blue); }
+
+/* Notación matemática ligera */
+.math { font-style: italic; }
+.math sub { font-size: .62em; }
+
+/* ===========================================
+   FOOTLINE (cromo Beamer persistente)
+   Único lugar donde vive el número de página.
+   =========================================== */
+.footline {
+    position: absolute; left: 110px; right: 110px; bottom: 44px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'Fira Sans', sans-serif; font-size: 20px; color: rgba(26,26,26,.55);
+    border-top: 1.5px solid var(--hairline); padding-top: 14px;
+}
+.footline .sec { color: var(--blue); font-weight: 500; }
+.footline .pageno { font-variant-numeric: tabular-nums; }
+
+/* Diapositivas divisorias destacadas (standout) */
+.slide--divider { background: var(--blue); }
+.slide--divider .frame { justify-content: center; align-items: flex-start; }
+.divider-kicker { font-family: 'Fira Sans', sans-serif; font-size: 30px; letter-spacing: .28em;
+    text-transform: uppercase; color: rgba(251,250,246,.75); }
+.divider-num { font-family: 'STIX Two Text', serif; font-size: 300px; font-weight: 700;
+    color: rgba(251,250,246,.28); line-height: 1; }
+.divider-title { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 96px;
+    color: var(--paper); line-height: 1.02; letter-spacing: -.01em; margin-top: -40px; }
+.slide--divider .footline { border-top-color: rgba(251,250,246,.3); color: rgba(251,250,246,.7); }
+.slide--divider .footline .sec { color: var(--paper); }
+
+/* Transiciones de actividad (PREDICT / DEMO / ...) */
+.activity-word { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 150px;
+    color: var(--blue); letter-spacing: -.02em; line-height: 1; }
+.activity-sub { font-size: 33px; margin-top: 26px; max-width: 1450px; line-height: 1.5; }
+
+/* Portada */
+.title-slide .frame { justify-content: center; align-items: center; text-align: center; }
+.title-course { font-family: 'Fira Sans', sans-serif; font-size: 29px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--red); font-weight: 600; }
+.title-main { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 118px;
+    color: var(--blue); letter-spacing: -.015em; line-height: 1.02; margin-top: 34px; }
+.title-sub { font-size: 41px; margin-top: 30px; font-style: italic; color: rgba(26,26,26,.8); max-width: 1350px; }
+.title-meta { margin-top: 66px; font-family: 'Fira Sans', sans-serif; font-size: 26px;
+    color: rgba(26,26,26,.65); display: flex; gap: 26px; align-items: baseline; }
+.title-meta .dot { color: var(--blue); }
+.title-rule { width: 220px; height: 3px; background: var(--blue); margin-top: 48px; }
+
+/* ===========================================
+   REVELADO EN CASCADA (activado por .visible)
+   =========================================== */
+.reveal {
+    opacity: 0; transform: translateY(26px);
+    transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1);
+}
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.d1 { transition-delay: .07s; } .d2 { transition-delay: .15s; } .d3 { transition-delay: .23s; }
+.d4 { transition-delay: .31s; } .d5 { transition-delay: .39s; } .d6 { transition-delay: .47s; }
+.d7 { transition-delay: .55s; } .d8 { transition-delay: .63s; }
+
+/* Notas del instructor (tecla N) */
+aside.notes {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 2000;
+    background: #FFF8E1; border-top: 3px solid var(--blue);
+    font-family: 'Fira Sans', sans-serif; font-size: 17px; line-height: 1.5;
+    padding: 14px 90px; color: #333; display: none; max-height: 30vh; overflow: auto;
+}
+body.show-notes aside.notes { display: block; }
+
+/* Barra de progreso y controles (fuera del escenario).
+   Sin contador: el número de página vive solo en la footline. */
+.progress-bar { position: fixed; top: 0; left: 0; height: 6px; width: 0%; background: var(--blue); z-index: 1200; transition: width .4s ease; }
+/* Sin botones PREV/NEXT: en ventanas 16:9 exactas se montaban sobre la
+   footline. Navegación: teclado (←→ espacio), rueda, swipe, Home/End. */
+
+/* Modo edición en línea */
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 18px; right: 18px; opacity: 0; pointer-events: none;
+    transition: opacity .3s ease; z-index: 10001; background: var(--blue); color: var(--paper);
+    border: none; font-family: 'Fira Sans', sans-serif; font-size: 16px;
+    padding: 11px 20px; cursor: pointer;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { background: var(--red); }
+body.editing .slide [contenteditable="true"] { outline: 1.5px dashed var(--blue); outline-offset: 3px; min-width: 24px; }
+body.editing .slide--divider [contenteditable="true"] { outline-color: var(--paper); }
+</style>
+<!-- Capa de tema QVAC Bootcamp: docs claro/oscuro + ninja (ver assets/slides.css) -->
+<link rel="stylesheet" href="../assets/slides.css">
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============ SLIDE 01 · PORTADA ============ -->
+<section class="slide title-slide">
+  <div class="frame">
+    <div class="title-course reveal d1">The Local-First AI Systems Masterclass</div>
+    <div class="title-main reveal d2">Airplane-Mode Intelligence</div>
+    <div class="title-sub reveal d3">¿Qué significa realmente que una aplicación de IA sea local?</div>
+    <div class="title-rule reveal d4"></div>
+    <div class="title-meta reveal d5">
+      <span>Módulo 1 — Your First Local Token</span><span class="dot">·</span>
+      <span>Clase 1 de 12</span><span class="dot">·</span>
+      <span>QVAC SDK v0.18.x</span><span class="dot">·</span>
+      <span>2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 02 · PREGUNTA ESENCIAL ============ -->
+<section class="slide">
+  <div class="frame">
+    <p class="small reveal d1" style="font-family:'Fira Sans';letter-spacing:.2em;text-transform:uppercase;">Pregunta esencial</p>
+    <h2 class="frametitle reveal d2" style="font-size:84px; max-width:1550px;">¿Qué significa <em class="term">realmente</em> que una aplicación de IA sea local?</h2>
+    <p class="body reveal d3" style="flex:none; margin-top:44px; font-size:34px;">No "que tiene modo offline". No "que guarda respuestas".
+      ¿Qué debe estar ocurriendo — y <b>dónde</b> — para que un modelo genere texto con la red desconectada?</p>
+    <div class="block alert reveal d4" style="max-width:1400px;">
+      <div class="block-title">Regla de la casa</div>
+      <div class="block-body">"Local" es una afirmación de arquitectura. Y como toda afirmación de arquitectura, <b>debe poder demostrarse</b>.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">Introducción</span><span class="pageno">02 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 03 · DIVIDER §1 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 1</div>
+    <div class="divider-num reveal d2">01</div>
+    <div class="divider-title reveal d3">¿Qué significa "local"?</div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">Concepto</span><span class="pageno">03 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 04 · DOS PATRONES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Dos patrones: dónde viajan tus datos</h2>
+    <div class="body" style="display:grid; grid-template-columns:1fr 1fr; gap:60px;">
+<pre class="diagram reveal d2"><b>PATRÓN CLOUD</b>
+
+User data
+   ↓ Internet
+Remote API
+   ↓ inferencia
+Internet
+   ↓
+Respuesta
+
+<b>depende de:</b> DNS, auth,
+rate limits, precios</pre>
+<pre class="diagram reveal d3"><b>PATRÓN LOCAL</b>
+
+User data
+   ↓
+Local model
+   ↓
+Respuesta
+
+<b>depende de:</b> disco,
+RAM/VRAM, CPU/GPU</pre>
+      <div style="grid-column:1 / span 2;">
+        <div class="block reveal d4">
+          <div class="block-title">Consecuencia arquitectónica</div>
+          <div class="block-body">El patrón local sustituye dependencias de red por dependencias de hardware. No elimina restricciones: <b>cambia cuáles son</b>. Aprender a razonar sobre esas nuevas restricciones es el objetivo del módulo.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§1 ¿Qué significa local?</span><span class="pageno">04 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 05 · CUATRO CATEGORÍAS ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Cuatro cosas que se confunden con "local"</h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th>Término</th><th>Significado</th><th>¿Sin red?</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td><b>Modelo local</b></td><td>los pesos están en el disco del dispositivo</td><td>solo si además infieres local</td></tr>
+        <tr class="reveal d4"><td><b>Inferencia local</b></td><td>la computación que produce tokens ocurre en el dispositivo</td><td><b style="color:var(--green)">sí</b> — definición operativa</td></tr>
+        <tr class="reveal d5"><td><b>App local-first</b></td><td>diseñada para que lo núcleo sobreviva sin conectividad</td><td><b style="color:var(--green)">sí</b>, por diseño</td></tr>
+        <tr class="reveal d6"><td><b>App que cachea</b></td><td>guarda assets/respuestas pero depende de inferencia remota</td><td style="color:var(--red)">no</td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d7" style="margin-top:30px;">Un modelo local sin inferencia local es solo un archivo grande en tu disco.</p>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§1 ¿Qué significa local?</span><span class="pageno">05 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 06 · CUATRO FASES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Cuatro fases que nunca debes mezclar</h2>
+<pre class="diagram reveal d2" style="font-size:30px;"><span style="color:#7a8899;">ENTRENAMIENTO</span>  (una vez · datacenter · hace meses)
+     produce los pesos → GGUF
+<span style="color:#7a8899;">DESCARGA</span>       (una vez · cuando hay red)
+     copia los pesos a tu disco (caché)
+<span style="color:#7a8899;">CARGA</span>          (cada sesión)
+     lee los pesos del disco hacia RAM/VRAM
+<span style="color:#7a8899;">INFERENCIA</span>     (por cada prompt)
+     predice tokens usando los pesos ya en memoria</pre>
+    <div class="block example reveal d3">
+      <div class="block-title">La clave de todo el curso</div>
+      <div class="block-body">Solo la <b>descarga</b> requiere red. Si aprovisionas primero, la carga y la inferencia pueden ocurrir en un avión.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§1 ¿Qué significa local?</span><span class="pageno">06 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 07 · AIRPLANE-MODE TEST ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">El Airplane-Mode Test</h2>
+    <p class="reveal d2" style="margin-top:24px; font-size:30px;">Una definición práctica de IA local debe ser <em class="term">testeable</em>:</p>
+    <ol class="enumerate" style="columns:2; column-gap:80px; margin-top:10px;">
+      <li class="reveal d3">Descarga/provisiona el modelo <i>con</i> red</li>
+      <li class="reveal d3">Cárgalo y ejecútalo una vez</li>
+      <li class="reveal d4">Cierra la aplicación</li>
+      <li class="reveal d4"><b>Desconecta la red del dispositivo</b></li>
+      <li class="reveal d5">Reinicia la aplicación</li>
+      <li class="reveal d5">Carga el modelo ya provisionado</li>
+      <li class="reveal d6">Genera una nueva respuesta</li>
+    </ol>
+    <div class="block reveal d7" style="max-width:1500px;">
+      <div class="block-title">Si el paso 7 produce texto…</div>
+      <div class="block-body">acabas de <b>demostrar</b> inferencia 100% local. Este test volverá en RAG, voz y sistemas distribuidos: es tu herramienta de verificación permanente.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§1 ¿Qué significa local?</span><span class="pageno">07 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 08 · DIVIDER §2 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 2</div>
+    <div class="divider-num reveal d2">02</div>
+    <div class="divider-title reveal d3">La ruta de datos en QVAC</div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">Arquitectura</span><span class="pageno">08 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 09 · MODELO MENTAL ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Modelo mental: quién hace qué</h2>
+<pre class="diagram reveal d2" style="font-size:27px;">┌──────────────────────────────────────────────┐
+│ TU PROCESO                                   │
+│   Tu aplicación (JS/TS)                      │
+│         │  llamadas a funciones              │
+│         ▼                                    │
+│   QVAC SDK (cliente)                         │
+│         │  RPC                               │
+│         ▼                                    │
+│   Worker Bare (runtime de inferencia)        │
+│         │  carga                             │
+│         ▼                                    │
+│   Modelo residente (pesos desde caché)       │
+└──────────────────────────────────────────────┘
+         │  tokens / eventos
+         ▼
+   tu aplicación otra vez</pre>
+    <ul class="itemize" style="column-count:2; column-gap:70px; margin-top:26px;">
+      <li class="reveal d3"><b>Perezoso:</b> fuera de Bare, el worker arranca en la primera operación — no al importar</li>
+      <li class="reveal d4"><b>Compartido:</b> el mismo worker se reutiliza; no pagas arranque dos veces</li>
+      <li class="reveal d5"><b>Residente:</b> el modelo permanece cargado hasta que tú lo descargas</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§2 Ruta de datos</span><span class="pageno">09 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 10 · INSIDE QVAC: downloadAsset ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Inside QVAC — provisionar: <code class="inline">downloadAsset()</code></h2>
+<pre class="verbatim reveal d2"><span class="kw">import</span> { downloadAsset, LLAMA_3_2_1B_INST_Q4_0 } <span class="kw">from</span> <span class="str">"@qvac/sdk"</span>;
+
+<span class="kw">const</span> op = downloadAsset({
+  assetSrc: LLAMA_3_2_1B_INST_Q4_0,
+  onProgress: (p) => console.log(`${p.percentage.toFixed(0)}%`),
+});
+<span class="kw">await</span> op;  <span class="cm">// descarga SIN cargar en memoria</span></pre>
+    <ul class="itemize" style="column-count:2; column-gap:70px;">
+      <li class="reveal d3">Acepta constantes de catálogo, URLs o rutas <code class="inline">pear://</code></li>
+      <li class="reveal d4"><code class="inline">op.requestId</code> existe sincrónicamente: pausa inmediata con <code class="inline">cancel()</code></li>
+      <li class="reveal d5">Las descargas son <b>reanudables por defecto</b>: los parciales van a disco</li>
+      <li class="reveal d6">Es la única fase de esta clase que necesita conexión</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§2 Ruta de datos</span><span class="pageno">10 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 11 · INSIDE QVAC: loadModel ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Inside QVAC — cargar desde caché: <code class="inline">loadModel()</code></h2>
+<pre class="verbatim reveal d2"><span class="kw">import</span> { loadModel, LLAMA_3_2_1B_INST_Q4_0 } <span class="kw">from</span> <span class="str">"@qvac/sdk"</span>;
+
+<span class="kw">const</span> modelId = <span class="kw">await</span> loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});</pre>
+    <div class="block reveal d3">
+      <div class="block-title">Por qué esto funciona offline</div>
+      <div class="block-body">Con una constante de catálogo, <code class="inline">loadModel()</code> consulta primero el caché configurado y <b>valida los archivos contra tamaño y checksum del catálogo</b>. Si validan, carga <b>sin contactar el registro</b>. La confianza en tu copia local es idéntica a la del original.</div>
+    </div>
+    <p class="small reveal d4" style="margin-top:24px;">Detalle crítico: quien descarga y quien carga deben usar el mismo <code class="inline">cacheDirectory</code>.</p>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§2 Ruta de datos</span><span class="pageno">11 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 12 · INSIDE QVAC: completion ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Inside QVAC — generar: <code class="inline">completion()</code></h2>
+<pre class="verbatim reveal d2"><span class="kw">const</span> run = completion({ modelId, history: [{ role: <span class="str">"user"</span>, content: prompt }], stream: true });
+
+<span class="kw">for await</span> (<span class="kw">const</span> event <span class="kw">of</span> run.events) {
+  <span class="kw">if</span> (event.type === <span class="str">"contentDelta"</span>) process.stdout.write(event.text);
+}
+<span class="kw">const</span> final = <span class="kw">await</span> run.final;  <span class="cm">// contentText · stats · stopReason</span></pre>
+    <ul class="itemize" style="column-count:2; column-gap:70px;">
+      <li class="reveal d3">Superficie canónica v0.18.x: iterable <code class="inline">events</code> + promesa agregada <code class="inline">final</code></li>
+      <li class="reveal d4">Eventos tipados: <code class="inline">contentDelta</code>, <code class="inline">thinkingDelta</code>, <code class="inline">toolCall</code>, <code class="inline">completionStats</code>, <code class="inline">completionDone</code>…</li>
+      <li class="reveal d5"><code class="inline">tokenStream</code> legacy sigue funcionando; código nuevo prefiere <code class="inline">events</code>/<code class="inline">final</code></li>
+    </ul>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§2 Ruta de datos</span><span class="pageno">12 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 13 · CICLO DE VIDA ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">El ciclo de vida completo</h2>
+<pre class="diagram reveal d2" style="font-size:29px;"><b>downloadAsset()</b>          <span style="color:#7a8899;">← requiere red (una vez)</span>
+      ↓
+<b>loadModel()</b>               ← valida caché, residente en RAM/VRAM
+      ↓
+<b>completion()</b> ×N           ← reutiliza el modelo cargado
+      ↓
+<b>unloadModel()</b>             ← libera memoria; asset sigue en disco
+      ↓
+<b>close()</b>                   ← cierre explícito del runtime/RPC</pre>
+    <div class="block alert reveal d3">
+      <div class="block-title">Anti-patrón frecuente</div>
+      <div class="block-body">Re-cargar el modelo en cada turno del usuario. Cargar es caro (I/O + reserva de memoria): cárgalo <b>una vez</b> y reutilízalo hasta cerrar.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§2 Ruta de datos</span><span class="pageno">13 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 14 · UNDER THE HOOD ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Under the hood — la física del asunto</h2>
+    <ul class="itemize" style="column-count:2; column-gap:70px;">
+      <li class="reveal d2">Los pesos pesan: Q4 ≈ <b>0.5–0.6 GB por 1B parámetros</b>; nuestro 1B cabe en casi cualquier laptop moderna</li>
+      <li class="reveal d3"><b>Cargar = I/O</b>: mover bytes de disco a memoria; domina SSD vs HDD, no la CPU</li>
+      <li class="reveal d4"><b>Inferir = aritmética limitada por ancho de banda de memoria</b>, no por frecuencia</li>
+      <li class="reveal d5"><span class="math">TTFT = t<sub>primer token</sub> − t<sub>prompt</sub></span> incluye prefill; tok/s mide decodificación posterior — fenómenos distintos</li>
+    </ul>
+    <table class="booktabs reveal d6">
+      <thead><tr><th>Desaparece con la red</th><th>Sigue disponible localmente</th></tr></thead>
+      <tbody><tr>
+        <td>DNS · gateways · autenticación · rate limits · registro remoto · telemetría</td>
+        <td>assets cacheados · archivos locales · runtime de inferencia · historial on-device · tu lógica</td>
+      </tr></tbody>
+    </table>
+    <p class="small reveal d7" style="margin-top:26px;">Por eso el modo avión funciona — y por eso cualquier fallo offline señala una dependencia mal clasificada.</p>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§2 Ruta de datos</span><span class="pageno">14 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 15 · DIVIDER §3 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 3</div>
+    <div class="divider-num reveal d2">03</div>
+    <div class="divider-title reveal d3">Predict · Demo</div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">Experimento</span><span class="pageno">15 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 16 · PREDICT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1"># Predict</div>
+    <p class="activity-sub reveal d2">Comprométete por escrito <b>antes</b> de ejecutar. Una predicción incorrecta verificada vale más que diez demos miradas en silencio.</p>
+    <ol class="enumerate" style="margin-top:30px;">
+      <li class="reveal d3">Corres dos veces seguidas <b>con</b> red: ¿qué fase será más rápida la segunda vez y por qué?</li>
+      <li class="reveal d4">Sin caché y sin red desde el inicio: ¿qué error esperas y en qué fase?</li>
+      <li class="reveal d5">Provisionaste; cortas la red; llamas <code class="inline">loadModel()</code>: ¿fallará? Justifica con el modelo mental del worker.</li>
+      <li class="reveal d6">Durante generación offline, ¿algún byte de tu prompt cruza la pila de red? ¿Cómo lo demostrarías?</li>
+    </ol>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§3 Predict · Demo</span><span class="pageno">16 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 17 · LET'S RUN IT (DEMO) ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Let's Run It</div>
+    <p class="activity-sub reveal d2">Primera inferencia local, ciclo completo — luego lo repites tú en el lab.</p>
+<pre class="verbatim reveal d3"><span class="cm"># terminal 1 — con red</span>
+npx tsx examples/01-provision.ts      <span class="cm">// descarga ~0.6–0.7 GB con progreso</span>
+npx tsx examples/03-measure.ts        <span class="cm">// corrida FRÍA: descarga+carga+inferencia</span>
+
+<span class="cm"># ahora: desconecta Wi-Fi / cable …</span>
+
+<span class="cm"># terminal 1 — modo avión</span>
+npx tsx examples/02-offline-inference.ts   <span class="cm">// ¿genera texto? ✔ demostrado</span>
+npx tsx examples/03-measure.ts             <span class="cm">// corrida TIBIA/OFFLINE: compara métricas</span></pre>
+    <ul class="itemize" style="column-count:2; column-gap:60px; margin-top:8px;">
+      <li class="reveal d4"><b>Observa:</b> ¿algún paso consultó la red tras provisionar?</li>
+      <li class="reveal d5"><b>Observa:</b> frío vs tibio — ¿qué métrica cambió más?</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§3 Predict · Demo</span><span class="pageno">17 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 18 · DIVIDER §4 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 4</div>
+    <div class="divider-num reveal d2">04</div>
+    <div class="divider-title reveal d3">Break It · Measure It</div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">Experimento</span><span class="pageno">18 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 19 · BREAK IT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Break It</div>
+    <p class="activity-sub reveal d2">Predice primero. Una abstracción no está entendida hasta que has visto fallar de forma significativa.</p>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Escenario controlado</th><th>Tu predicción (antes)</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>Borrar los archivos cacheados del modelo; correr offline</td><td>¿qué fase? ¿qué mensaje?</td></tr>
+        <tr class="reveal d5"><td>Mover el asset cacheado a otra carpeta</td><td>¿detecta la validación checksum?</td></tr>
+        <tr class="reveal d6"><td>Arrancar sin haber provisionado nunca, sin red</td><td>¿se distingue este error del anterior?</td></tr>
+        <tr class="reveal d7"><td><code class="inline">ctx_size: 8192</code> con poca RAM libre</td><td>¿falla en carga o en inferencia?</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§4 Break · Measure</span><span class="pageno">19 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 20 · MEASURE IT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Measure It</div>
+    <p class="activity-sub reveal d2">Nada de "más rápido" sin evidencia. Estas son tus métricas — <b>de tu máquina</b>:</p>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Métrica</th><th>Cómo se obtiene</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>Tamaño de descarga</td><td><code class="inline">p.downloaded</code> / <code class="inline">p.total</code> en <code class="inline">onProgress</code></td></tr>
+        <tr class="reveal d5"><td>Tiempo de carga</td><td><code class="inline">performance.now()</code> alrededor de <code class="inline">loadModel()</code></td></tr>
+        <tr class="reveal d6"><td>TTFT</td><td>timestamp del primer evento <code class="inline">contentDelta</code> − envío del prompt</td></tr>
+        <tr class="reveal d7"><td>Tokens/segundo</td><td><code class="inline">run.final.stats.tokensPerSecond</code> (reportado por el runtime)</td></tr>
+        <tr class="reveal d8"><td>Memoria pico</td><td>muestreo de <code class="inline">process.memoryUsage()</code> o monitor del sistema</td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d8" style="margin-top:22px;">Corre cada medición dos veces (fría/tibia). El sistema no se comporta igual caliente que frío.</p>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§4 Break · Measure</span><span class="pageno">20 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 21 · DIVIDER §5 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 5</div>
+    <div class="divider-num reveal d2">05</div>
+    <div class="divider-title reveal d3">Sintetiza y construye</div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">Cierre</span><span class="pageno">21 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 22 · MISCONCEPCIONES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Misconcepciones comunes</h2>
+    <div class="block alert reveal d2">
+      <div class="block-title">Misconcepción 1</div>
+      <div class="block-body">"Descargué el modelo, entonces mi app es local." — Descargar es copiar bytes. <b>Local</b> es donde ocurre la inferencia. Una app que descarga assets pero llama a una API sigue siendo cloud-dependent.</div>
+    </div>
+    <div class="block alert reveal d3">
+      <div class="block-title">Misconcepción 2</div>
+      <div class="block-body">"Offline significa que toda la app funciona sin red." — Local-first significa que la funcionalidad <b>prometida como local</b> sobrevive. Saber y declarar cuáles features sí requieren red es parte del diseño.</div>
+    </div>
+    <div class="block alert reveal d4">
+      <div class="block-title">Misconcepción 3</div>
+      <div class="block-body">"Si falla en modo avión, el SDK no sirve." — Casi siempre indica una dependencia mal clasificada: registro, telemetría, ruta absoluta ajena. Diagnosticar <b>cuál</b> es exactamente el ejercicio.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§5 Cierre</span><span class="pageno">22 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 23 · YOUR TURN ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Your Turn</div>
+    <div class="block reveal d2" style="max-width:1600px;">
+      <div class="block-title">Challenge independiente — field-provision</div>
+      <div class="block-body">Una ONG necesita garantizar que sus laptops de campo quedan listas para generar texto offline. Construye una CLI con dos modos: <code class="inline">provision</code> (descarga+valida con progreso reanudable) y <code class="inline">verify --offline</code> (ciclo completo sin tocar la red; falla nombrando la fase exacta).</div>
+    </div>
+    <ul class="itemize" style="column-count:2; column-gap:70px;">
+      <li class="reveal d3"><b>Sin starter:</b> tú diseñas la frontera red/local</li>
+      <li class="reveal d4">Reporte de métricas obligatorio (frío/tibio)</li>
+      <li class="reveal d5">Clasificación explícita de dependencias con justificación</li>
+      <li class="reveal d6">Defensa oral: ¿por qué tu verify nunca toca la red? Muéstralo en el código</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§5 Cierre</span><span class="pageno">23 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 24 · CHECKPOINT + TAKEAWAY ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Checkpoint — demuéstralo</h2>
+    <ol class="enumerate" style="column-count:2; column-gap:80px; margin-top:6px;">
+      <li class="reveal d2">Explica modelo local vs inferencia local usando la ruta de datos</li>
+      <li class="reveal d3">¿Contacta el registro tu segunda <code class="inline">loadModel()</code> del día? ¿Qué hace en su lugar?</li>
+      <li class="reveal d4">Un error menciona "download" en modo avión: tres hipótesis y cómo distinguirlas</li>
+      <li class="reveal d5">Frío 4.1 s vs tibio 0.9 s en carga: ¿bug? Analiza el supuesto falso</li>
+      <li class="reveal d6">Redacta qué prometerías como "local" en una app de cabina de avión + su test de CI</li>
+    </ol>
+    <div class="block reveal d7" style="max-width:1650px;">
+      <div class="block-title">Takeaway</div>
+      <div class="block-body">La IA local no es una etiqueta: es una propiedad <b>verificable</b> de la arquitectura. Provisionas con red; cargas, infieres y mides sin ella. El Airplane-Mode Test convierte la promesa en evidencia — esa disciplina sostiene todo el bootcamp.</div>
+    </div>
+    <p class="small reveal d8" style="margin-top:22px;"><b>Siguiente:</b> Clase 2 — abrimos el GGUF: pesos, tokenizer, cuantización y nombres de modelos.</p>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">§5 Cierre</span><span class="pageno">24 / 25</span></div>
+</section>
+
+<!-- ============ SLIDE 25 · FUENTES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Fuentes usadas</h2>
+    <ul class="itemize" style="margin-top:34px;">
+      <li class="reveal d2">QVAC — Download lifecycle (provisión offline, descargas reanudables, fallbackSrc)<br><span class="mono small">docs.qvac.tether.io/models/download-lifecycle/</span></li>
+      <li class="reveal d3">QVAC — Text generation (superficie events/final de completion)<br><span class="mono small">docs.qvac.tether.io/ai-capabilities/text-generation/</span></li>
+      <li class="reveal d4">QVAC — API Summary v0.18.x y Release Notes v0.18.x<br><span class="mono small">docs.qvac.tether.io/reference/api/ · /reference/release-notes/</span></li>
+      <li class="reveal d5">npm @qvac/sdk 0.18.1 — quickstart oficial<br><span class="mono small">npmjs.com/package/@qvac/sdk</span></li>
+      <li class="reveal d6">Currículo canónico — QVAC Course Expanded Learning Edition, Cap. 1 §1.1–1.8</li>
+    </ul>
+    <p class="small reveal d7" style="margin-top:34px;">Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm · 2026-08-25. Revisa release notes antes de re-impartir.</p>
+  </div>
+  <div class="footline"><span>Airplane-Mode Intelligence</span><span class="sec">Referencias</span><span class="pageno">25 / 25</span></div>
+</section>
+
+</main>
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Modo edición (E)">✏ EDITAR</button>
+
+<script>
+/* ===========================================
+   CONTROLADOR DE LA PRESENTACIÓN
+   Teclado · táctil · rueda · notas (N).
+   NOTA: NO gestiona ningún contador de página —
+   el único número visible es el .pageno estático
+   de la footline de cada diapositiva (Beamer).
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.currentSlide = 0;
+        this.stage = document.getElementById('deckStage');
+        this.progressBar = document.getElementById('progressBar');
+        this.wheelLock = false;
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupEmbedBridge();
+        document.getElementById('prevBtn')?.addEventListener('click', () => this.showSlide(this.currentSlide - 1));
+        document.getElementById('nextBtn')?.addEventListener('click', () => this.showSlide(this.currentSlide + 1));
+        this.showSlide(0);
+    }
+
+    /* Escala el lienzo fijo 1920×1080 completo al viewport (letterbox). */
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(innerWidth / 1920, innerHeight / 1080);
+            this.stage.style.transform =
+                'translate(' + ((innerWidth - 1920 * f) / 2) + 'px,' + ((innerHeight - 1080 * f) / 2) + 'px) scale(' + f + ')';
+        };
+        scale();
+        addEventListener('resize', scale);
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true') return;
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide + 1); }
+            if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide - 1); }
+            if (e.key === 'Home') this.showSlide(0);
+            if (e.key === 'End') this.showSlide(this.slides.length - 1);
+            if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('show-notes');
+        });
+    }
+
+    setupTouchNav() {
+        let x0 = null;
+        addEventListener('touchstart', (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+        addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 60) this.showSlide(this.currentSlide + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        addEventListener('wheel', (e) => {
+            if (this.wheelLock || Math.abs(e.deltaY) < 30) return;
+            this.wheelLock = true;
+            this.showSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => { this.wheelLock = false; }, 700);
+        }, { passive: true });
+    }
+
+    setupEmbedBridge() {
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d || d.type !== 'qvac-slides') return;
+            if (d.action === 'next') this.showSlide(this.currentSlide + 1);
+            if (d.action === 'prev') this.showSlide(this.currentSlide - 1);
+            if (d.action === 'go' && typeof d.index === 'number') this.showSlide(d.index - 1);
+        });
+    }
+
+    notifyParent() {
+        if (window.parent === window) return;
+        window.parent.postMessage({
+            type: 'qvac-slides',
+            current: this.currentSlide + 1,
+            total: this.slides.length
+        }, '*');
+    }
+
+    /* Única responsabilidad: alternar visibilidad + barra de progreso.
+       Sin escritura de contadores de texto. */
+    showSlide(index) {
+        this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
+        this.slides.forEach((s, i) => {
+            s.classList.toggle('active', i === this.currentSlide);
+            s.classList.toggle('visible', i === this.currentSlide);
+        });
+        this.progressBar.style.width = ((this.currentSlide + 1) / this.slides.length * 100) + '%';
+        this.notifyParent();
+    }
+}
+
+/* ===========================================
+   EDICIÓN EN LÍNEA
+   Hover arriba-izquierda o tecla E · guarda en
+   localStorage · Ctrl+S exporta el HTML editado.
+   =========================================== */
+class InlineEditor {
+    constructor(deckKey) {
+        this.deckKey = deckKey;
+        this.isActive = false;
+        this.hideTimeout = null;
+        this.toggleBtn = document.getElementById('editToggle');
+        this.bindChrome();
+        this.bindKeys();
+        this.restore();
+    }
+    targets() {
+        return document.querySelectorAll(
+            '.slide h2, .slide p, .slide td, .slide th, .slide li, .slide .block-body, .slide .block-title, .slide .title-sub, .slide .title-meta span, .slide .activity-sub'
+        );
+    }
+    bindChrome() {
+        const hotzone = document.querySelector('.edit-hotzone');
+        const showBtn = () => { clearTimeout(this.hideTimeout); this.toggleBtn.classList.add('show'); };
+        const hideBtn = () => {
+            this.hideTimeout = setTimeout(() => { if (!this.isActive) this.toggleBtn.classList.remove('show'); }, 400);
+        };
+        hotzone.addEventListener('mouseenter', showBtn);
+        hotzone.addEventListener('mouseleave', hideBtn);
+        this.toggleBtn.addEventListener('mouseenter', () => clearTimeout(this.hideTimeout));
+        this.toggleBtn.addEventListener('mouseleave', hideBtn);
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        this.toggleBtn.addEventListener('click', () => this.toggleEditMode());
+    }
+    bindKeys() {
+        document.addEventListener('keydown', (e) => {
+            const editingText = e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true';
+            if ((e.key === 'e' || e.key === 'E') && !editingText) this.toggleEditMode();
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); this.exportFile(); }
+        });
+    }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        this.toggleBtn.classList.toggle('active', this.isActive);
+        this.toggleBtn.textContent = this.isActive ? '✓ EDITANDO' : '✏ EDITAR';
+        this.targets().forEach((el) => { el.contentEditable = this.isActive ? 'true' : 'false'; });
+        if (!this.isActive) this.save();
+    }
+    save() {
+        const data = {};
+        this.targets().forEach((el, i) => { data[i] = el.innerHTML; });
+        try { localStorage.setItem('frontend-slides-' + this.deckKey, JSON.stringify(data)); } catch (err) {}
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem('frontend-slides-' + this.deckKey) || '{}');
+            this.targets().forEach((el, i) => { if (typeof data[i] === 'string') el.innerHTML = data[i]; });
+        } catch (err) {}
+    }
+    exportFile() {
+        this.save();
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = this.deckKey + '.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+new SlidePresentation();
+new InlineEditor('class-01-airplane-mode-intelligence-slides');
+
+/* =======================================================
+   Puente de modo UI de la plataforma QVAC Bootcamp
+   (solo presentación — no toca el protocolo 'qvac-slides')
+   Prioridad: query param ?ui= > localStorage bootcamp.uiMode.
+   Escucha postMessage {type:'qvac-ui', ui, theme} del padre y
+   alterna en <html>: 'ninja-slides' (modo ninja) y 'slides-dark'
+   (docs con tema oscuro de la plataforma).
+   ======================================================= */
+(function () {
+    var root = document.documentElement;
+    function readLS(key) { try { return localStorage.getItem(key); } catch (err) { return null; } }
+    function apply(ui, theme) {
+        var ninja = ui === 'ninja';
+        root.classList.toggle('ninja-slides', ninja);
+        root.classList.toggle('slides-dark', !ninja && (theme || readLS('bootcamp.theme')) === 'dark');
+    }
+    var params = new URLSearchParams(location.search);
+    apply(params.get('ui') || readLS('bootcamp.uiMode'), params.get('theme'));
+    window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (!d || d.type !== 'qvac-ui') return;
+        if (window.parent !== window && e.source !== window.parent) return;
+        apply(d.ui, d.theme);
+    });
+})();
+</script>
+</body>
+</html>

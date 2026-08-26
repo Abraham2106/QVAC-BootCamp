@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clase 3 — Local Inference Fundamentals</title>
+
+<!-- ============================================================
+     CLASE 3 · LOCAL INFERENCE FUNDAMENTALS
+     The Local-First AI Systems Masterclass
+     ------------------------------------------------------------
+     Estilo: BEAMER ACADÉMICO (mismo sistema que Clase 2).
+     FILOSOFÍA slides-vs-lesson (docs/slides-vs-lesson.md):
+     Complementarias a lesson.md — visual, hooks, una idea/slide.
+     NO copiar párrafos del canónico; detalle y código en la lección.
+
+     Narrativa: Hook → Tokens → Autoregresivo → events/final →
+     Streaming → stopReason → Sampling → Contexto → TTFT/tok/s →
+     KV cache → Profiler → Predict/Demo → Break It/Measure It →
+     Misconcepciones → Your Turn → Cierre.
+     Baseline: QVAC SDK v0.18.x / v0.18.1 (verificado 2026-08-25).
+     Escenario fijo 1920×1080 escalado como unidad.
+     CONTADOR: único escritor = footline derecho (.pageno).
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============ VARIABLES DEL TEMA BEAMER ============ */
+:root {
+    --stage-bg: #101010;
+    --paper: #FBFAF6;
+    --ink: #1A1A1A;
+    --blue: #1E4B8F;
+    --blue-tint: #EDF2F9;
+    --red: #B22222;
+    --red-tint: #F9EDED;
+    --green: #2E7D46;
+    --green-tint: #EEF6F0;
+    --hairline: rgba(26,26,26,.22);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ============ FIXED 16:9 STAGE: BASE OBLIGATORIA ============ */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    overflow: hidden; transform-origin: 0 0; background: var(--paper);
+}
+.slide {
+    position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden;
+    display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--paper);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative; display: block !important; visibility: visible !important;
+        opacity: 1 !important; pointer-events: auto !important;
+        width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .progress-bar, .edit-toggle, .edit-hotzone, .footline { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ============ TIPOGRAFÍA ============ */
+.slide { font-family: 'STIX Two Text', Georgia, serif; color: var(--ink); }
+
+/* ============ FRAME COMÚN ============ */
+.frame { position: absolute; inset: 70px 110px 130px; display: flex; flex-direction: column;
+    font-size: 31px; line-height: 1.5; }
+h2.frametitle {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 58px;
+    letter-spacing: -.01em; color: var(--blue); line-height: 1.08;
+}
+h2.frametitle::after {
+    content: ""; display: block; width: 100%; height: 2.5px; margin-top: 12px;
+    background: linear-gradient(90deg, var(--blue) 0 38%, var(--hairline) 38% 100%);
+}
+.body { margin-top: 30px; font-size: 31px; line-height: 1.55; flex: 1; min-height: 0; }
+.body p + p { margin-top: 16px; }
+em.term { font-style: italic; color: var(--blue); }
+.small { font-size: 25px; color: rgba(26,26,26,.65); }
+
+ul.itemize { list-style: none; }
+ul.itemize li { position: relative; padding-left: 42px; margin-top: 20px; }
+ul.itemize li::before {
+    content: "•"; position: absolute; left: 10px; top: 0;
+    color: var(--blue); font-size: inherit; line-height: inherit;
+}
+ol.enumerate { list-style: none; counter-reset: enum; }
+ol.enumerate li {
+    counter-increment: enum; position: relative; padding-left: 62px;
+    margin-top: 14px; margin-bottom: 22px; line-height: 1.5;
+}
+ol.enumerate li:last-child { margin-bottom: 0; }
+ol.enumerate li::before {
+    content: counter(enum); position: absolute; left: 0; top: 2px;
+    width: 42px; height: 42px; border-radius: 50%; background: var(--blue); color: var(--paper);
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 23px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.block { margin-top: 26px; border: 1px solid var(--hairline); background: var(--blue-tint); }
+.block .block-title {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 27px;
+    background: var(--blue); color: var(--paper); padding: 12px 28px;
+}
+.block .block-body { padding: 22px 28px; font-size: 28px; line-height: 1.5; }
+.block.example { background: var(--green-tint); }
+.block.example .block-title { background: var(--green); }
+.block.alert { background: var(--red-tint); }
+.block.alert .block-title { background: var(--red); }
+
+table.booktabs { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: 27px; }
+.booktabs thead tr { border-top: 3px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.booktabs th { font-family: 'Fira Sans', sans-serif; font-weight: 600; text-align: left; padding: 15px 20px; font-size: 25px; }
+.booktabs tbody tr:last-child { border-bottom: 3px solid var(--ink); }
+.booktabs td { padding: 14px 20px; line-height: 1.35; }
+.booktabs tbody tr + tr { border-top: 1px solid var(--hairline); }
+.booktabs code { font-size: 23px; }
+
+pre.verbatim {
+    margin-top: 26px; background: #F3F1EA; border: 1px solid var(--hairline);
+    border-left: 6px solid var(--blue); padding: 24px 30px;
+    font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.52;
+    white-space: pre-wrap; color: #14304f;
+}
+pre.verbatim .cm { color: #7a8899; }
+pre.verbatim .kw { color: var(--blue); font-weight: 700; }
+pre.verbatim .str { color: var(--green); }
+code.inline { font-family: 'JetBrains Mono', monospace; font-size: .82em;
+    background: #F3F1EA; border: 1px solid var(--hairline); padding: 2px 8px; color: #14304f; }
+
+pre.diagram { font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.45;
+    color: var(--ink); padding: 10px 0 0; margin-top: 22px; white-space: pre; }
+pre.diagram b { color: var(--blue); }
+pre.diagram .dim { color: #7a8899; }
+
+/* ============ FOOTLINE ============ */
+.footline {
+    position: absolute; left: 110px; right: 110px; bottom: 44px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'Fira Sans', sans-serif; font-size: 20px; color: rgba(26,26,26,.55);
+    border-top: 1.5px solid var(--hairline); padding-top: 14px;
+}
+.footline .sec { color: var(--blue); font-weight: 500; }
+.footline .pageno { font-variant-numeric: tabular-nums; }
+
+/* ============ DIVIDER / ACTIVIDAD / PORTADA ============ */
+.slide--divider { background: var(--blue); }
+.slide--divider .frame { justify-content: center; align-items: flex-start; }
+.divider-kicker { font-family: 'Fira Sans', sans-serif; font-size: 30px; letter-spacing: .28em;
+    text-transform: uppercase; color: rgba(251,250,246,.75); }
+.divider-num { font-family: 'STIX Two Text', serif; font-size: 300px; font-weight: 700;
+    color: rgba(251,250,246,.28); line-height: 1; }
+.divider-title { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 96px;
+    color: var(--paper); line-height: 1.02; letter-spacing: -.01em; margin-top: -40px; }
+.slide--divider .footline { border-top-color: rgba(251,250,246,.3); color: rgba(251,250,246,.7); }
+.slide--divider .footline .sec { color: var(--paper); }
+
+.activity-word { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 150px;
+    color: var(--blue); letter-spacing: -.02em; line-height: 1; }
+.activity-sub { font-size: 33px; margin-top: 26px; max-width: 1450px; line-height: 1.5; }
+
+.title-slide .frame { justify-content: center; align-items: center; text-align: center; }
+.title-course { font-family: 'Fira Sans', sans-serif; font-size: 29px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--red); font-weight: 600; }
+.title-main { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 104px;
+    color: var(--blue); letter-spacing: -.015em; line-height: 1.04; margin-top: 34px; }
+.title-sub { font-size: 41px; margin-top: 30px; font-style: italic; color: rgba(26,26,26,.8); max-width: 1400px; }
+.title-meta { margin-top: 66px; font-family: 'Fira Sans', sans-serif; font-size: 26px;
+    color: rgba(26,26,26,.65); display: flex; gap: 26px; align-items: baseline; }
+.title-meta .dot { color: var(--blue); }
+.title-rule { width: 220px; height: 3px; background: var(--blue); margin-top: 48px; }
+
+/* ============ REVELADO ============ */
+.reveal { opacity: 0; transform: translateY(26px);
+    transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.d1 { transition-delay: .07s; } .d2 { transition-delay: .15s; } .d3 { transition-delay: .23s; }
+.d4 { transition-delay: .31s; } .d5 { transition-delay: .39s; } .d6 { transition-delay: .47s; }
+.d7 { transition-delay: .55s; } .d8 { transition-delay: .63s; }
+
+/* ============ CROMO FUERA DEL ESCENARIO ============ */
+.progress-bar { position: fixed; top: 0; left: 0; height: 6px; width: 0%; background: var(--blue); z-index: 1200; transition: width .4s ease; }
+aside.notes {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 2000;
+    background: #FFF8E1; border-top: 3px solid var(--blue);
+    font-family: 'Fira Sans', sans-serif; font-size: 17px; line-height: 1.5;
+    padding: 14px 90px; color: #333; display: none; max-height: 30vh; overflow: auto;
+}
+body.show-notes aside.notes { display: block; }
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 18px; right: 18px; opacity: 0; pointer-events: none;
+    transition: opacity .3s ease; z-index: 10001; background: var(--blue); color: var(--paper);
+    border: none; font-family: 'Fira Sans', sans-serif; font-size: 16px;
+    padding: 11px 20px; cursor: pointer;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { background: var(--red); }
+body.editing .slide [contenteditable="true"] { outline: 1.5px dashed var(--blue); outline-offset: 3px; min-width: 24px; }
+body.editing .slide--divider [contenteditable="true"] { outline-color: var(--paper); }
+</style>
+<!-- Capa de tema QVAC Bootcamp: docs claro/oscuro + ninja (ver assets/slides.css) -->
+<link rel="stylesheet" href="../assets/slides.css">
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============ SLIDE 01 · PORTADA ============ -->
+<section class="slide title-slide">
+  <div class="frame">
+    <div class="title-course reveal d1">The Local-First AI Systems Masterclass</div>
+    <div class="title-main reveal d2">Local Inference<br>Fundamentals</div>
+    <div class="title-sub reveal d3">¿Qué ocurre entre un prompt y el siguiente token generado, y cómo podemos observar las consecuencias?</div>
+    <div class="title-rule reveal d4"></div>
+    <div class="title-meta reveal d5">
+      <span>Módulo 1 — Your First Local Token</span><span class="dot">·</span>
+      <span>Clase 3 de 12</span><span class="dot">·</span>
+      <span>QVAC SDK v0.18.x</span><span class="dot">·</span>
+      <span>2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 02 · HOOK AUTOREGRESIVO ============ -->
+<section class="slide">
+  <div class="frame">
+    <p class="small reveal d1" style="font-family:'Fira Sans';letter-spacing:.2em;text-transform:uppercase;">Pregunta esencial</p>
+    <h2 class="frametitle reveal d2" style="font-size:72px; max-width:1600px;">¿Qué ocurre <em class="term">entre</em> el prompt y el siguiente token?</h2>
+    <div class="block reveal d3" style="max-width:1500px;">
+      <div class="block-title">Dos configs, misma laptop</div>
+      <div class="block-body"><b>Config A:</b> primer token a los 200 ms · decode a 15 tok/s<br>
+      <b>Config B:</b> primer token a los 2 s · decode a 40 tok/s<br>
+      ¿Cuál "se siente" más rápida? <b>Depende de qué midas.</b></div>
+    </div>
+    <p class="body reveal d4" style="flex:none; margin-top:30px; font-size:31px;">Clases 1–2: dónde vive el modelo y qué contiene el GGUF. Hoy: qué pasa <b>mientras infiere</b> — y cómo observarlo sin tratar la API como caja negra.</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">Introducción</span><span class="pageno">02 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 03 · DIVIDER §1 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 1</div>
+    <div class="divider-num reveal d2">01</div>
+    <div class="divider-title reveal d3">De prompt a token</div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">Concepto</span><span class="pageno">03 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 04 · TOKENS ≠ PALABRAS ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Tokens ≠ palabras</h2>
+    <ul class="itemize">
+      <li class="reveal d2">Un LLM no consume "palabras" — el <b>tokenizer</b> convierte texto en <b>tokens</b> (unidades sub-palabra del vocabulario)</li>
+      <li class="reveal d3">"Hola" puede ser 1 token; un término técnico compuesto puede ser 3; puntuación y espacios también cuentan</li>
+      <li class="reveal d4">El costo de contexto escala con <b>tokens procesados</b>, no con "número de frases"</li>
+    </ul>
+    <div class="block alert reveal d5">
+      <div class="block-title">Regla práctica</div>
+      <div class="block-body">No adivines conteos exactos sin medir con el tokenizer del modelo concreto. Si no tienes API de conteo verificada, usa proxies (caracteres, mensajes) y <b>etiquétalos honestamente</b>.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§1 De prompt a token</span><span class="pageno">04 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 05 · BUCLE AUTOREGRESIVO ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Generación autoregresiva</h2>
+<pre class="diagram reveal d2" style="font-size:27px;">history / prompt
+      ↓
+tokenización
+      ↓
+evaluación del prompt <span class="dim">(prefill)</span>
+      ↓
+distribución del <b>siguiente</b> token
+      ↓
+sampling / selección
+      ↓
+append al contexto
+      ↓
+repetir hasta condición de parada</pre>
+    <p class="body reveal d3" style="flex:none; margin-top:20px;">Cada token nuevo depende de <b>todo lo anterior</b> — incluidos los que el modelo acaba de generar. Por eso el streaming tiene sentido: puedes <b>observar</b> el bucle mientras ocurre.</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§1 De prompt a token</span><span class="pageno">05 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 06 · MODELO MENTAL ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Modelo mental — cadena causal</h2>
+<pre class="diagram reveal d2" style="font-size:28px;">history → tokenization → model state <span class="dim">(attention)</span>
+      ↓
+next-token distribution → sampling → token
+      ↓
+streamed event <b>(contentDelta)</b> → repeat until stop</pre>
+    <div class="block reveal d3">
+      <div class="block-title">Pregunta de diseño</div>
+      <div class="block-body">Cuando cambies un parámetro, pregúntate: <b>¿en qué eslabón de esta cadena actúa?</b>
+      <code class="inline">temp</code> → sampling · history larga → prefill · <code class="inline">predict</code> → stop condition.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§1 De prompt a token</span><span class="pageno">06 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 07 · DIVIDER §2 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 2</div>
+    <div class="divider-num reveal d2">02</div>
+    <div class="divider-title reveal d3">Superficie QVAC</div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">API</span><span class="pageno">07 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 08 · events + final ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1"><code class="inline">completion()</code> → <code class="inline">CompletionRun</code></h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th>Superficie</th><th>Qué es</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td><code class="inline">events</code></td><td><code class="inline">AsyncIterable&lt;CompletionEvent&gt;</code> ordenado, tipado por <code class="inline">type</code></td></tr>
+        <tr class="reveal d4"><td><code class="inline">final</code></td><td><code class="inline">Promise&lt;CompletionFinal&gt;</code> — texto agregado, stats, <code class="inline">stopReason</code></td></tr>
+      </tbody>
+    </table>
+    <div class="block example reveal d5">
+      <div class="block-title">Contrato canónico v0.18.x</div>
+      <div class="block-body">Código nuevo: preferir <code class="inline">events</code> + <code class="inline">final</code>.
+      Superficies legacy (<code class="inline">tokenStream</code>, <code class="inline">text</code> sueltos) existen por compatibilidad — no las enseñamos.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§2 Superficie QVAC</span><span class="pageno">08 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 09 · EVENT STREAM ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Watch the stream — eventos clave</h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th>Evento</th><th>Rol pedagógico</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td><code class="inline">contentDelta</code></td><td>Fragmento de texto visible; <b>primer evento útil para TTFT</b></td></tr>
+        <tr class="reveal d4"><td><code class="inline">completionStats</code></td><td>Stats del runtime (p. ej. tok/s) durante o al final</td></tr>
+        <tr class="reveal d5"><td><code class="inline">completionDone</code></td><td>Señal de cierre del stream; puede incluir stopReason</td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d6" style="margin-top:22px;">Streaming expone progreso al cliente — <b>no acelera intrínsecamente</b> el motor. tok/s del runtime puede ser idéntico con o sin streaming UX.</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§2 Superficie QVAC</span><span class="pageno">09 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 10 · stopReason ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1"><code class="inline">stopReason</code> — por qué paró</h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th>Valor</th><th>Significado típico</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td><code class="inline">"eos"</code></td><td>Fin natural (end-of-sequence)</td></tr>
+        <tr class="reveal d4"><td><code class="inline">"length"</code></td><td>Alcanzó límite de tokens nuevos (<code class="inline">predict</code>)</td></tr>
+        <tr class="reveal d5"><td><code class="inline">"stopSequence"</code></td><td>Encontró secuencia de parada configurada</td></tr>
+        <tr class="reveal d6"><td><code class="inline">"cancelled"</code> / <code class="inline">"error"</code></td><td>Cancelación explícita vs fallo mid-stream</td></tr>
+      </tbody>
+    </table>
+    <div class="block alert reveal d7">
+      <div class="block-title">Diagnóstico</div>
+      <div class="block-body"><code class="inline">stopReason: "length"</code> no es "el modelo falló" — es el runtime obedeciendo un límite que <b>tú</b> configuraste. Evidencia: <code class="inline">final.stopReason</code>, contenido parcial, stats.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§2 Superficie QVAC</span><span class="pageno">10 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 11 · DIVIDER §3 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 3</div>
+    <div class="divider-num reveal d2">03</div>
+    <div class="divider-title reveal d3">Knobs y fases</div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">Mecánica</span><span class="pageno">11 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 12 · SAMPLING ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Sampling — reglas de selección</h2>
+<pre class="diagram reveal d2" style="font-size:28px;">modelo predice candidatos al next token
+        ↓
+sampling elige uno → distintos settings → distinto comportamiento</pre>
+    <table class="booktabs reveal d3">
+      <thead><tr><th><code class="inline">generationParams</code></th><th>Rol</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td><code class="inline">temp</code></td><td>Escala la distribución; 0 → greedy/determinista</td></tr>
+        <tr class="reveal d5"><td><code class="inline">top_k</code> / <code class="inline">top_p</code></td><td>Limita candidatos (K más probables / nucleus)</td></tr>
+        <tr class="reveal d6"><td><code class="inline">seed</code> / <code class="inline">predict</code></td><td>Reproducibilidad · máximo de tokens nuevos</td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d7" style="margin-top:18px;"><code class="inline">temp</code> altera <b>selección</b>, no el conocimiento en los pesos. Usa <code class="inline">temp</code>, no <code class="inline">temperature</code>.</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§3 Knobs y fases</span><span class="pageno">12 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 13 · PRESIÓN DE CONTEXTO ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Presión de contexto</h2>
+<pre class="diagram reveal d2" style="font-size:26px;">system / template <span class="dim">(interno)</span>
++ conversation history
++ retrieved context <span class="dim">(RAG — Clase 6)</span>
++ current user message
++ generation budget (<code class="inline">predict</code>)
+= <b>ventana finita</b></pre>
+    <ul class="itemize">
+      <li class="reveal d3"><code class="inline">history</code> no es decoración — <b>es input de inferencia</b></li>
+      <li class="reveal d4">History más larga → más trabajo de <b>prefill</b> antes del primer token → TTFT puede subir</li>
+      <li class="reveal d5">"Si cabe en contexto, es gratis" es falso — más contexto = más procesamiento</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§3 Knobs y fases</span><span class="pageno">13 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 14 · TTFT / tok/s / LATENCIA ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">TTFT · tok/s · latencia total</h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th>Métrica</th><th>Qué mide</th><th>Dónde</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td><b>TTFT</b></td><td>Espera hasta primer <code class="inline">contentDelta</code></td><td>Responsividad percibida al inicio</td></tr>
+        <tr class="reveal d4"><td><b>tok/s</b></td><td>Throughput de decode sostenido</td><td><code class="inline">final.stats.tokensPerSecond</code></td></tr>
+        <tr class="reveal d5"><td><b>Latencia total</b></td><td>Wall-clock request → <code class="inline">final</code></td><td>TTFT + decode + overhead</td></tr>
+      </tbody>
+    </table>
+    <div class="block reveal d6">
+      <div class="block-title">Regla de oro</div>
+      <div class="block-body"><b>TTFT ≠ total latency ≠ tokens/sec.</b> Dos configs con el mismo tok/s pueden sentirse muy distintas si difieren en TTFT o en cuántos tokens producen.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§3 Knobs y fases</span><span class="pageno">14 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 15 · KV CACHE + PROFILER ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">KV cache y profiler</h2>
+    <ul class="itemize" style="column-count:2; column-gap:60px;">
+      <li class="reveal d2"><b>KV cache:</b> reutiliza attention state (keys/values) de prefijos compatibles en follow-ups</li>
+      <li class="reveal d3"><code class="inline">kvCache: true</code> — auto-cache SDK · <code class="inline">"mi-sesion"</code> — caller-managed</li>
+      <li class="reveal d4"><b>NO es</b> memoria semántica, RAG ni garantía de speedup en prompts diminutos</li>
+      <li class="reveal d5"><b>Profiler:</b> timing agregado por operación — <code class="inline">profiler.enable()</code> → <code class="inline">exportSummary()</code></li>
+    </ul>
+    <div class="block example reveal d6">
+      <div class="block-title">Tres capas de evidencia — no las mezcles</div>
+      <div class="block-body"><code class="inline">completionStats</code> / <code class="inline">final.stats</code> → esa generación ·
+      Profiler → timing RPC/handler · Resource gauges → señales de backend (opt-in).</div>
+    </div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§3 Knobs y fases</span><span class="pageno">15 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 16 · DIVIDER §4 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 4</div>
+    <div class="divider-num reveal d2">04</div>
+    <div class="divider-title reveal d3">Predict · Demo</div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">Experimento</span><span class="pageno">16 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 17 · PREDICT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1"># Predict</div>
+    <p class="activity-sub reveal d2">Predict Before We Run — por escrito, <b>antes</b> de ejecutar. Comprometerse con un modelo mental es lo que convierte la observación en aprendizaje.</p>
+    <ol class="enumerate" style="margin-top:24px;">
+      <li class="reveal d3">Mismo prompt, <code class="inline">seed: 42</code>, <code class="inline">temp: 0</code> vs <code class="inline">temp: 1.0</code> — ¿salida idéntica?</li>
+      <li class="reveal d4">History corta vs larga — ¿qué métrica cambia primero: TTFT o tok/s?</li>
+      <li class="reveal d5"><code class="inline">predict: 8</code> con prompt que pide respuesta larga — ¿qué <code class="inline">stopReason</code> esperas?</li>
+      <li class="reveal d6">Follow-up con <code class="inline">kvCache: true</code> vs sin cache — ¿dónde debería verse la diferencia?</li>
+    </ol>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§4 Predict · Demo</span><span class="pageno">17 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 18 · WATCH EVENT STREAM ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:100px;"># Watch the Event Stream</div>
+    <p class="activity-sub reveal d2">Cinco ejemplos ejecutables — observa el bucle token a token.</p>
+<pre class="verbatim reveal d3"><span class="cm"># streaming + eventos canónicos</span>
+npx tsx examples/01-streaming-events.ts
+npx tsx examples/02-sampling-experiment.ts
+npx tsx examples/03-context-experiment.ts
+npx tsx examples/04-kv-cache.ts
+npx tsx examples/05-profiler.ts</pre>
+    <ul class="itemize" style="column-count:2; column-gap:60px; margin-top:8px;">
+      <li class="reveal d4"><b>Observa:</b> primer <code class="inline">contentDelta</code> → marca TTFT</li>
+      <li class="reveal d5"><b>Observa:</b> <code class="inline">completionDone</code> + <code class="inline">final.stopReason</code></li>
+    </ul>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§4 Predict · Demo</span><span class="pageno">18 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 19 · DIVIDER §5 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 5</div>
+    <div class="divider-num reveal d2">05</div>
+    <div class="divider-title reveal d3">Break It · Measure It</div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">Experimento</span><span class="pageno">19 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 20 · BREAK IT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Break It</div>
+    <p class="activity-sub reveal d2">Prompt pide respuesta larga; <code class="inline">generationParams.predict</code> intencionalmente bajo (p. ej. 8).</p>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Predicción (antes)</th><th>Evidencia (después)</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>¿Qué evento confirma el fin?</td><td><code class="inline">completionDone</code></td></tr>
+        <tr class="reveal d5"><td>¿Qué <code class="inline">stopReason</code>?</td><td>Típicamente <code class="inline">"length"</code></td></tr>
+        <tr class="reveal d6"><td>¿Falló el modelo?</td><td>No — obedeció tu límite; contenido parcial + stats</td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d7" style="margin-top:20px;">Contrasta con <code class="inline">"eos"</code> (fin natural), <code class="inline">"cancelled"</code> y <code class="inline">"error"</code> (fallo real).</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§5 Break · Measure</span><span class="pageno">20 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 21 · MEASURE IT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:100px;"># Measure It</div>
+    <p class="activity-sub reveal d2">Measure the System — mínimo en tu Inference Experiment Report:</p>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Medición</th><th>Cómo</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>TTFT</td><td>wall-clock al primer <code class="inline">contentDelta</code></td></tr>
+        <tr class="reveal d5"><td>Duración total</td><td>request start → <code class="inline">await run.final</code></td></tr>
+        <tr class="reveal d6"><td>tok/s</td><td><code class="inline">final.stats.tokensPerSecond</code></td></tr>
+        <tr class="reveal d7"><td>stopReason</td><td><code class="inline">final.stopReason</code></td></tr>
+        <tr class="reveal d8"><td>Modo cache</td><td><code class="inline">kvCache</code> usado + condición de history</td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d8" style="margin-top:18px;">Etiqueta siempre resultados como <b>de tu máquina</b> — cero benchmarks universales fabricados.</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§5 Break · Measure</span><span class="pageno">21 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 22 · MISCONCEPCIONES + YOUR TURN ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Misconcepciones + Your Turn</h2>
+    <div class="block alert reveal d2">
+      <div class="block-title">Top 3</div>
+      <div class="block-body">"Streaming acelera el modelo" · "tok/s cuenta toda la latencia" ·
+      "temp cambia lo que el modelo sabe" · "KV cache = memoria forever"</div>
+    </div>
+    <div class="block reveal d3" style="max-width:1620px;">
+      <div class="block-title">Challenge — Design a Responsive Local Generation Configuration</div>
+      <div class="block-body">Un modelo, usuarios que se quejan de lentitud. Define qué significa "lento", mide baseline,
+      formula hipótesis, cambia <b>UNA</b> variable, compara controlado y recomienda configuración.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§5 Cierre</span><span class="pageno">22 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 23 · CHECKPOINT + TAKEAWAY ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Checkpoint — demuéstralo</h2>
+    <ol class="enumerate" style="column-count:2; column-gap:70px; margin-top:6px;">
+      <li class="reveal d2">¿Por qué TTFT ≠ tok/s?</li>
+      <li class="reveal d3">¿Por qué streaming puede sentir la app más rápida sin cambiar tok/s?</li>
+      <li class="reveal d4">¿Cuándo ayuda KV cache en un follow-up?</li>
+      <li class="reveal d5"><code class="inline">stopReason: "length"</code> — ¿falló necesariamente?</li>
+      <li class="reveal d6">Mismo tok/s, TTFT muy distinto — dos causas plausibles</li>
+      <li class="reveal d7">Diseña experimento controlado: ¿contexto afecta responsividad?</li>
+    </ol>
+    <div class="block reveal d8" style="max-width:1650px;">
+      <div class="block-title">Takeaway</div>
+      <div class="block-body">La inferencia es un <b>proceso con fases observables</b>, no una llamada API opaca.
+      Separa prompt latency de decode throughput, lee el event stream, y <b>diseña un experimento antes de afirmar rendimiento</b>.</div>
+    </div>
+    <p class="small reveal d8" style="margin-top:18px;"><b>Siguiente:</b> Clase 4 — Build the Offline Chat: convierte estos primitivos en app persistente con history y UX.</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">§5 Cierre</span><span class="pageno">23 / 24</span></div>
+</section>
+
+<!-- ============ SLIDE 24 · FUENTES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Fuentes usadas</h2>
+    <ul class="itemize" style="margin-top:30px;">
+      <li class="reveal d2">QVAC — Text generation · docs.qvac.tether.io/ai-capabilities/text-generation/</li>
+      <li class="reveal d3">QVAC — API Summary v0.18.x · docs.qvac.tether.io/reference/api/</li>
+      <li class="reveal d4">QVAC — Profiler · docs.qvac.tether.io/runtime/profiler/</li>
+      <li class="reveal d5">QVAC — How It Works · Release Notes v0.18.x</li>
+      <li class="reveal d6">npm @qvac/sdk 0.18.1 · llama.cpp — github.com/ggml-org/llama.cpp</li>
+      <li class="reveal d7">Currículo canónico — QVAC Course Expanded Learning Edition, Cap. 4 §4.11–4.20</li>
+    </ul>
+    <p class="small reveal d8" style="margin-top:30px;">Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · superficie canónica <code class="inline">events</code> + <code class="inline">final</code> · verificado 2026-08-25.</p>
+  </div>
+  <div class="footline"><span>Local Inference Fundamentals</span><span class="sec">Referencias</span><span class="pageno">24 / 24</span></div>
+</section>
+
+</main>
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Modo edición (E)">✏ EDITAR</button>
+
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.currentSlide = 0;
+        this.stage = document.getElementById('deckStage');
+        this.progressBar = document.getElementById('progressBar');
+        this.wheelLock = false;
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupEmbedBridge();
+        this.showSlide(0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(innerWidth / 1920, innerHeight / 1080);
+            this.stage.style.transform =
+                'translate(' + ((innerWidth - 1920 * f) / 2) + 'px,' + ((innerHeight - 1080 * f) / 2) + 'px) scale(' + f + ')';
+        };
+        scale();
+        addEventListener('resize', scale);
+    }
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true') return;
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide + 1); }
+            if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide - 1); }
+            if (e.key === 'Home') this.showSlide(0);
+            if (e.key === 'End') this.showSlide(this.slides.length - 1);
+            if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('show-notes');
+        });
+    }
+    setupTouchNav() {
+        let x0 = null;
+        addEventListener('touchstart', (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+        addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 60) this.showSlide(this.currentSlide + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+    setupWheelNav() {
+        addEventListener('wheel', (e) => {
+            if (this.wheelLock || Math.abs(e.deltaY) < 30) return;
+            this.wheelLock = true;
+            this.showSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => { this.wheelLock = false; }, 700);
+        }, { passive: true });
+    }
+    setupEmbedBridge() {
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d || d.type !== 'qvac-slides') return;
+            if (d.action === 'next') this.showSlide(this.currentSlide + 1);
+            if (d.action === 'prev') this.showSlide(this.currentSlide - 1);
+            if (d.action === 'go' && typeof d.index === 'number') this.showSlide(d.index - 1);
+        });
+    }
+    notifyParent() {
+        if (window.parent === window) return;
+        window.parent.postMessage({
+            type: 'qvac-slides',
+            current: this.currentSlide + 1,
+            total: this.slides.length
+        }, '*');
+    }
+    showSlide(index) {
+        this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
+        this.slides.forEach((s, i) => {
+            s.classList.toggle('active', i === this.currentSlide);
+            s.classList.toggle('visible', i === this.currentSlide);
+        });
+        this.progressBar.style.width = ((this.currentSlide + 1) / this.slides.length * 100) + '%';
+        this.notifyParent();
+    }
+}
+
+class InlineEditor {
+    constructor(deckKey) {
+        this.deckKey = deckKey;
+        this.isActive = false;
+        this.hideTimeout = null;
+        this.toggleBtn = document.getElementById('editToggle');
+        this.bindChrome();
+        this.bindKeys();
+        this.restore();
+    }
+    targets() {
+        return document.querySelectorAll(
+            '.slide h2, .slide p, .slide td, .slide th, .slide li, .slide .block-body, .slide .block-title, .slide .title-sub, .slide .title-meta span, .slide .activity-sub'
+        );
+    }
+    bindChrome() {
+        const hotzone = document.querySelector('.edit-hotzone');
+        const showBtn = () => { clearTimeout(this.hideTimeout); this.toggleBtn.classList.add('show'); };
+        const hideBtn = () => {
+            this.hideTimeout = setTimeout(() => { if (!this.isActive) this.toggleBtn.classList.remove('show'); }, 400);
+        };
+        hotzone.addEventListener('mouseenter', showBtn);
+        hotzone.addEventListener('mouseleave', hideBtn);
+        this.toggleBtn.addEventListener('mouseenter', () => clearTimeout(this.hideTimeout));
+        this.toggleBtn.addEventListener('mouseleave', hideBtn);
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        this.toggleBtn.addEventListener('click', () => this.toggleEditMode());
+    }
+    bindKeys() {
+        document.addEventListener('keydown', (e) => {
+            const editingText = e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true';
+            if ((e.key === 'e' || e.key === 'E') && !editingText) this.toggleEditMode();
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); this.exportFile(); }
+        });
+    }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        this.toggleBtn.classList.toggle('active', this.isActive);
+        this.toggleBtn.textContent = this.isActive ? '✓ EDITANDO' : '✏ EDITAR';
+        this.targets().forEach((el) => { el.contentEditable = this.isActive ? 'true' : 'false'; });
+        if (!this.isActive) this.save();
+    }
+    save() {
+        const data = {};
+        this.targets().forEach((el, i) => { data[i] = el.innerHTML; });
+        try { localStorage.setItem('frontend-slides-' + this.deckKey, JSON.stringify(data)); } catch (err) {}
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem('frontend-slides-' + this.deckKey) || '{}');
+            this.targets().forEach((el, i) => { if (typeof data[i] === 'string') el.innerHTML = data[i]; });
+        } catch (err) {}
+    }
+    exportFile() {
+        this.save();
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = this.deckKey + '.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+new SlidePresentation();
+new InlineEditor('class-03-local-inference-fundamentals-slides');
+
+/* =======================================================
+   Puente de modo UI de la plataforma QVAC Bootcamp
+   (solo presentación — no toca el protocolo 'qvac-slides')
+   Prioridad: query param ?ui= > localStorage bootcamp.uiMode.
+   Escucha postMessage {type:'qvac-ui', ui, theme} del padre y
+   alterna en <html>: 'ninja-slides' (modo ninja) y 'slides-dark'
+   (docs con tema oscuro de la plataforma).
+   ======================================================= */
+(function () {
+    var root = document.documentElement;
+    function readLS(key) { try { return localStorage.getItem(key); } catch (err) { return null; } }
+    function apply(ui, theme) {
+        var ninja = ui === 'ninja';
+        root.classList.toggle('ninja-slides', ninja);
+        root.classList.toggle('slides-dark', !ninja && (theme || readLS('bootcamp.theme')) === 'dark');
+    }
+    var params = new URLSearchParams(location.search);
+    apply(params.get('ui') || readLS('bootcamp.uiMode'), params.get('theme'));
+    window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (!d || d.type !== 'qvac-ui') return;
+        if (window.parent !== window && e.source !== window.parent) return;
+        apply(d.ui, d.theme);
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clase 2 — Models, GGUF and the QVAC Lifecycle</title>
+
+<!-- ============================================================
+     CLASE 2 · MODELS, GGUF AND THE QVAC LIFECYCLE
+     The Local-First AI Systems Masterclass
+     ------------------------------------------------------------
+     Estilo: BEAMER ACADÉMICO (mismo sistema que Clase 1).
+     FILOSOFÍA slides-vs-lesson (docs/slides-vs-lesson.md):
+     Complementarias a lesson.md — visual, hooks, una idea/slide.
+     NO copiar párrafos del canónico; detalle y código en la lección.
+
+     Narrativa: Hook → Anatomía → GGUF → Cuantización → Nombres →
+     Catálogo/Ciclo de vida → Predict/Demo → Break It/Measure It →
+     Misconcepciones → Your Turn → Cierre.
+     Baseline: QVAC SDK v0.18.x / v0.18.1 (verificado 2026-08-25).
+     Escenario fijo 1920×1080 escalado como unidad.
+     CONTADOR: único escritor = footline derecho (.pageno).
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============ VARIABLES DEL TEMA BEAMER ============ */
+:root {
+    --stage-bg: #101010;
+    --paper: #FBFAF6;
+    --ink: #1A1A1A;
+    --blue: #1E4B8F;
+    --blue-tint: #EDF2F9;
+    --red: #B22222;
+    --red-tint: #F9EDED;
+    --green: #2E7D46;
+    --green-tint: #EEF6F0;
+    --hairline: rgba(26,26,26,.22);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ============ FIXED 16:9 STAGE: BASE OBLIGATORIA ============ */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg); }
+.deck-stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    overflow: hidden; transform-origin: 0 0; background: var(--paper);
+}
+.slide {
+    position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden;
+    display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--paper);
+}
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative; display: block !important; visibility: visible !important;
+        opacity: 1 !important; pointer-events: auto !important;
+        width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .progress-bar, .edit-toggle, .edit-hotzone, .footline { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ============ TIPOGRAFÍA ============ */
+.slide { font-family: 'STIX Two Text', Georgia, serif; color: var(--ink); }
+
+/* ============ FRAME COMÚN ============ */
+.frame { position: absolute; inset: 70px 110px 130px; display: flex; flex-direction: column;
+    /* base tipográfica para hijos directos (listas/tablas) */
+    font-size: 31px; line-height: 1.5; }
+h2.frametitle {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 58px;
+    letter-spacing: -.01em; color: var(--blue); line-height: 1.08;
+}
+h2.frametitle::after {
+    content: ""; display: block; width: 100%; height: 2.5px; margin-top: 12px;
+    background: linear-gradient(90deg, var(--blue) 0 38%, var(--hairline) 38% 100%);
+}
+.body { margin-top: 30px; font-size: 31px; line-height: 1.55; flex: 1; min-height: 0; }
+.body p + p { margin-top: 16px; }
+em.term { font-style: italic; color: var(--blue); }
+.small { font-size: 25px; color: rgba(26,26,26,.65); }
+
+ul.itemize { list-style: none; }
+ul.itemize li { position: relative; padding-left: 42px; margin-top: 20px; }
+ul.itemize li::before {
+    content: "•"; position: absolute; left: 10px; top: 0;
+    color: var(--blue); font-size: inherit; line-height: inherit;
+}
+ol.enumerate { list-style: none; counter-reset: enum; }
+ol.enumerate li {
+    counter-increment: enum; position: relative; padding-left: 62px;
+    margin-top: 14px; margin-bottom: 22px; line-height: 1.5;
+}
+ol.enumerate li:last-child { margin-bottom: 0; }
+ol.enumerate li::before {
+    content: counter(enum); position: absolute; left: 0; top: 2px;
+    width: 42px; height: 42px; border-radius: 50%; background: var(--blue); color: var(--paper);
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 23px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.block { margin-top: 26px; border: 1px solid var(--hairline); background: var(--blue-tint); }
+.block .block-title {
+    font-family: 'Fira Sans', sans-serif; font-weight: 600; font-size: 27px;
+    background: var(--blue); color: var(--paper); padding: 12px 28px;
+}
+.block .block-body { padding: 22px 28px; font-size: 28px; line-height: 1.5; }
+.block.example { background: var(--green-tint); }
+.block.example .block-title { background: var(--green); }
+.block.alert { background: var(--red-tint); }
+.block.alert .block-title { background: var(--red); }
+
+table.booktabs { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: 27px; }
+.booktabs thead tr { border-top: 3px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.booktabs th { font-family: 'Fira Sans', sans-serif; font-weight: 600; text-align: left; padding: 15px 20px; font-size: 25px; }
+.booktabs tbody tr:last-child { border-bottom: 3px solid var(--ink); }
+.booktabs td { padding: 14px 20px; line-height: 1.35; }
+.booktabs tbody tr + tr { border-top: 1px solid var(--hairline); }
+.booktabs code { font-size: 23px; }
+
+pre.verbatim {
+    margin-top: 26px; background: #F3F1EA; border: 1px solid var(--hairline);
+    border-left: 6px solid var(--blue); padding: 24px 30px;
+    font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.52;
+    white-space: pre-wrap; color: #14304f;
+}
+pre.verbatim .cm { color: #7a8899; }
+pre.verbatim .kw { color: var(--blue); font-weight: 700; }
+pre.verbatim .str { color: var(--green); }
+code.inline { font-family: 'JetBrains Mono', monospace; font-size: .82em;
+    background: #F3F1EA; border: 1px solid var(--hairline); padding: 2px 8px; color: #14304f; }
+
+pre.diagram { font-family: 'JetBrains Mono', monospace; font-size: 26px; line-height: 1.45;
+    color: var(--ink); padding: 10px 0 0; margin-top: 22px; white-space: pre; }
+pre.diagram b { color: var(--blue); }
+pre.diagram .dim { color: #7a8899; }
+
+.math { font-style: italic; }
+.math sub { font-size: .62em; }
+
+/* ============ FOOTLINE ============ */
+.footline {
+    position: absolute; left: 110px; right: 110px; bottom: 44px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'Fira Sans', sans-serif; font-size: 20px; color: rgba(26,26,26,.55);
+    border-top: 1.5px solid var(--hairline); padding-top: 14px;
+}
+.footline .sec { color: var(--blue); font-weight: 500; }
+.footline .pageno { font-variant-numeric: tabular-nums; }
+
+/* ============ DIVIDER / ACTIVIDAD / PORTADA ============ */
+.slide--divider { background: var(--blue); }
+.slide--divider .frame { justify-content: center; align-items: flex-start; }
+.divider-kicker { font-family: 'Fira Sans', sans-serif; font-size: 30px; letter-spacing: .28em;
+    text-transform: uppercase; color: rgba(251,250,246,.75); }
+.divider-num { font-family: 'STIX Two Text', serif; font-size: 300px; font-weight: 700;
+    color: rgba(251,250,246,.28); line-height: 1; }
+.divider-title { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 96px;
+    color: var(--paper); line-height: 1.02; letter-spacing: -.01em; margin-top: -40px; }
+.slide--divider .footline { border-top-color: rgba(251,250,246,.3); color: rgba(251,250,246,.7); }
+.slide--divider .footline .sec { color: var(--paper); }
+
+.activity-word { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 150px;
+    color: var(--blue); letter-spacing: -.02em; line-height: 1; }
+.activity-sub { font-size: 33px; margin-top: 26px; max-width: 1450px; line-height: 1.5; }
+
+.title-slide .frame { justify-content: center; align-items: center; text-align: center; }
+.title-course { font-family: 'Fira Sans', sans-serif; font-size: 29px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--red); font-weight: 600; }
+.title-main { font-family: 'Fira Sans', sans-serif; font-weight: 700; font-size: 104px;
+    color: var(--blue); letter-spacing: -.015em; line-height: 1.04; margin-top: 34px; }
+.title-sub { font-size: 41px; margin-top: 30px; font-style: italic; color: rgba(26,26,26,.8); max-width: 1400px; }
+.title-meta { margin-top: 66px; font-family: 'Fira Sans', sans-serif; font-size: 26px;
+    color: rgba(26,26,26,.65); display: flex; gap: 26px; align-items: baseline; }
+.title-meta .dot { color: var(--blue); }
+.title-rule { width: 220px; height: 3px; background: var(--blue); margin-top: 48px; }
+
+/* ============ REVELADO ============ */
+.reveal { opacity: 0; transform: translateY(26px);
+    transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.d1 { transition-delay: .07s; } .d2 { transition-delay: .15s; } .d3 { transition-delay: .23s; }
+.d4 { transition-delay: .31s; } .d5 { transition-delay: .39s; } .d6 { transition-delay: .47s; }
+.d7 { transition-delay: .55s; } .d8 { transition-delay: .63s; }
+
+/* ============ CROMO FUERA DEL ESCENARIO ============ */
+.progress-bar { position: fixed; top: 0; left: 0; height: 6px; width: 0%; background: var(--blue); z-index: 1200; transition: width .4s ease; }
+aside.notes {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 2000;
+    background: #FFF8E1; border-top: 3px solid var(--blue);
+    font-family: 'Fira Sans', sans-serif; font-size: 17px; line-height: 1.5;
+    padding: 14px 90px; color: #333; display: none; max-height: 30vh; overflow: auto;
+}
+body.show-notes aside.notes { display: block; }
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 18px; right: 18px; opacity: 0; pointer-events: none;
+    transition: opacity .3s ease; z-index: 10001; background: var(--blue); color: var(--paper);
+    border: none; font-family: 'Fira Sans', sans-serif; font-size: 16px;
+    padding: 11px 20px; cursor: pointer;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { background: var(--red); }
+body.editing .slide [contenteditable="true"] { outline: 1.5px dashed var(--blue); outline-offset: 3px; min-width: 24px; }
+body.editing .slide--divider [contenteditable="true"] { outline-color: var(--paper); }
+</style>
+<!-- Capa de tema QVAC Bootcamp: docs claro/oscuro + ninja (ver assets/slides.css) -->
+<link rel="stylesheet" href="../assets/slides.css">
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============ SLIDE 01 · PORTADA ============ -->
+<section class="slide title-slide">
+  <div class="frame">
+    <div class="title-course reveal d1">The Local-First AI Systems Masterclass</div>
+    <div class="title-main reveal d2">Models, GGUF<br>and the QVAC Lifecycle</div>
+    <div class="title-sub reveal d3">¿Qué estamos cargando realmente cuando "cargamos un modelo"?</div>
+    <div class="title-rule reveal d4"></div>
+    <div class="title-meta reveal d5">
+      <span>Módulo 1 — Your First Local Token</span><span class="dot">·</span>
+      <span>Clase 2 de 12</span><span class="dot">·</span>
+      <span>QVAC SDK v0.18.x</span><span class="dot">·</span>
+      <span>2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 02 · PREGUNTA ESENCIAL ============ -->
+<section class="slide">
+  <div class="frame">
+    <p class="small reveal d1" style="font-family:'Fira Sans';letter-spacing:.2em;text-transform:uppercase;">Pregunta esencial</p>
+    <h2 class="frametitle reveal d2" style="font-size:80px; max-width:1600px;">¿Qué hay <em class="term">dentro</em> de la caja que descargaste ayer?</h2>
+    <p class="body reveal d3" style="flex:none; margin-top:40px; font-size:33px;">En la Clase 1 fue una caja negra de ~0.6 GB. Hoy la abrimos:
+      pesos, tensors, tokenizer, metadata — y el <b>contrato</b> que codifica un nombre como
+      <code class="inline">QWEN3_4B_INST_Q4_K_M</code>.</p>
+    <div class="block alert reveal d4" style="max-width:1450px;">
+      <div class="block-title">Por qué importa</div>
+      <div class="block-body">Elegir mal el modelo produce una de dos fallas garantizadas: la app que <b>no carga</b>
+      (memoria) o la app que <b>decepciona</b> (calidad). En local, la elección de modelo ES la decisión de arquitectura.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">Introducción</span><span class="pageno">02 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 03 · DIVIDER §1 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 1</div>
+    <div class="divider-num reveal d2">01</div>
+    <div class="divider-title reveal d3">Anatomía de un modelo</div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">Concepto</span><span class="pageno">03 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 04 · ANATOMÍA ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Qué hay dentro de un "modelo"</h2>
+    <table class="booktabs reveal d2">
+      <thead><tr><th>Pieza</th><th>Qué es</th><th>Por qué importa</th></tr></thead>
+      <tbody>
+        <tr class="reveal d3"><td><b>Arquitectura</b></td><td>el diseño de la red (capas, atención)</td><td>sin ella, los pesos son números sueltos</td></tr>
+        <tr class="reveal d4"><td><b>Tensors + pesos</b></td><td>los valores aprendidos, organizados</td><td>el "conocimiento"; casi todo el tamaño</td></tr>
+        <tr class="reveal d5"><td><b>Tokenizer</b></td><td>vocabulario + reglas de corte en tokens</td><td>sin él, la entrada no coincide con lo aprendido</td></tr>
+        <tr class="reveal d6"><td><b>Metadata</b></td><td>contexto máximo, chat template, cuantización</td><td>lo que el runtime necesita para usar el resto</td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d7" style="margin-top:26px;">Multimodal añade piezas (adapters, projection models) — quedan para su clase. Hoy: LLMs de texto.</p>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§1 Anatomía</span><span class="pageno">04 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 05 · CHECKPOINT ≠ GGUF ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">El archivo que descargaste <em class="term">no</em> es el checkpoint</h2>
+<pre class="diagram reveal d2" style="font-size:29px;"><span class="dim">Training checkpoint</span>   PyTorch / Safetensors
+        ↓              pensado para SEGUIR entrenando
+   Conversión
+        ↓
+     <b>GGUF</b>             empaquetado para INFERIR
+        ↓
+<span class="dim">Cuantización opcional</span>  Q8 · Q6 · Q5 · Q4
+        ↓
+  Inferencia local      en tu máquina</pre>
+    <div class="block reveal d3">
+      <div class="block-title">Dos formatos, dos etapas</div>
+      <div class="block-body">El checkpoint existe para el equipo de entrenamiento. El GGUF existe para
+      <b>tu runtime</b>: un solo archivo autocontenido con tensors + tokenizer + metadata.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§1 Anatomía</span><span class="pageno">05 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 06 · GGUF ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">GGUF: el formato del ecosistema GGML/<code class="inline">llama.cpp</code></h2>
+    <ul class="itemize">
+      <li class="reveal d2"><b>Binario y autocontenido:</b> tensors (con cuantizaciones posiblemente mixtas) + tokenizer + metadata rica en UN archivo</li>
+      <li class="reveal d3"><b>El motor de texto de QVAC</b> (<code class="inline">qvac-fabric-llm.cpp</code>) consume exactamente este formato: cualquier modelo <code class="inline">llama.cpp</code>-compatible en <code class="inline">.gguf</code> puede cargarse</li>
+      <li class="reveal d4"><b>Portable:</b> un archivo, validado por checksum, sin frameworks de entrenamiento ni dependencias extra — la propiedad que hace posible local-first</li>
+    </ul>
+    <div class="block example reveal d5">
+      <div class="block-title">Metáfora del curso</div>
+      <div class="block-body">El GGUF en disco es el <b>contenedor de envío</b>. El modelo cargado en RAM/VRAM es la <b>máquina desplegada</b>. El archivo no computa nada por sí solo.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§1 Anatomía</span><span class="pageno">06 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 07 · CUANTIZACIÓN ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Cuantización: la negociación central</h2>
+<pre class="diagram reveal d2" style="font-size:28px;">menos bits por peso
+   ↓
+menos almacenamiento + menos memoria + típicamente más velocidad
+   ↓
+posible pérdida de calidad <span class="dim">(tarea-dependiente)</span></pre>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Precisión</th><th>Bits/peso</th><th>Tamaño aprox. por 1B parámetros</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>F32</td><td>32</td><td>~4.0 GB</td></tr>
+        <tr class="reveal d5"><td>F16</td><td>16</td><td>~2.0 GB</td></tr>
+        <tr class="reveal d6"><td>Q8</td><td>8</td><td>~1.0 GB</td></tr>
+        <tr class="reveal d7"><td><b>Q4</b></td><td><b>4</b></td><td><b>~0.5–0.6 GB</b></td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d8" style="margin-top:22px;">Órdenes de magnitud para razonar, no promesas: esquema, metadata y vocabulario mueven el total. <b>Siempre mide el archivo real.</b></p>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§1 Anatomía</span><span class="pageno">07 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 08 · LEER NOMBRES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Leer nombres: el contrato público</h2>
+<pre class="diagram reveal d2" style="font-size:34px; line-height:1.7;"><span class="dim">QWEN3</span>        familia <span class="dim">(arquitectura + linaje)</span>
+<b>4B</b>           escala <span class="dim">→ ~4 mil millones de parámetros</span>
+<span class="dim">INST</span>         instruction-tuned <span class="dim">(sin esto: "base", completador crudo)</span>
+<b>Q4_K_M</b>       cuantización <span class="dim">4 bits · K-quants · variante mixta M</span></pre>
+    <div class="block reveal d3">
+      <div class="block-title">El nombre te dice ANTES de descargar</div>
+      <div class="block-body">Cuánta memoria necesitarás (escala × bits) · qué tarea espera (INST) ·
+      qué tan agresiva fue la compresión. Leer el nombre = primera criba de la matriz de decisión.</div>
+    </div>
+    <p class="small reveal d4" style="margin-top:20px;">Practica con: <code class="inline">LLAMA_3_2_1B_INST_Q4_0</code> · <code class="inline">QWEN3_600M_INST_Q4</code> · <code class="inline">QWEN3_4B_INST_Q4_K_M</code></p>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§1 Anatomía</span><span class="pageno">08 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 09 · MATRIZ ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">La matriz de decisión</h2>
+<pre class="diagram reveal d2" style="font-size:31px;">calidad  ×  ajuste a la tarea  ×  memoria  ×  almacenamiento
+   ×  latencia  ×  contexto  ×  hardware  ×  modalidad</pre>
+    <div class="block reveal d3">
+      <div class="block-title">No existe "el mejor modelo"</div>
+      <div class="block-body">Existe el mejor modelo <b>PARA una tarea</b>, <b>EN un hardware</b>, <b>CON una restricción</b>.
+      La matriz se evalúa con evidencia — exactamente lo que medirás hoy.</div>
+    </div>
+    <div class="block alert reveal d4">
+      <div class="block-title">Anti-patrón</div>
+      <div class="block-body">"Elegir el más grande que quepa." Ignora tarea, latencia y el costo de oportunidad del contexto.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§1 Anatomía</span><span class="pageno">09 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 10 · DIVIDER §2 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 2</div>
+    <div class="divider-num reveal d2">02</div>
+    <div class="divider-title reveal d3">Catálogo y ciclo de vida en QVAC</div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">Arquitectura</span><span class="pageno">10 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 11 · TRES FUENTES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">De dónde vienen los modelos: tres fuentes</h2>
+    <ol class="enumerate">
+      <li class="reveal d2"><b>Registro distribuido de QVAC</b> vía constantes del SDK — <code class="inline">LLAMA_3_2_1B_INST_Q4_0</code>, <code class="inline">QWEN3_4B_INST_Q4_K_M</code>…</li>
+      <li class="reveal d3"><b>URL HTTP</b> directa (p. ej. un mirror) — con <code class="inline">fallbackSrc</code> solo para constantes</li>
+      <li class="reveal d4"><b>Ruta local</b> + <code class="inline">modelType</code> explícito — sin checksum de catálogo: la integridad es tuya</li>
+    </ol>
+    <div class="block alert reveal d5">
+      <div class="block-title">Dato que sorprende a todos</div>
+      <div class="block-body">Las constantes del paquete npm son <b>punteros al registro distribuido</b>.
+      El paquete NO trae pesos embebidos — por eso pesa kilobytes y no gigabytes.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§2 Catálogo y ciclo de vida</span><span class="pageno">11 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 12 · CICLO DE VIDA ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">El ciclo de vida canónico</h2>
+<pre class="diagram reveal d2" style="font-size:28px;"><b>find</b>      → modelRegistryList / modelRegistrySearch / constantes
+   ↓
+<b>download</b>  → downloadAsset() · reanudable · requestId · checksum
+   ↓
+<b>validate</b>  → automática contra tamaño/checksum del catálogo
+   ↓
+<b>load</b>      → loadModel() → modelId · residente hasta unload
+   ↓
+<b>infer</b>     → completion() ×N · <span style="color:#7a8899;">reutiliza, no re-cargues</span>
+   ↓
+<b>unload</b>    → unloadModel({ modelId }) · libera memoria, asset queda
+   ↓
+<b>close</b>     → close() explícito <span class="dim">(o automático al descargar el último)</span></pre>
+    <div class="block reveal d3">
+      <div class="block-title">Modelo mental</div>
+      <div class="block-body"><b>Un worker compartido</b> por aplicación — no uno por modelo. Los cargados permanecen disponibles hasta que tú los liberas.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§2 Catálogo y ciclo de vida</span><span class="pageno">12 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 13 · INSIDE: REGISTRY + INFO ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Inside QVAC — explorar catálogo y caché</h2>
+<pre class="verbatim reveal d2"><span class="kw">import</span> { getModelInfo, modelRegistryList, modelRegistrySearch } <span class="kw">from</span> <span class="str">"@qvac/sdk"</span>;
+
+<span class="kw">const</span> all     = <span class="kw">await</span> modelRegistryList();          <span class="cm">// catálogo completo</span>
+<span class="kw">const</span> found   = <span class="kw">await</span> modelRegistrySearch({ … });   <span class="cm">// filtros: tipo · engine · cuant</span>
+<span class="kw">const</span> info    = <span class="kw">await</span> getModelInfo(…);              <span class="cm">// isCached · expectedSize · cacheFiles</span></pre>
+    <ul class="itemize" style="column-count:2; column-gap:70px;">
+      <li class="reveal d3"><code class="inline">cacheFiles[]</code> expone <b>sha256Checksum</b> por archivo: la validación es verificable, no mágica</li>
+      <li class="reveal d4">La firma exacta de parámetros se verifica contra el <code class="inline">.d.ts</code> de tu versión — el API Summary es un índice de alto nivel</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§2 Catálogo y ciclo de vida</span><span class="pageno">13 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 14 · INSIDE: RECURSOS ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Inside QVAC — qué puede tu máquina</h2>
+<pre class="verbatim reveal d2"><span class="kw">import</span> { getSystemResources } <span class="kw">from</span> <span class="str">"@qvac/sdk"</span>;
+
+<span class="kw">const</span> res = <span class="kw">await</span> getSystemResources({ sample: <span class="kw">true</span> });
+<span class="cm">// res.capabilities.memory.totalBytes → RAM total</span>
+<span class="cm">// res.sample → uso actual · GPU/driver observados</span></pre>
+    <div class="block reveal d3">
+      <div class="block-title">Requisitos duros del host (documentados)</div>
+      <div class="block-body">RAM total ≥ 2 GB, recomendado ≥ 4 GB — <b>"por debajo de 4 GB, la mayoría de los LLMs
+      fallan al cargar"</b> · RAM disponible al cargar ≥ 2 GB · disco ≥ 5 GB · Metal en macOS,
+      <b>Vulkan ≥ 1.4 en Windows/Linux (incluso para CPU-only)</b> · validable con <code class="inline">qvac doctor</code>.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§2 Catálogo y ciclo de vida</span><span class="pageno">14 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 15 · UNDER THE HOOD ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Under the hood — qué reserva la carga</h2>
+    <ul class="itemize">
+      <li class="reveal d2"><b>Dos consumos al cargar:</b> los pesos (≈ tamaño del archivo, ya cuantizados) + la reserva de contexto (<code class="inline">ctx_size</code> → KV-cache)</li>
+      <li class="reveal d3">Por eso <code class="inline">ctx_size: 32768</code> falla en máquinas justas <b>aunque los pesos "caben"</b></li>
+      <li class="reveal d4"><b>Q4 cabe donde F16 no:</b> mismos pesos, 4× menos bits — la memoria que ahorras decide en qué laptop corre tu app</li>
+      <li class="reveal d5"><b>La calidad de Q4 es tarea-dependiente:</b> chat general → degradación pequeña; código/razón fino → puede notarse. No hay respuesta universal: <b>se mide con TU tarea</b></li>
+    </ul>
+    <div class="block reveal d6" style="max-width:1600px;">
+      <div class="block-title">Heurística de trabajo (RECOMENDADA, no garantía)</div>
+      <div class="block-body">Q4 ≈ <b>0.5–0.6 GB por 1B parámetros</b> + margen de contexto/runtime aparte. Decide qué PROBAR; la verdad final es cargar y medir.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§2 Catálogo y ciclo de vida</span><span class="pageno">15 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 16 · DIVIDER §3 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 3</div>
+    <div class="divider-num reveal d2">03</div>
+    <div class="divider-title reveal d3">Predict · Demo</div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">Experimento</span><span class="pageno">16 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 17 · PREDICT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1"># Predict</div>
+    <p class="activity-sub reveal d2">Por escrito, <b>antes</b> de ejecutar. Comprometerse con un modelo mental es lo que convierte la observación en aprendizaje.</p>
+    <ol class="enumerate" style="margin-top:30px;">
+      <li class="reveal d3"><code class="inline">QWEN3_600M_INST_Q4</code> vs <code class="inline">LLAMA_3_2_1B_INST_Q4_0</code>: ¿cuál carga más rápido? ¿cuál genera más tok/s? ¿por qué?</li>
+      <li class="reveal d4">El mismo modelo, frío vs tibio: ¿qué fase cambia y cuál no?</li>
+      <li class="reveal d5"><code class="inline">ctx_size: 32768</code> con 8 GB libres: ¿dónde falla — descarga, carga o primera inferencia?</li>
+      <li class="reveal d6">Registro caído pero caché válida: ¿funciona <code class="inline">loadModel()</code> con constante? ¿y <code class="inline">modelRegistryList()</code>?</li>
+    </ol>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§3 Predict · Demo</span><span class="pageno">17 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 18 · LET'S RUN IT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Let's Run It</div>
+    <p class="activity-sub reveal d2">El Model Explorer en tres movimientos — luego lo construyes tú en el lab.</p>
+<pre class="verbatim reveal d3"><span class="cm"># qué existe y qué puede mi máquina</span>
+npx tsx examples/01-registry-explorer.ts
+npx tsx examples/03-memory-report.ts
+
+<span class="cm"># comparación determinista: mismo prompt · temp 0 · seed 42</span>
+npx tsx examples/02-compare-models.ts
+<span class="cm">// → tabla: loadMs · TTFT · tok/s · muestra de texto por modelo</span></pre>
+    <ul class="itemize" style="column-count:2; column-gap:60px; margin-top:8px;">
+      <li class="reveal d4"><b>Observa:</b> ¿los números deciden solos?</li>
+      <li class="reveal d5"><b>Observa:</b> lee las muestras — la calidad se evalúa leyendo</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§3 Predict · Demo</span><span class="pageno">18 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 19 · DIVIDER §4 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 4</div>
+    <div class="divider-num reveal d2">04</div>
+    <div class="divider-title reveal d3">Break It · Measure It</div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">Experimento</span><span class="pageno">19 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 20 · BREAK IT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Break It</div>
+    <p class="activity-sub reveal d2">Regla de seguridad: <b>unloadModel ENTRE intentos</b> — el worker es compartido, no lo tapes de modelos residentes.</p>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Escenario controlado</th><th>Tu predicción (antes)</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>Cargar un modelo mayor a la RAM disponible</td><td>¿en qué fase muere? ¿qué mensaje?</td></tr>
+        <tr class="reveal d5"><td><code class="inline">ctx_size: 32768</code> con memoria justa</td><td>¿carga y falla al inferir, o falla al cargar?</td></tr>
+        <tr class="reveal d6"><td>Registro caído + constante SIN caché</td><td>¿se distingue del error con caché válida?</td></tr>
+        <tr class="reveal d7"><td>Ruta local a un archivo truncado</td><td>¿quién valida aquí? <span class="small">(pista: no hay checksum de catálogo)</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§4 Break · Measure</span><span class="pageno">20 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 21 · MEASURE IT ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Measure It</div>
+    <p class="activity-sub reveal d2">La tabla de elección — frío y tibio por modelo, en TU máquina:</p>
+    <table class="booktabs reveal d3">
+      <thead><tr><th>Métrica</th><th>Cómo</th></tr></thead>
+      <tbody>
+        <tr class="reveal d4"><td>Tamaño en disco</td><td><code class="inline">getModelInfo</code> (expected/actual) o <code class="inline">fs.stat</code> del asset</td></tr>
+        <tr class="reveal d5"><td>Tiempo de carga</td><td><code class="inline">performance.now()</code> alrededor de <code class="inline">loadModel()</code></td></tr>
+        <tr class="reveal d6"><td>Memoria observable</td><td><code class="inline">getSystemResources({ sample: true })</code> antes/durante/después</td></tr>
+        <tr class="reveal d7"><td>TTFT</td><td>primer <code class="inline">contentDelta</code> − envío del prompt</td></tr>
+        <tr class="reveal d8"><td>Tokens/segundo</td><td><code class="inline">run.final.stats.tokensPerSecond</code></td></tr>
+      </tbody>
+    </table>
+    <p class="small reveal d8" style="margin-top:20px;">La calidad se evalúa leyendo las salidas a ciegas — los números solos no eligen.</p>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§4 Break · Measure</span><span class="pageno">21 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 22 · DIVIDER §5 ============ -->
+<section class="slide slide--divider">
+  <div class="frame">
+    <div class="divider-kicker reveal d1">Sección 5</div>
+    <div class="divider-num reveal d2">05</div>
+    <div class="divider-title reveal d3">Sintetiza y decide</div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">Cierre</span><span class="pageno">22 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 23 · MISCONCEPCIONES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Misconcepciones comunes</h2>
+    <div class="block alert reveal d2">
+      <div class="block-title">1 · "Más parámetros siempre es mejor"</div>
+      <div class="block-body">Un 7B mal ajustado a la tarea pierde contra un 1B bien elegido — y en hardware modesto el 7B directamente no carga. La matriz es multi-factor.</div>
+    </div>
+    <div class="block alert reveal d3">
+      <div class="block-title">2 · "Q4 destruye la calidad"</div>
+      <div class="block-body">La degradación existe, es tarea-dependiente y suele ser pequeña en chat general. La comparación honesta: a ciegas, con TU caso de uso.</div>
+    </div>
+    <div class="block alert reveal d4">
+      <div class="block-title">3 · "El GGUF se ejecuta solo" / "el SDK trae los pesos"</div>
+      <div class="block-body">Es un paquete de datos + metadata: sin runtime, tokenizer y memoria no es nada. Y las constantes del npm son punteros al registro — los pesos se descargan y validan aparte.</div>
+    </div>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§5 Cierre</span><span class="pageno">23 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 24 · YOUR TURN ============ -->
+<section class="slide">
+  <div class="frame">
+    <div class="activity-word reveal d1" style="font-size:110px;"># Your Turn</div>
+    <div class="block reveal d2" style="max-width:1620px;">
+      <div class="block-title">Challenge independiente — Model Selection Report</div>
+      <div class="block-body">Tres contextos, tres elecciones: <b>kiosco de feria</b> (4 GB, FAQ offline) ·
+      <b>laptop de consultor</b> (16 GB, redacción larga en español) · <b>tu máquina</b> (chat de desarrollo, medido de verdad).
+      Familia + escala + cuantización, justificados con la matriz y respaldados con mediciones.</div>
+    </div>
+    <ul class="itemize" style="column-count:2; column-gap:70px;">
+      <li class="reveal d3"><b>Sin starter:</b> tú diseñas el experimento comparativo</li>
+      <li class="reveal d4">Contextos sin hardware: SIMULA y decláralo (honestidad AT5)</li>
+      <li class="reveal d5">Cada elección descarta 2 alternativas con razón</li>
+      <li class="reveal d6">Defensa oral: ¿por qué NO el más grande que cabe?</li>
+    </ul>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§5 Cierre</span><span class="pageno">24 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 25 · CHECKPOINT + TAKEAWAY ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Checkpoint — demuéstralo</h2>
+    <ol class="enumerate" style="column-count:2; column-gap:80px; margin-top:6px;">
+      <li class="reveal d2">Decodifica <code class="inline">QWEN3_4B_INST_Q4_K_M</code> segmento por segmento</li>
+      <li class="reveal d3">Checkpoint vs GGUF: dos diferencias de propósito/contenido</li>
+      <li class="reveal d4">6 GB disponibles, chat offline: ¿qué escala + cuantización primero?</li>
+      <li class="reveal d5">7B Q4 con 3 GB libres: ¿en qué fase falla y qué mensaje esperas?</li>
+      <li class="reveal d6">Registro caído, la app sigue cargando: ¿cómo es posible el flujo?</li>
+      <li class="reveal d7">"Resumir documentos offline" en TU máquina: matriz + riesgo + detección</li>
+    </ol>
+    <div class="block reveal d8" style="max-width:1650px;">
+      <div class="block-title">Takeaway</div>
+      <div class="block-body">"Cargar un modelo" = desplegar a memoria un GGUF validado: pesos cuantizados + tokenizer +
+      metadata. El nombre es un contrato; tu hardware, la contraparte. <b>Lee ambos antes de prometer nada.</b></div>
+    </div>
+    <p class="small reveal d8" style="margin-top:20px;"><b>Siguiente:</b> Clase 3 — qué ocurre DENTRO de la inferencia: tokens, sampling, KV-cache, TTFT vs throughput.</p>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">§5 Cierre</span><span class="pageno">25 / 26</span></div>
+</section>
+
+<!-- ============ SLIDE 26 · FUENTES ============ -->
+<section class="slide">
+  <div class="frame">
+    <h2 class="frametitle reveal d1">Fuentes usadas</h2>
+    <ul class="itemize" style="margin-top:30px;">
+      <li class="reveal d2">QVAC — Download lifecycle · docs.qvac.tether.io/models/download-lifecycle/</li>
+      <li class="reveal d3">QVAC — Text generation · docs.qvac.tether.io/ai-capabilities/text-generation/</li>
+      <li class="reveal d4">QVAC — System requirements (RAM/disco/Vulkan, <span class="mono">qvac doctor</span>) · docs.qvac.tether.io/system-requirements/</li>
+      <li class="reveal d5">QVAC — API Summary v0.18.x · Release Notes v0.18.x</li>
+      <li class="reveal d6">npm @qvac/sdk 0.18.1 · llama.cpp / GGUF — github.com/ggml-org/llama.cpp</li>
+      <li class="reveal d7">Currículo canónico — QVAC Course Expanded Learning Edition, Cap. 4 §4.1–4.10</li>
+    </ul>
+    <p class="small reveal d8" style="margin-top:30px;">Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm · 2026-08-25.</p>
+  </div>
+  <div class="footline"><span>Models, GGUF and the QVAC Lifecycle</span><span class="sec">Referencias</span><span class="pageno">26 / 26</span></div>
+</section>
+
+</main>
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Modo edición (E)">✏ EDITAR</button>
+
+<script>
+/* ===========================================
+   CONTROLADOR — idéntico a Clase 1.
+   Sin contador de página (footline única escritora).
+   Navegación: teclado, rueda, swipe · Notas: N · Editar: E
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.currentSlide = 0;
+        this.stage = document.getElementById('deckStage');
+        this.progressBar = document.getElementById('progressBar');
+        this.wheelLock = false;
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupEmbedBridge();
+        this.showSlide(0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(innerWidth / 1920, innerHeight / 1080);
+            this.stage.style.transform =
+                'translate(' + ((innerWidth - 1920 * f) / 2) + 'px,' + ((innerHeight - 1080 * f) / 2) + 'px) scale(' + f + ')';
+        };
+        scale();
+        addEventListener('resize', scale);
+    }
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true') return;
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide + 1); }
+            if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.showSlide(this.currentSlide - 1); }
+            if (e.key === 'Home') this.showSlide(0);
+            if (e.key === 'End') this.showSlide(this.slides.length - 1);
+            if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('show-notes');
+        });
+    }
+    setupTouchNav() {
+        let x0 = null;
+        addEventListener('touchstart', (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+        addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 60) this.showSlide(this.currentSlide + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+    setupWheelNav() {
+        addEventListener('wheel', (e) => {
+            if (this.wheelLock || Math.abs(e.deltaY) < 30) return;
+            this.wheelLock = true;
+            this.showSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => { this.wheelLock = false; }, 700);
+        }, { passive: true });
+    }
+    setupEmbedBridge() {
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d || d.type !== 'qvac-slides') return;
+            if (d.action === 'next') this.showSlide(this.currentSlide + 1);
+            if (d.action === 'prev') this.showSlide(this.currentSlide - 1);
+            if (d.action === 'go' && typeof d.index === 'number') this.showSlide(d.index - 1);
+        });
+    }
+    notifyParent() {
+        if (window.parent === window) return;
+        window.parent.postMessage({
+            type: 'qvac-slides',
+            current: this.currentSlide + 1,
+            total: this.slides.length
+        }, '*');
+    }
+    showSlide(index) {
+        this.currentSlide = Math.max(0, Math.min(index, this.slides.length - 1));
+        this.slides.forEach((s, i) => {
+            s.classList.toggle('active', i === this.currentSlide);
+            s.classList.toggle('visible', i === this.currentSlide);
+        });
+        this.progressBar.style.width = ((this.currentSlide + 1) / this.slides.length * 100) + '%';
+        this.notifyParent();
+    }
+}
+
+class InlineEditor {
+    constructor(deckKey) {
+        this.deckKey = deckKey;
+        this.isActive = false;
+        this.hideTimeout = null;
+        this.toggleBtn = document.getElementById('editToggle');
+        this.bindChrome();
+        this.bindKeys();
+        this.restore();
+    }
+    targets() {
+        return document.querySelectorAll(
+            '.slide h2, .slide p, .slide td, .slide th, .slide li, .slide .block-body, .slide .block-title, .slide .title-sub, .slide .title-meta span, .slide .activity-sub'
+        );
+    }
+    bindChrome() {
+        const hotzone = document.querySelector('.edit-hotzone');
+        const showBtn = () => { clearTimeout(this.hideTimeout); this.toggleBtn.classList.add('show'); };
+        const hideBtn = () => {
+            this.hideTimeout = setTimeout(() => { if (!this.isActive) this.toggleBtn.classList.remove('show'); }, 400);
+        };
+        hotzone.addEventListener('mouseenter', showBtn);
+        hotzone.addEventListener('mouseleave', hideBtn);
+        this.toggleBtn.addEventListener('mouseenter', () => clearTimeout(this.hideTimeout));
+        this.toggleBtn.addEventListener('mouseleave', hideBtn);
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        this.toggleBtn.addEventListener('click', () => this.toggleEditMode());
+    }
+    bindKeys() {
+        document.addEventListener('keydown', (e) => {
+            const editingText = e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true';
+            if ((e.key === 'e' || e.key === 'E') && !editingText) this.toggleEditMode();
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); this.exportFile(); }
+        });
+    }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        this.toggleBtn.classList.toggle('active', this.isActive);
+        this.toggleBtn.textContent = this.isActive ? '✓ EDITANDO' : '✏ EDITAR';
+        this.targets().forEach((el) => { el.contentEditable = this.isActive ? 'true' : 'false'; });
+        if (!this.isActive) this.save();
+    }
+    save() {
+        const data = {};
+        this.targets().forEach((el, i) => { data[i] = el.innerHTML; });
+        try { localStorage.setItem('frontend-slides-' + this.deckKey, JSON.stringify(data)); } catch (err) {}
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem('frontend-slides-' + this.deckKey) || '{}');
+            this.targets().forEach((el, i) => { if (typeof data[i] === 'string') el.innerHTML = data[i]; });
+        } catch (err) {}
+    }
+    exportFile() {
+        this.save();
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = this.deckKey + '.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+new SlidePresentation();
+new InlineEditor('class-02-models-gguf-lifecycle-slides');
+
+/* =======================================================
+   Puente de modo UI de la plataforma QVAC Bootcamp
+   (solo presentación — no toca el protocolo 'qvac-slides')
+   Prioridad: query param ?ui= > localStorage bootcamp.uiMode.
+   Escucha postMessage {type:'qvac-ui', ui, theme} del padre y
+   alterna en <html>: 'ninja-slides' (modo ninja) y 'slides-dark'
+   (docs con tema oscuro de la plataforma).
+   ======================================================= */
+(function () {
+    var root = document.documentElement;
+    function readLS(key) { try { return localStorage.getItem(key); } catch (err) { return null; } }
+    function apply(ui, theme) {
+        var ninja = ui === 'ninja';
+        root.classList.toggle('ninja-slides', ninja);
+        root.classList.toggle('slides-dark', !ninja && (theme || readLS('bootcamp.theme')) === 'dark');
+    }
+    var params = new URLSearchParams(location.search);
+    apply(params.get('ui') || readLS('bootcamp.uiMode'), params.get('theme'));
+    window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (!d || d.type !== 'qvac-ui') return;
+        if (window.parent !== window && e.source !== window.parent) return;
+        apply(d.ui, d.theme);
+    });
+})();
+</script>
+</body>
+</html>
