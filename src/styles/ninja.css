@@ -503,7 +503,15 @@ html.ninja {
 /* --- Misc --------------------------------------------------------------------- */
 
 [data-ui='ninja'] .ring {
-  background: conic-gradient(var(--nj-accent) calc(var(--pct) * 1%), var(--ring-track) 0);
+  background: conic-gradient(
+    from -90deg,
+    var(--nj-accent) calc(var(--pct) * 1%),
+    var(--ring-track) calc(var(--pct) * 1%)
+  );
+}
+
+[data-ui='ninja'] .ring--empty {
+  background: var(--ring-track);
 }
 
 [data-ui='ninja'] .dod input[type='checkbox'] {

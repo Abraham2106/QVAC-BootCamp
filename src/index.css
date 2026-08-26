@@ -674,10 +674,8 @@ h2.stitle::after {
 }
 
 .class-card__continue-pill {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 2;
+  display: inline-flex;
+  align-items: center;
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 600;
@@ -688,21 +686,31 @@ h2.stitle::after {
   border: 1px solid color-mix(in oklch, var(--blue) 35%, var(--border));
   border-radius: 999px;
   padding: 3px 10px;
+  line-height: 1.2;
 }
 
 .class-card-layout {
   position: relative;
-  padding-right: 68px;
 }
 
-.class-card-layout--continue {
-  padding-top: 26px;
+.class-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.class-card__header-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
 }
 
 .class-card__progress {
-  position: absolute;
-  top: 0;
-  right: 0;
+  flex: 0 0 auto;
 }
 
 .class-no--lite {
@@ -1046,18 +1054,33 @@ h2.stitle::after {
   gap: 8px;
   margin-top: 10px;
 }
+.progress-ring__label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  line-height: 1;
+}
+
 .ring {
   --pct: 0;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: conic-gradient(var(--green) calc(var(--pct) * 1%), var(--ring-track) 0);
+  background: conic-gradient(
+    from -90deg,
+    var(--green) calc(var(--pct) * 1%),
+    var(--ring-track) calc(var(--pct) * 1%)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
 }
+.ring--empty {
+  background: var(--ring-track);
+}
 .ring i {
   border-radius: 50%;
-  background: var(--bg);
+  background: var(--card-bg);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;

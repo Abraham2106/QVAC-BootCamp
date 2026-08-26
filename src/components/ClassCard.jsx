@@ -10,16 +10,20 @@ export default function ClassCard({ cls, isContinueTarget = false }) {
   const pct = cls.available && cls.slug ? getProgressPct(cls.slug) : 0
 
   const content = (
-    <CardContent className={cn('class-card-layout pt-(--card-spacing) pb-5', isContinueTarget && 'class-card-layout--continue')}>
-      {isContinueTarget && cls.available && (
-        <span className="class-card__continue-pill">Continuar aquí</span>
-      )}
-      {cls.available && (
-        <div className="class-card__progress">
-          <ProgressDisplay pct={pct} size={52} label={`Progreso ${cls.no}`} />
+    <CardContent className="class-card-layout pt-(--card-spacing) pb-5">
+      <div className="class-card__header">
+        <div className="class-card__header-meta">
+          {isContinueTarget && cls.available && (
+            <span className="class-card__continue-pill">Continuar aquí</span>
+          )}
+          <span className="class-no class-no--lite">{cls.no}</span>
         </div>
-      )}
-      <span className="class-no class-no--lite">{cls.no}</span>
+        {cls.available && (
+          <div className="class-card__progress">
+            <ProgressDisplay pct={pct} size={52} label={`Progreso ${cls.no}`} />
+          </div>
+        )}
+      </div>
       <div className="class-card__body min-w-0">
         <h3 className="font-semibold text-base leading-snug tracking-tight">{cls.title}</h3>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{cls.desc}</p>

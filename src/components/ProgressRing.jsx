@@ -1,13 +1,24 @@
+import { CircularProgress } from '@/components/ui/circular-progress'
+import { cn } from '@/lib/utils'
+
 export default function ProgressRing({ pct, size = 54, className }) {
-  const inner = Math.round(size * 0.74)
+  const safePct = Math.min(100, Math.max(0, pct))
+  const strokeWidth = Math.max(3, Math.round(size * 0.1))
+
   return (
-    <div
-      className={['ring', className].filter(Boolean).join(' ')}
-      style={{ '--pct': pct, width: size, height: size }}
-      aria-label={`Progreso: ${pct}%`}
+    <CircularProgress
+      value={safePct}
+      size={size}
+      strokeWidth={strokeWidth}
+      circleStrokeWidth={strokeWidth}
+      progressStrokeWidth={strokeWidth}
+      showLabel
+      renderLabel={(value) => `${value}%`}
+      className={cn('stroke-[color:var(--ring-track)]', className)}
+      progressClassName="stroke-[color:var(--green)]"
+      labelClassName="progress-ring__label"
       role="img"
-    >
-      <i style={{ width: inner, height: inner }}>{pct}%</i>
-    </div>
+      aria-label={`Progreso: ${safePct}%`}
+    />
   )
 }

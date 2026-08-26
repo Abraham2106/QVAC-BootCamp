@@ -23,14 +23,8 @@ export default function CourseCard({
         className,
       )}
     >
-      {isContinueTarget && <span className="class-card__continue-pill">Continuar aquí</span>}
-      <CardHeader
-        className={cn(
-          'gap-2.5 pb-0',
-          isContinueTarget && 'pt-8',
-          headerClassName,
-        )}
-      >
+      <CardHeader className={cn('gap-2.5 pb-0', headerClassName)}>
+        {isContinueTarget && <span className="class-card__continue-pill">Continuar aquí</span>}
         {tag && <p className="card-kicker">{tag}</p>}
         <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
       </CardHeader>
