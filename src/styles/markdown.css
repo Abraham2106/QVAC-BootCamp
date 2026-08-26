@@ -162,6 +162,17 @@
 
 @media (max-width: 720px) {
   .markdown-page {
-    padding: 20px 18px;
+    padding: 16px 14px;
+  }
+
+  .markdown-page-hero {
+    padding: 36px 0 24px;
+  }
+
+  .markdown-page-hero .cta-row .btn {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }

@@ -136,3 +136,31 @@ article.slides-card {
     transition: none;
   }
 }
+
+@media (max-width: 720px) {
+  .slides-card .slides-card__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px max(14px, env(safe-area-inset-right, 0px)) 12px
+      max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .slides-card .embed-nav {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .slides-card .embed-nav__btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 14px;
+  }
+
+  .slides-card .slides-card__expand,
+  .slides-card .slides-card__toolbar .btn {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+  }
+}

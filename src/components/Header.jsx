@@ -34,6 +34,11 @@ export default function Header() {
     }
   }, [open])
 
+  useEffect(() => {
+    document.body.classList.toggle('nav-open', open)
+    return () => document.body.classList.remove('nav-open')
+  }, [open])
+
   return (
     <header className="site-head" ref={headRef}>
       <div className="bar">
@@ -41,48 +46,52 @@ export default function Header() {
           QVAC <b>Masterclass</b>
         </Link>
 
-        <div className="head-actions">
+        <nav id="site-nav" className={`site-nav${open ? ' is-open' : ''}`} aria-label="Principal">
+          {LINKS.map(({ to, label, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              onClick={() => setOpen(false)}
+              className={({ isActive }) => (isActive ? 'active' : undefined)}
+            >
+              {({ isActive }) => (
+                <>
+                  {label}
+                  {isActive && !reduceMotion && (
+                    <motion.span
+                      layoutId="site-nav-indicator"
+                      className="site-nav__indicator"
+                      aria-hidden="true"
+                      transition={{ type: 'spring', stiffness: 480, damping: 40 }}
+                    />
+                  )}
+                </>
+              )}
+            </NavLink>
+          ))}
+          <div className="site-nav__tools" aria-label="Preferencias">
+            <UiModeToggle />
+            <ThemeToggle />
+          </div>
+        </nav>
+
+        <div className="head-actions" aria-hidden={open}>
           <UiModeToggle />
           <ThemeToggle />
-
-          <button
-            type="button"
-            className="nav-toggle"
-            aria-expanded={open}
-            aria-controls="site-nav"
-            onClick={() => setOpen((v) => !v)}
-            ref={toggleRef}
-          >
-            <span className="sr-only">Menú</span>
-            <span aria-hidden="true" className={`nav-toggle__icon${open ? ' is-open' : ''}`} />
-          </button>
-
-          <nav id="site-nav" className={`site-nav${open ? ' is-open' : ''}`} aria-label="Principal">
-            {LINKS.map(({ to, label, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) => (isActive ? 'active' : undefined)}
-              >
-                {({ isActive }) => (
-                  <>
-                    {label}
-                    {isActive && !reduceMotion && (
-                      <motion.span
-                        layoutId="site-nav-indicator"
-                        className="site-nav__indicator"
-                        aria-hidden="true"
-                        transition={{ type: 'spring', stiffness: 480, damping: 40 }}
-                      />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </nav>
         </div>
+
+        <button
+          type="button"
+          className="nav-toggle"
+          aria-expanded={open}
+          aria-controls="site-nav"
+          onClick={() => setOpen((v) => !v)}
+          ref={toggleRef}
+        >
+          <span className="sr-only">{open ? 'Cerrar menú' : 'Abrir menú'}</span>
+          <span aria-hidden="true" className={`nav-toggle__icon${open ? ' is-open' : ''}`} />
+        </button>
       </div>
     </header>
   )
