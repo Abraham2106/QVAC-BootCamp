@@ -1,7 +1,7 @@
 /* Markdown viewer — GitHub-style prose + syntax highlighting */
 
 .markdown-page-hero {
-  padding: 48px 0 32px;
+  padding-block: 48px 32px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-subtle);
 }
@@ -166,7 +166,7 @@
   }
 
   .markdown-page-hero {
-    padding: 36px 0 24px;
+    padding-block: 36px 24px;
   }
 
   .markdown-page-hero .cta-row .btn {
