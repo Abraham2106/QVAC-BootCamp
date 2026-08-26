@@ -1,0 +1,29 @@
+# Dependencies & build
+node_modules
+dist
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Internal / local-only artifacts (see docs/internal-artifacts.md)
+_internal/
+
+# Legacy path — merged into _internal/prompts/
+_prompts/
+
+# IDE & editor
+.cursor/
+.vscode/
+.idea/
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
