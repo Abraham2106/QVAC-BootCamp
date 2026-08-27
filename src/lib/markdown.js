@@ -13,6 +13,8 @@ export function markdownBackLink(staticPath) {
   if (staticPath.includes('class-01-airplane-mode-intelligence')) return '/class/01'
   if (staticPath.includes('class-02-models-gguf-lifecycle')) return '/class/02'
   if (staticPath.includes('class-03-local-inference-fundamentals')) return '/class/03'
+  if (staticPath.includes('class-04-build-offline-chat')) return '/class/04'
+  if (staticPath.includes('class-05-embeddings-meaning-as-geometry')) return '/class/05'
   return '/curriculum'
 }
 

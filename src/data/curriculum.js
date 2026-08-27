@@ -78,7 +78,9 @@ export const MODULES = [
         slug: 'class-05',
         title: 'Embeddings: Meaning as Geometry',
         desc: 'Cómo encontrar significado relacionado sin coincidencia literal de palabras.',
-        available: false,
+        href: '/class/05',
+        available: true,
+        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
       {
         no: '06',
@@ -236,5 +238,25 @@ export const CLASS04 = {
     { id: 'offline', label: 'Modo avión: nueva completion tras restart sin red (acceptance E)' },
     { id: 'metrics', label: 'Métricas por turno: TTFT, duración, tok/s, stopReason (acceptance F)' },
     { id: 'breakit', label: 'Break It diagnosticado: cancel entre stream y commit (persistencia parcial)' },
+  ],
+}
+
+export const CLASS05 = {
+  id: 'class-05',
+  kicker: 'Clase 05 · Módulo 2 — Private Knowledge',
+  title: 'Embeddings: Meaning as Geometry',
+  eq: '¿Cómo puede una máquina encontrar significado relacionado sin buscar las mismas palabras?',
+  outcomes: [
+    { tag: 'Outcome 1–2', title: 'Representación + límites', body: 'Texto → vector, embeddings ≠ generación y dimensiones observadas en runtime, no inventadas.' },
+    { tag: 'Outcome 3–5', title: 'Similarity + ranking', body: 'Query/document embeddings, cosine similarity en aplicación y Top-K visible con scores.' },
+    { tag: 'Outcome 6–8', title: 'Measure + diagnose', body: 'Latencia por etapa, query ambigua, corpus insuficiente y explicación basada en evidencia.' },
+  ],
+  dodItems: [
+    { id: 'single', label: 'Generé single + batch embeddings y observé dimensions en runtime' },
+    { id: 'predict', label: 'Escribí un ranking esperado antes de ejecutar semantic search' },
+    { id: 'topk', label: 'Semantic Search v1 muestra Top-K + scores + texto' },
+    { id: 'metrics', label: 'Separé corpus embedding, query embedding y ranking latency' },
+    { id: 'breakit', label: 'Diagnostiqué una query ambigua sin culpar al modelo por intuición' },
+    { id: 'report', label: 'Entregué Semantic Search Report con límites de la conclusión' },
   ],
 }

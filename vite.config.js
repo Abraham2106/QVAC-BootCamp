@@ -13,6 +13,7 @@ const STATIC_DIRS = [
   'class-02-models-gguf-lifecycle',
   'class-03-local-inference-fundamentals',
   'class-04-build-offline-chat',
+  'class-05-embeddings-meaning-as-geometry',
   'lessons',
   'assets',
 ]

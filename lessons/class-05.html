@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 5 — Embeddings: Meaning as Geometry</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-05">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<header class="site-head"><div class="bar"><a class="brand" href="/">QVAC <b>Masterclass</b></a><nav class="site-nav" aria-label="Principal"><a href="/">Inicio</a><a href="/curriculum">Currículo</a><a href="/class/05">Clase 5</a></nav></div></header>
+<main id="main"><div class="lesson-layout">
+<aside class="lesson-sidebar" aria-label="Navegación de la lección"><div class="lesson-sidebar-title"><span class="lesson-sidebar__kicker">Clase 05 · Módulo 2</span><h1 class="lesson-sidebar__name">Embeddings: Meaning as Geometry</h1></div><nav class="lesson-toc" aria-label="Contenido"><span class="toc-head">Contenido</span><a href="#esencial">Pregunta esencial</a><a href="#representacion">Representación</a><a href="#qvac">Inside QVAC</a><a href="#similarity">Similarity</a><a href="#search">Semantic search</a><a href="#predict">Predict</a><a href="#break">Break It</a><a href="#measure">Measure It</a><a href="#takeaway">Takeaway</a><a href="#fuentes">Fuentes</a></nav></aside>
+<article class="lesson">
+<div class="block alert" style="margin-bottom:2rem;"><div class="block-title">Contenido extendido en lesson.md</div><div class="block-body">Esta página es un índice resumido. Lee la <strong>versión canónica completa</strong> en <a href="/class-05-embeddings-meaning-as-geometry/lesson.md"><code class="inline">lesson.md</code></a> o en el <a href="/markdown/class-05-embeddings-meaning-as-geometry/lesson.md">visor Markdown</a>. Las <a href="/class-05-embeddings-meaning-as-geometry/slides.html">slides</a> son complementarias.</div></div>
+<p class="lesson-meta">Baseline técnico: QVAC SDK v0.18.x / v0.18.1.</p>
+<section id="esencial"><h2>Pregunta esencial</h2><div class="block"><div class="block-body" style="font-size:20px;">¿Cómo puede una máquina encontrar significado relacionado sin buscar las mismas palabras?</div></div></section>
+<section id="representacion"><h2>Meaning as geometry</h2><p>Un embedding transforma texto en un vector. La interpretación útil no está en una dimensión aislada sino en las relaciones geométricas entre representaciones generadas por el mismo modelo.</p><pre><code>texto → embedding model → [x1, x2, …, xn]</code></pre></section>
+<section id="qvac"><h2>Inside QVAC</h2><p>La API actual documenta <code class="inline">loadModel()</code> con <code class="inline">modelType: "embeddings"</code>, seguido por <code class="inline">embed()</code> y <code class="inline">unloadModel()</code>. Un string produce un vector; un array permite batch embeddings.</p></section>
+<section id="similarity"><h2>Similarity</h2><p>En el lab calculamos cosine similarity como lógica de aplicación. Un score alto describe cercanía según el modelo y la métrica; no prueba verdad.</p></section>
+<section id="search"><h2>Semantic search</h2><pre><code>documents → vectors
+query → vector
+      ↓
+similarity → rank → Top-K</code></pre><p>Esta clase todavía no añade workspace, chunking gestionado ni generación grounded: eso pertenece a Clase 06.</p></section>
+<section id="predict"><h2>Predict</h2><p>Escribe el ranking esperado antes de ejecutar una query con vocabulario distinto al documento relevante.</p></section>
+<section id="break"><h2>Break It</h2><p>Usa una query ambigua como <code class="inline">apple performance</code> en un corpus con fruta y tecnología. Diagnostica query, corpus, modelo y Top-K antes de culpar al embedding.</p></section>
+<section id="measure"><h2>Measure It</h2><p>Separa model load, corpus embedding, query embedding y ranking en aplicación. No generalices una medición de una máquina.</p></section>
+<section id="takeaway"><h2>Takeaway</h2><div class="block example"><div class="block-body"><strong>Embeddings convierten significado en representación comparable. El ranking es evidencia de cercanía, no una respuesta.</strong></div></div></section>
+<section id="fuentes"><h2>Fuentes</h2><ul><li><a href="https://docs.qvac.tether.io/ai-capabilities/text-embeddings/">QVAC Text embeddings</a></li><li><a href="https://docs.qvac.tether.io/reference/api/">QVAC API v0.18.x</a></li></ul></section>
+</article></div></main>
+</body></html>
