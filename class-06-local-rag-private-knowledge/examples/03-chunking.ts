@@ -1,4 +1,4 @@
-import { ragChunk } from '@qvac/sdk'
+import { close, ragChunk } from '@qvac/sdk'
 
 const document = `
 Local-first systems keep their primary execution path on user-controlled devices.
@@ -14,21 +14,25 @@ const configs = [
   { label: 'large', chunkSize: 280, chunkOverlap: 40 },
 ]
 
-for (const config of configs) {
-  const chunks = await ragChunk({
-    documents: [document],
-    chunkOpts: {
-      chunkSize: config.chunkSize,
-      chunkOverlap: config.chunkOverlap,
-      chunkStrategy: 'paragraph',
-    },
-  })
+try {
+  for (const config of configs) {
+    const chunks = await ragChunk({
+      documents: [document],
+      chunkOpts: {
+        chunkSize: config.chunkSize,
+        chunkOverlap: config.chunkOverlap,
+        chunkStrategy: 'paragraph',
+      },
+    })
 
-  console.log(`\n=== ${config.label} ===`)
-  chunks.forEach((chunk, index) => {
-    console.log(`#${index + 1} id=${chunk.id}`)
-    console.log(chunk.content)
-  })
+    console.log(`\n=== ${config.label} ===`)
+    chunks.forEach((chunk, index) => {
+      console.log(`#${index + 1} id=${chunk.id}`)
+      console.log(chunk.content)
+    })
+  }
+
+  console.log('\nDo not declare one config universally better. Use the retrieval task to evaluate it.')
+} finally {
+  await close()
 }
-
-console.log('\nDo not declare one config universally better. Use the retrieval task to evaluate it.')
