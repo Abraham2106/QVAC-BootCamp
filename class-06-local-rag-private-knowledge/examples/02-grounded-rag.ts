@@ -1,4 +1,5 @@
 import {
+  close,
   completion,
   GTE_LARGE_FP16,
   loadModel,
@@ -22,7 +23,7 @@ let llmModelId: string | undefined
 
 try {
   embeddingModelId = await loadModel({ modelSrc: GTE_LARGE_FP16, modelType: 'embeddings' })
-  llmModelId = await loadModel({ modelSrc: QWEN3_600M_INST_Q4, modelType: 'llm', modelConfig: { ctx_size: 4096 } })
+  llmModelId = await loadModel({ modelSrc: QWEN3_600M_INST_Q4, modelConfig: { ctx_size: 4096 } })
 
   await ragIngest({
     modelId: embeddingModelId,
@@ -48,7 +49,7 @@ try {
   const generationStarted = performance.now()
   const run = completion({ modelId: llmModelId, history: [{ role: 'user', content: prompt }], stream: true })
   for await (const event of run.events) {
-    if (event.type === 'contentDelta') process.stdout.write(event.text)
+    if (event.type === 'contentDelta') process.stdout.write(event.delta)
   }
   const final = await run.final
   const generationMs = performance.now() - generationStarted
@@ -59,4 +60,5 @@ try {
   await ragCloseWorkspace({ workspace, deleteOnClose: true }).catch(() => {})
   if (llmModelId) await unloadModel({ modelId: llmModelId })
   if (embeddingModelId) await unloadModel({ modelId: embeddingModelId })
+  await close()
 }
