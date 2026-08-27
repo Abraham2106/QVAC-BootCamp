@@ -84,6 +84,23 @@
     document.addEventListener('bootcamp:theme', function () { paint(btn); });
   }
 
+  function normalizeTeachingCopy() {
+    var replacements = [
+      [/Break It \u00b7 Measure It/gi, 'Diagnóstico · evidencia'],
+      [/Break It\/Measure It/gi, 'Diagnóstico y medición'],
+      [/Break It/gi, 'Diagnóstico'],
+      [/Measure It/gi, 'Medición']
+    ];
+    function visit(node) {
+      if (node.nodeType === 3) {
+        replacements.forEach(function (pair) { node.nodeValue = node.nodeValue.replace(pair[0], pair[1]); });
+      } else if (node.nodeType === 1 && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
+        Array.prototype.forEach.call(node.childNodes, visit);
+      }
+    }
+    visit(document.body);
+  }
+  normalizeTeachingCopy();
   global.BootcampTheme = { KEY: KEY, getStored: getStored, getResolved: getResolved, apply: apply, init: init, toggle: toggle, mountToggle: mountToggle };
   init();
 })();

@@ -5,28 +5,494 @@
 <script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lección · Clase 5 — Embeddings: Meaning as Geometry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/site.css">
 </head>
 <body class="lesson-page" data-lesson-class="class-05">
 <a class="skip-link" href="#main">Saltar al contenido</a>
-<header class="site-head"><div class="bar"><a class="brand" href="/">QVAC <b>Masterclass</b></a><nav class="site-nav" aria-label="Principal"><a href="/">Inicio</a><a href="/curriculum">Currículo</a><a href="/class/05">Clase 5</a></nav></div></header>
-<main id="main"><div class="lesson-layout">
-<aside class="lesson-sidebar" aria-label="Navegación de la lección"><div class="lesson-sidebar-title"><span class="lesson-sidebar__kicker">Clase 05 · Módulo 2</span><h1 class="lesson-sidebar__name">Embeddings: Meaning as Geometry</h1></div><nav class="lesson-toc" aria-label="Contenido"><span class="toc-head">Contenido</span><a href="#esencial">Pregunta esencial</a><a href="#representacion">Representación</a><a href="#qvac">Inside QVAC</a><a href="#similarity">Similarity</a><a href="#search">Semantic search</a><a href="#predict">Predict</a><a href="#break">Break It</a><a href="#measure">Measure It</a><a href="#takeaway">Takeaway</a><a href="#fuentes">Fuentes</a></nav></aside>
-<article class="lesson">
-<div class="block alert" style="margin-bottom:2rem;"><div class="block-title">Contenido extendido en lesson.md</div><div class="block-body">Esta página es un índice resumido. Lee la <strong>versión canónica completa</strong> en <a href="/class-05-embeddings-meaning-as-geometry/lesson.md"><code class="inline">lesson.md</code></a> o en el <a href="/markdown/class-05-embeddings-meaning-as-geometry/lesson.md">visor Markdown</a>. Las <a href="/class-05-embeddings-meaning-as-geometry/slides.html">slides</a> son complementarias.</div></div>
-<p class="lesson-meta">Baseline técnico: QVAC SDK v0.18.x / v0.18.1.</p>
-<section id="esencial"><h2>Pregunta esencial</h2><div class="block"><div class="block-body" style="font-size:20px;">¿Cómo puede una máquina encontrar significado relacionado sin buscar las mismas palabras?</div></div></section>
-<section id="representacion"><h2>Meaning as geometry</h2><p>Un embedding transforma texto en un vector. La interpretación útil no está en una dimensión aislada sino en las relaciones geométricas entre representaciones generadas por el mismo modelo.</p><pre><code>texto → embedding model → [x1, x2, …, xn]</code></pre></section>
-<section id="qvac"><h2>Inside QVAC</h2><p>La API actual documenta <code class="inline">loadModel()</code> con <code class="inline">modelType: "embeddings"</code>, seguido por <code class="inline">embed()</code> y <code class="inline">unloadModel()</code>. Un string produce un vector; un array permite batch embeddings.</p></section>
-<section id="similarity"><h2>Similarity</h2><p>En el lab calculamos cosine similarity como lógica de aplicación. Un score alto describe cercanía según el modelo y la métrica; no prueba verdad.</p></section>
-<section id="search"><h2>Semantic search</h2><pre><code>documents → vectors
-query → vector
-      ↓
-similarity → rank → Top-K</code></pre><p>Esta clase todavía no añade workspace, chunking gestionado ni generación grounded: eso pertenece a Clase 06.</p></section>
-<section id="predict"><h2>Predict</h2><p>Escribe el ranking esperado antes de ejecutar una query con vocabulario distinto al documento relevante.</p></section>
-<section id="break"><h2>Break It</h2><p>Usa una query ambigua como <code class="inline">apple performance</code> en un corpus con fruta y tecnología. Diagnostica query, corpus, modelo y Top-K antes de culpar al embedding.</p></section>
-<section id="measure"><h2>Measure It</h2><p>Separa model load, corpus embedding, query embedding y ranking en aplicación. No generalices una medición de una máquina.</p></section>
-<section id="takeaway"><h2>Takeaway</h2><div class="block example"><div class="block-body"><strong>Embeddings convierten significado en representación comparable. El ranking es evidencia de cercanía, no una respuesta.</strong></div></div></section>
-<section id="fuentes"><h2>Fuentes</h2><ul><li><a href="https://docs.qvac.tether.io/ai-capabilities/text-embeddings/">QVAC Text embeddings</a></li><li><a href="https://docs.qvac.tether.io/reference/api/">QVAC API v0.18.x</a></li></ul></section>
-</article></div></main>
-</body></html>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/05">Clase 5</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 05 · Módulo 2</span>
+      <h1 class="lesson-sidebar__name">Embeddings: Meaning as Geometry</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+      <span class="toc-head">INTRODUCCIÓN</span>
+      <a href="#intro">Introducción</a>
+      <a href="#outcomes">Qué aprenderás</a>
+      <a href="#contexto">Definición y contexto</a>
+      <span class="toc-head">TÉRMINOS</span>
+      <a href="#terminos">Índice de términos</a>
+      <a href="#embedding">Embedding</a>
+      <a href="#vector">Vector</a>
+      <a href="#cosine-similarity">Cosine similarity</a>
+      <a href="#semantic-search">Semantic search</a>
+      <a href="#top-k">Top-K</a>
+      <a href="#batch-embed">Batch embed</a>
+      <a href="#loadModel-embeddings">loadModel(embeddings)</a>
+      <a href="#embed-fn">embed()</a>
+      <span class="toc-head">REFERENCIA QVAC</span>
+      <a href="#referencia">Referencia QVAC</a>
+      <a href="#loadModel">loadModel()</a>
+      <a href="#embed">embed()</a>
+      <a href="#unload">unloadModel()</a>
+      <span class="toc-head">EJEMPLOS</span>
+      <a href="#ejemplo">Ejemplo completo</a>
+      <span class="toc-head">PRÁCTICA</span>
+      <a href="#predict">Antes de ejecutar</a>
+      <a href="#build">Práctica guiada</a>
+      <a href="#errores">Errores comunes</a>
+      <a href="#medicion">Medición</a>
+      <a href="#resumen">Resumen</a>
+      <a href="#fuentes">Fuentes</a>
+    </nav>
+  </aside>
+
+  <article class="lesson">
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales el 2026-08-27.</p>
+
+    <section id="intro">
+      <h2>Introducción</h2>
+      <p>La búsqueda por palabras exactas falla cuando la intención y el vocabulario no coinciden. "Vehículo eléctrico" y "auto a batería" pueden referirse al mismo concepto sin compartir casi las mismas palabras.</p>
+      <p>Un <strong>embedding</strong> transforma texto en un vector numérico. La posición relativa de ese vector frente a otros — generados con el mismo modelo — permite comparar significado antes de construir RAG.</p>
+    </section>
+
+    <section id="outcomes">
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Explicar</strong> qué representa un embedding y por qué no es una respuesta generativa.</li>
+        <li><strong>Generar</strong> vectores con <code class="inline">loadModel({ modelType: "embeddings" })</code> y <code class="inline">embed()</code>.</li>
+        <li><strong>Calcular</strong> similitud coseno como lógica de aplicación.</li>
+        <li><strong>Construir</strong> un ranking semántico mínimo con Top-K.</li>
+        <li><strong>Medir</strong> latencia de carga, corpus, query y ranking por separado.</li>
+        <li><strong>Diagnosticar</strong> cuándo un ranking sorprendente se debe a query, corpus o modelo — no al embedding "roto".</li>
+      </ol>
+    </section>
+
+    <section id="contexto">
+      <h2>Definición y contexto</h2>
+      <p>Un embedding model mapea una entrada de texto a un vector de dimensión fija:</p>
+<pre class="codebox"><code>texto
+  ↓
+embedding model
+  ↓
+[x1, x2, x3, ... xn]</code></pre>
+      <p>Las dimensiones individuales no deben interpretarse como etiquetas humanas independientes. Lo útil es la <strong>posición relativa</strong> del vector frente a otros vectores producidos por el mismo modelo y la misma configuración.</p>
+      <p>Dos capacidades distintas en QVAC:</p>
+<pre class="codebox"><code>embedding: texto → vector
+LLM:       history → texto generado</code></pre>
+      <p>Un embedding <strong>representa</strong> una entrada. No genera una respuesta grounded por sí solo.</p>
+      <p><strong>Conexión arquitectónica:</strong></p>
+<pre class="codebox"><code>Clase 04: historial conversacional
+Clase 05: significado externo como vector
+Clase 06: vectores + persistencia + retrieval + generación grounded</code></pre>
+      <p>Esta clase termina en ranking semántico en memoria. Todavía <strong>no</strong> hay workspace persistente, chunking gestionado ni generación grounded.</p>
+    </section>
+
+    <section id="terminos">
+      <h2>Términos</h2>
+      <h3>Índice rápido</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Definición breve</th><th>¿Lo provee QVAC?</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Embedding</strong></td><td>Representación numérica de un texto</td><td>Sí (<code class="inline">embed()</code>)</td></tr>
+          <tr><td><strong>Vector</strong></td><td>Arreglo <code class="inline">number[]</code> de dimensión fija</td><td>Sí (salida de <code class="inline">embed()</code>)</td></tr>
+          <tr><td><strong>Cosine similarity</strong></td><td>Métrica de cercanía entre dos vectores</td><td>No (aplicación)</td></tr>
+          <tr><td><strong>Semantic search</strong></td><td>Búsqueda por significado, no por palabras exactas</td><td>Parcial (vectores sí; ranking no)</td></tr>
+          <tr><td><strong>Top-K</strong></td><td>Los K documentos con mayor score</td><td>No (aplicación)</td></tr>
+          <tr><td><strong>Batch embed</strong></td><td>Embeber varios textos en una sola llamada</td><td>Sí (<code class="inline">embed()</code> con array)</td></tr>
+          <tr><td><strong>loadModel(embeddings)</strong></td><td>Cargar un modelo de tipo embeddings</td><td>Sí</td></tr>
+          <tr><td><strong>embed()</strong></td><td>Convertir texto en vector(es)</td><td>Sí</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="embedding">Embedding</h3>
+      <p><strong>Definición:</strong> Representación numérica de un texto producida por un modelo de embeddings.</p>
+      <p><strong>Uso:</strong> Comparar significado entre textos sin depender de coincidencia léxica. Prerrequisito para búsqueda semántica y RAG.</p>
+<pre class="codebox"><code>const { embedding } = await embed({
+  modelId,
+  text: 'Local AI keeps inference on the device.',
+})
+console.log('dimensions:', embedding.length)</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Un arreglo <code class="inline">number[]</code>. La longitud depende del modelo; obsérvala en ejecución.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Un embedding no "contesta" una pregunta. Produce una representación.</div></div>
+
+      <h3 id="vector">Vector</h3>
+      <p><strong>Definición:</strong> Arreglo <code class="inline">number[]</code> de dimensión fija que almacena la salida de <code class="inline">embed()</code>.</p>
+      <p><strong>Uso:</strong> Unidad de comparación en similitud coseno y ranking semántico.</p>
+<pre class="codebox"><code>// Un string → number[]
+const { embedding: one } = await embed({ modelId, text: 'hello' })
+
+// Un array → number[][]
+const { embedding: many } = await embed({ modelId, text: ['a', 'b', 'c'] })</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body"><code class="inline">one.length</code> es la dimensión del modelo. <code class="inline">many.length</code> es el número de textos embebidos.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">No compares vectores de modelos distintos. No asumas espacios compatibles entre modelos diferentes.</div></div>
+
+      <h3 id="cosine-similarity">Cosine similarity</h3>
+      <p><strong>Definición:</strong> Métrica que mide el ángulo entre dos vectores del mismo espacio.</p>
+      <p><strong>Uso:</strong> Ranking semántico. Un score alto describe cercanía según el modelo y la métrica; <strong>no prueba verdad</strong>.</p>
+<pre class="codebox"><code>cosine(a,b) = dot(a,b) / (||a|| · ||b||)</code></pre>
+<pre class="codebox"><code>function cosineSimilarity(a: number[], b: number[]) {
+  if (a.length !== b.length) throw new Error('Dimension mismatch')
+  let dot = 0, aa = 0, bb = 0
+  for (let i = 0; i &lt; a.length; i++) {
+    dot += a[i] * b[i]
+    aa += a[i] * a[i]
+    bb += b[i] * b[i]
+  }
+  return dot / (Math.sqrt(aa) * Math.sqrt(bb))
+}</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Valor típicamente entre -1 y 1. Scores más altos indican vectores más alineados.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Implementarla en aplicación es una decisión pedagógica de esta clase.</div></div>
+
+      <h3 id="semantic-search">Semantic search</h3>
+      <p><strong>Definición:</strong> Búsqueda que ordena documentos por significado, no por coincidencia de palabras.</p>
+      <p><strong>Uso:</strong> Encontrar contenido relevante cuando la query y el documento usan vocabulario distinto.</p>
+<pre class="codebox"><code>documentos ──embed──→ vectores guardados en memoria
+query       ──embed──→ vector de consulta
+                           ↓
+                    similarity(query, doc)
+                           ↓
+                        ordenar
+                           ↓
+                         Top-K</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Lista ordenada de textos con score de similitud.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">QVAC genera los vectores. El ranking lo implementa la aplicación.</div></div>
+
+      <h3 id="top-k">Top-K</h3>
+      <p><strong>Definición:</strong> Los K documentos con mayor score de similitud tras ordenar.</p>
+      <p><strong>Uso:</strong> Limitar resultados a los más relevantes. Una query puede tener varios textos relevantes o ser ambigua; Top-1 no siempre basta.</p>
+<pre class="codebox"><code>const topK = ranked.slice(0, 3)
+topK.forEach(({ text, score }, i) =&gt; {
+  console.log(`#${i + 1} score=${score.toFixed(4)} ${text}`)
+})</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Si Top-K oculta un resultado útil, prueba aumentar K o revisar el corpus.</div></div>
+
+      <h3 id="batch-embed">Batch embed</h3>
+      <p><strong>Definición:</strong> Embeber varios textos en una sola llamada a <code class="inline">embed()</code>.</p>
+      <p><strong>Uso:</strong> Reducir overhead al procesar un corpus. Más eficiente que llamar <code class="inline">embed()</code> por cada frase.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Entrada</th><th>Salida</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">string</code></td><td><code class="inline">number[]</code></td></tr>
+          <tr><td><code class="inline">string[]</code></td><td><code class="inline">number[][]</code></td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>const { embedding } = await embed({
+  modelId,
+  text: [
+    'Electric cars store energy in batteries.',
+    'Gasoline engines burn fuel inside cylinders.',
+    'Bread recipes usually contain flour and yeast.',
+  ],
+})
+console.log('vectors:', embedding.length)
+console.log('dimensions:', embedding[0]?.length)</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">El tiempo depende del tamaño del batch, del backend y del hardware.</div></div>
+
+      <h3 id="loadModel-embeddings">loadModel(embeddings)</h3>
+      <p><strong>Definición:</strong> Carga un modelo de embeddings en memoria antes de llamar <code class="inline">embed()</code>.</p>
+      <p><strong>Uso:</strong> Prerrequisito para generar vectores. Usa el mismo <code class="inline">modelId</code> para documentos y query.</p>
+<pre class="codebox"><code>modelId = await loadModel({
+  modelSrc: GTE_LARGE_FP16,
+  modelType: 'embeddings',
+})</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Descarga con <code class="inline">unloadModel({ modelId })</code> cuando termines.</div></div>
+
+      <h3 id="embed-fn">embed()</h3>
+      <p><strong>Definición:</strong> Función de QVAC que convierte texto en vector o vectores.</p>
+      <p><strong>Uso:</strong> Núcleo del pipeline de embeddings. Acepta un string o un array de strings.</p>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body"><code class="inline">{ embedding: number[] | number[][], stats?: ... }</code></div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">El tamaño del vector debe observarse en ejecución; no lo adivines para un modelo distinto.</div></div>
+    </section>
+
+    <section id="referencia">
+      <h2>Referencia QVAC</h2>
+      <p>Flujo documentado:</p>
+<pre class="codebox"><code>loadModel()
+   ↓
+embed()
+   ↓
+vector / vectores
+   ↓
+unloadModel()</code></pre>
+
+      <h3 id="loadModel"><code class="inline">loadModel()</code> — embeddings</h3>
+      <p><strong>Definición:</strong> Carga un modelo de tipo embeddings desde caché o fuente remota.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelSrc</code></td><td><code class="inline">CatalogConstant | string</code></td><td>Origen del modelo (p. ej. <code class="inline">GTE_LARGE_FP16</code>)</td></tr>
+          <tr><td><code class="inline">modelType</code></td><td><code class="inline">"embeddings"</code></td><td>Tipo de modelo requerido para <code class="inline">embed()</code></td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>import { GTE_LARGE_FP16, loadModel } from '@qvac/sdk'
+
+const modelId = await loadModel({
+  modelSrc: GTE_LARGE_FP16,
+  modelType: 'embeddings',
+})</code></pre>
+
+      <h3 id="embed"><code class="inline">embed()</code></h3>
+      <p><strong>Definición:</strong> Genera embedding(s) para el texto dado.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelId</code></td><td><code class="inline">string</code></td><td>ID del modelo de embeddings cargado</td></tr>
+          <tr><td><code class="inline">text</code></td><td><code class="inline">string | string[]</code></td><td>Texto o batch de textos</td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>import { embed } from '@qvac/sdk'
+
+// Single
+const { embedding } = await embed({ modelId, text: 'hello' })
+
+// Batch
+const { embedding: vectors } = await embed({ modelId, text: ['a', 'b'] })</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body"><code class="inline">embedding</code> es <code class="inline">number[]</code> para un string o <code class="inline">number[][]</code> para un array. Puede incluir <code class="inline">stats</code>.</div></div>
+
+      <h3 id="unload"><code class="inline">unloadModel()</code></h3>
+      <p><strong>Definición:</strong> Descarga el modelo de embeddings de memoria.</p>
+<pre class="codebox"><code>await unloadModel({ modelId })</code></pre>
+    </section>
+
+    <section id="ejemplo">
+      <h2>Ejemplo completo</h2>
+      <p>Ejemplo mínimo — un solo texto:</p>
+<pre class="codebox"><code>import { close, embed, GTE_LARGE_FP16, loadModel, unloadModel } from '@qvac/sdk'
+
+let modelId: string | undefined
+try {
+  modelId = await loadModel({
+    modelSrc: GTE_LARGE_FP16,
+    modelType: 'embeddings',
+  })
+
+  const { embedding } = await embed({
+    modelId,
+    text: 'Local AI keeps inference on the device.',
+  })
+
+  console.log('dimensions:', embedding.length)
+} finally {
+  if (modelId) await unloadModel({ modelId })
+  await close()
+}</code></pre>
+      <p>Ejemplo de búsqueda semántica — corpus + query + Top-K:</p>
+<pre class="codebox"><code>import { close, embed, GTE_LARGE_FP16, loadModel, unloadModel } from '@qvac/sdk'
+
+const corpus = [
+  'Los vehículos eléctricos almacenan energía en baterías.',
+  'Los motores de combustión queman gasolina.',
+  'Una receta de pan necesita harina y levadura.',
+  'Un automóvil a batería se recarga conectándolo a la red.',
+]
+
+function cosineSimilarity(a: number[], b: number[]) {
+  if (a.length !== b.length) throw new Error('Dimension mismatch')
+  let dot = 0, aa = 0, bb = 0
+  for (let i = 0; i &lt; a.length; i++) {
+    dot += a[i] * b[i]
+    aa += a[i] * a[i]
+    bb += b[i] * b[i]
+  }
+  return dot / (Math.sqrt(aa) * Math.sqrt(bb))
+}
+
+const query = 'un coche que funciona con electricidad'
+let modelId: string | undefined
+
+try {
+  modelId = await loadModel({ modelSrc: GTE_LARGE_FP16, modelType: 'embeddings' })
+
+  const { embedding: documentVectors } = await embed({ modelId, text: corpus })
+  const { embedding: queryVector } = await embed({ modelId, text: query })
+
+  const ranked = corpus
+    .map((text, i) =&gt; ({ text, score: cosineSimilarity(queryVector, documentVectors[i]) }))
+    .sort((a, b) =&gt; b.score - a.score)
+
+  ranked.slice(0, 3).forEach(({ text, score }, i) =&gt; {
+    console.log(`#${i + 1} score=${score.toFixed(4)} ${text}`)
+  })
+} finally {
+  if (modelId) await unloadModel({ modelId })
+  await close()
+}</code></pre>
+      <p>Ejemplos ejecutables en <a href="../class-05-embeddings-meaning-as-geometry/examples/">examples/</a>.</p>
+    </section>
+
+    <section id="predict">
+      <h2>Antes de ejecutar</h2>
+      <p>Antes del lab, ordena mentalmente estos textos para la query <strong>"un coche que funciona con electricidad"</strong>:</p>
+      <ol>
+        <li>"Los vehículos eléctricos almacenan energía en baterías."</li>
+        <li>"Los motores de combustión queman gasolina."</li>
+        <li>"Una receta de pan necesita harina y levadura."</li>
+        <li>"Un automóvil a batería se recarga conectándolo a la red."</li>
+      </ol>
+      <p>Escribe tu ranking esperado antes de medir.</p>
+      <p><strong>Checkpoint:</strong></p>
+      <ol>
+        <li>¿Por qué un embedding no es una respuesta generativa?</li>
+        <li>¿Qué parte del semantic search implementa QVAC y qué parte implementamos nosotros?</li>
+        <li>¿Por qué debes usar el mismo modelo para documentos y query?</li>
+        <li>Una query devuelve un Top-1 sorprendente. Enumera tres hipótesis antes de culpar al modelo.</li>
+        <li>¿Qué métrica separarías si el usuario dice "la búsqueda semántica está lenta"?</li>
+        <li>Diseña un experimento para comparar dos formas de redactar la misma query.</li>
+      </ol>
+    </section>
+
+    <section id="build">
+      <h2>Práctica guiada</h2>
+      <h3>Build — Semantic Search</h3>
+      <ol>
+        <li>Define 15–30 frases pequeñas.</li>
+        <li>Genera embeddings en batch.</li>
+        <li>Embebe una query.</li>
+        <li>Calcula similitud coseno.</li>
+        <li>Ordena de mayor a menor.</li>
+        <li>Imprime Top-K con score y texto.</li>
+        <li>Registra latencia de embedding/query + ranking.</li>
+      </ol>
+      <p>Guía en <a href="../class-05-embeddings-meaning-as-geometry/lab/README.md">lab/README.md</a>.</p>
+
+      <h3>Break It — Ambigüedad</h3>
+      <p>Prueba una query como <code class="inline">apple performance</code> en un corpus que contenga textos sobre fruta y sobre computadores. Antes de ejecutar, predice si el modelo entenderá la intención. Después inspecciona el ranking.</p>
+      <p>La pregunta correcta no es "¿el embedding está mal?", sino:</p>
+      <ul>
+        <li>¿la query es ambigua?</li>
+        <li>¿el corpus ofrece suficiente contexto?</li>
+        <li>¿el modelo de embeddings representa bien este dominio/idioma?</li>
+        <li>¿Top-K está ocultando un resultado útil?</li>
+      </ul>
+
+      <h3>Práctica integrada — buscador semántico evaluable</h3>
+      <p>Construye un corpus pequeño pero intencional: diez textos relevantes, cinco distractores y dos casos ambiguos. Define antes de ejecutar qué documentos deberían aparecer en <code class="inline">Top-K=3</code> para cinco queries. Después registra:</p>
+      <ul>
+        <li><code class="inline">recall@3</code>: cuántas respuestas esperadas aparecen;</li>
+        <li>latencia de carga, corpus, query y ranking;</li>
+        <li>dimensión y modelo usados;</li>
+        <li>un resultado sorprendente y tres hipótesis verificables.</li>
+      </ul>
+      <p>Repite una query con redacción literal y otra conversacional. La conclusión debe separar calidad del corpus, calidad del modelo y costo de la consulta. Cambia una sola variable por experimento.</p>
+    </section>
+
+    <section id="errores">
+      <h2>Errores comunes</h2>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td>Top-1 irrelevante</td><td>Query ambigua, idioma o corpus inadecuado</td><td>Revisar query, idioma y contenido del corpus</td></tr>
+          <tr><td>Dimensiones incompatibles</td><td>Model ID distinto o longitud de vector</td><td>Usar el mismo modelo para documentos y query</td></tr>
+          <tr><td>Consulta lenta</td><td>Embedding de query vs ranking</td><td>Medir por separado; no culpar al modelo completo</td></tr>
+          <tr><td>Score bajo en todo</td><td>Normalización, dominio o corpus vacío</td><td>Verificar que exista contenido relevante</td></tr>
+        </tbody>
+      </table>
+      <h3>Notas adicionales</h3>
+      <ol>
+        <li><strong>"Cada dimensión significa una cosa concreta."</strong> No hay lectura humana simple de cada componente. El poder está en las relaciones geométricas.</li>
+        <li><strong>"Un score alto significa verdad."</strong> El score describe cercanía; no valida hechos.</li>
+        <li><strong>"Embeddings generan conocimiento."</strong> Representan entradas; no generan respuesta grounded.</li>
+        <li><strong>"Top-1 siempre basta."</strong> Una query puede tener varios textos relevantes o ser ambigua.</li>
+        <li><strong>"Puedo comparar vectores de modelos distintos."</strong> No asumas espacios compatibles.</li>
+      </ol>
+      <h3>Troubleshooting guiado</h3>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Primera comprobación</th><th>No concluyas todavía</th></tr></thead>
+        <tbody>
+          <tr><td>Top-1 irrelevante</td><td>query, idioma y corpus</td><td>que el embedding esté roto</td></tr>
+          <tr><td>dimensiones incompatibles</td><td>model ID y longitud</td><td>que cosine sea el problema</td></tr>
+          <tr><td>consulta lenta</td><td>embedding de query vs ranking</td><td>que el modelo completo sea lento</td></tr>
+          <tr><td>score bajo en todo</td><td>normalización y dominio</td><td>que no exista contenido relevante</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="medicion">
+      <h2>Medición</h2>
+      <p>Separa al menos:</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Métrica</th><th>Cómo obtenerla</th><th>Unidad</th><th>Interpretación</th></tr></thead>
+        <tbody>
+          <tr><td>Tiempo de carga del modelo</td><td><code class="inline">performance.now()</code> alrededor de <code class="inline">loadModel()</code></td><td>ms</td><td>Costo de arranque</td></tr>
+          <tr><td>Tiempo de embedding del corpus</td><td>Antes/después de <code class="inline">embed()</code> con array</td><td>ms</td><td>Costo del corpus</td></tr>
+          <tr><td>Tiempo de embedding de la query</td><td>Antes/después de <code class="inline">embed()</code> con query</td><td>ms</td><td>Costo por consulta</td></tr>
+          <tr><td>Tiempo de ranking</td><td>Loop de cosine + sort</td><td>ms</td><td>Costo de aplicación</td></tr>
+          <tr><td>Top-K observado</td><td>Salida del ranking</td><td>texto + score</td><td>Calidad aparente</td></tr>
+        </tbody>
+      </table>
+      <p>No presentes estos tiempos como rendimiento universal de QVAC: dependen de modelo, backend, hardware, tamaño del batch y corpus.</p>
+<pre class="codebox"><code>model, dimensions, corpusSize, loadMs, corpusMs, queryMs, rankMs, topK</code></pre>
+    </section>
+
+    <section id="resumen">
+      <h2>Resumen</h2>
+      <ul>
+        <li>Los embeddings convierten significado en una representación comparable (<code class="inline">number[]</code>).</li>
+        <li>QVAC genera vectores con <code class="inline">loadModel({ modelType: "embeddings" })</code> + <code class="inline">embed()</code>. El ranking semántico es lógica de aplicación.</li>
+        <li>Cosine similarity mide cercanía; un score alto no prueba verdad.</li>
+        <li>Usa el mismo modelo para documentos y query. No compares vectores de modelos distintos.</li>
+        <li>Mide carga, corpus, query y ranking por separado. Los tiempos dependen del hardware.</li>
+      </ul>
+      <p><strong>Siguiente clase:</strong> RAG local — persistencia, retrieval y generación grounded (Clase 6).</p>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes</h2>
+      <ul>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/text-embeddings/">QVAC — Text embeddings</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/api/">QVAC — API v0.18.x</a></li>
+        <li><a href="https://docs.qvac.tether.io/runtime/profiler/">QVAC — Profiler</a></li>
+        <li><a href="https://docs.qvac.tether.io/about/how-it-works/">QVAC — How it works</a></li>
+        <li><a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a></li>
+      </ul>
+    </section>
+  </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Introducción</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/05">Clase</a></li>
+        <li><a href="/class-05-embeddings-meaning-as-geometry/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-05-embeddings-meaning-as-geometry/lab/README.md">Lab</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 5 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-05-embeddings-meaning-as-geometry/">← Volver a la Clase 5</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

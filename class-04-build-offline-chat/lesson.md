@@ -5,39 +5,36 @@
 
 ---
 
-## Pregunta esencial
+## Introducción
 
-> **¿Cómo convertimos la inferencia local en una aplicación de conversación confiable que preserve estado, maneje interrupciones y siga funcionando tras reinicio sin la nube?**
+Un script que llama `completion()` una vez no es un chat. Una aplicación de conversación local requiere historial multi-turno, streaming con frontera de commit, cancelación, persistencia y recuperación tras reinicio.
 
----
-
-## Resultados de aprendizaje
-
-Al terminar esta lección puedes:
-
-1. **Distinguir** estado de inferencia de estado de aplicación.
-2. **Representar** conversación multi-turno como historial ordenado.
-3. **Construir** bucle de chat event-driven con `events` + `final`.
-4. **Commitear** salida del asistente solo tras estado terminal válido.
-5. **Cancelar** completion en vuelo con `requestId`.
-6. **Manejar** cancelación separada de errores inesperados.
-7. **Persistir** historial comprometido localmente.
-8. **Restaurar** conversación tras reinicio del proceso.
-9. **Reutilizar** modelo cargado entre turnos.
-10. **Aplicar** KV cache donde el runtime lo soporte.
-11. **Exponer** métricas por turno sin confundirlas con rendimiento universal.
-12. **Cerrar** recursos limpiamente (`unloadModel` / `close`).
-13. **Verificar** chat en modo avión tras restart.
-14. **Diagnosticar** fallo de consistencia de estado.
-15. **Defender** política de cuándo persistir un turno.
+QVAC provee primitivas de inferencia y runtime. **Tu aplicación posee el estado del producto y la política de persistencia.**
 
 ---
 
-## Por qué un demo de completion no es una aplicación
+## Qué aprenderás
 
-Imagina que tienes un script que llama `completion()` una vez y imprime el resultado. Funciona. El usuario dice: "Quiero hablar con esto como un chat."
+Al terminar esta lección podrás:
 
-Lo que falta no es "más prompts". Falta **arquitectura de aplicación**:
+1. **Distinguir** estado de aplicación de estado de inferencia/runtime.
+2. **Representar** conversación multi-turno como historial ordenado pasado en cada `completion()`.
+3. **Construir** un bucle de chat event-driven con `events` + `final`.
+4. **Commitear** la salida del asistente solo tras un estado terminal válido.
+5. **Cancelar** una completion en vuelo con `cancel({ requestId })`.
+6. **Persistir** y **restaurar** historial comprometido en almacenamiento local.
+7. **Reutilizar** un modelo cargado entre turnos y cerrar recursos con `unloadModel` / `close`.
+8. **Verificar** el chat en modo avión tras restart (modelo ya provisionado).
+9. **Medir** TTFT, duración, tok/s y `stopReason` por turno en tu máquina.
+10. **Diagnosticar** fallos de consistencia entre output provisional y estado durable.
+
+---
+
+## Definición y contexto
+
+La Clase 3 observó el motor de inferencia: tokens, streaming, `stopReason`. Esta clase construye la **aplicación alrededor del motor**.
+
+Lo que falta en un demo de completion no es "más prompts". Falta arquitectura de aplicación:
 
 ```text
 model lifecycle
@@ -57,37 +54,185 @@ metrics
 shutdown
 ```
 
-QVAC provee primitivas de inferencia y runtime. **Tu aplicación posee el estado del producto y la política de persistencia.**
+| Application state | Model / runtime state |
+|---|---|
+| conversation history | loaded weights |
+| conversation id | runtime/backend |
+| UI state | KV cache |
+| persistence path | in-flight inference |
+| active request id | |
+| per-turn metrics | |
+
+**Regla:** Si borras el transcript pero mantienes el modelo, pierdes la conversación pero puedes inferir. Si borras el modelo pero mantienes el transcript, tienes texto pero no puedes generar hasta volver a cargar o provisionar.
 
 ---
 
-## Tres ciclos de vida
+## Términos
 
-Trata estos tres ciclos como independientes:
+### Índice rápido
 
-### 1. Model lifecycle
+| Término | Definición breve | ¿Responsabilidad de la app? |
+|---|---|---|
+| **Application state** | Historial, IDs, UI y métricas del producto | Sí |
+| **Conversation history** | Mensajes `{ role, content }[]` pasados en cada request | Sí |
+| **Commit boundary** | Línea entre output provisional y turno durable | Sí |
+| **Streaming UX** | Render incremental sin commitear hasta `final` | Sí |
+| **Cancellation** | Detener un request activo por `requestId` | Sí (política) |
+| **Persistence** | Guardar transcript comprometido en disco local | Sí |
+| **Three lifecycles** | Modelo, request y conversación como ciclos independientes | Sí (orquestación) |
+
+### Application state
+
+**Definición:** Datos que la aplicación posee y controla: historial comprometido, IDs de conversación, estado de UI, ruta de persistencia, request activo y métricas por turno.
+
+**Uso:** Separar lo que es producto de lo que es runtime. QVAC no almacena tu chat ni decide cuándo persistir.
+
+**Nota:** KV cache es estado de runtime, no memoria conversacional del producto. Borrar caché del modelo no restaura ni borra el transcript.
+
+### Conversation history
+
+**Definición:** Secuencia ordenada de mensajes `{ role, content }` que la app pasa en el parámetro `history` de cada `completion()`.
+
+**Uso:** Multi-turn behavior. El modelo no recuerda automáticamente entre llamadas aisladas.
+
+**Ejemplo:**
+
+```ts
+history: [
+  { role: "user", content: "My favorite color for this test is orange." },
+  { role: "assistant", content: "Got it — orange for this test." },
+  { role: "user", content: "What color did I tell you?" },
+]
+```
+
+**Resultado:** El segundo turno puede responder usando contexto del primero porque la app incluyó ambos mensajes.
+
+**Nota:** Esto es estado de aplicación, no memoria a largo plazo del modelo.
+
+### Commit boundary
+
+**Definición:** Regla que separa **output provisional del asistente** (stream en pantalla) de **turno comprometido** (parte del historial durable).
+
+**Uso:** Evitar persistir texto incompleto o cancelado como mensaje completo del asistente.
+
+**Política mínima:**
+
+| stopReason | ¿Commitear? |
+|---|---|
+| `eos` | Sí |
+| `length` | Sí (parcial pero terminal) |
+| `stopSequence` | Sí |
+| `cancelled` | No (o según política documentada) |
+| error mid-stream | No |
+
+**Resultado:** Tras cancelación, el historial comprometido no incluye el turno parcial del asistente.
+
+**Nota:** Debes decidir y documentar la política antes de implementar. No hay respuesta universal.
+
+### Streaming UX
+
+**Definición:** Patrón donde `contentDelta` actualiza un buffer provisional en pantalla mientras la generación continúa.
+
+**Uso:** Mostrar progreso al usuario sin tratar el stream como estado durable.
+
+**Flujo recomendado:**
+
+```text
+buffer provisional (pantalla)
+        ≠
+committed history (durable)
+```
+
+**Ejemplo:**
+
+```ts
+let provisional = "";
+for await (const event of run.events) {
+  if (event.type === "contentDelta") {
+    provisional += event.delta;
+    process.stdout.write(event.delta);
+  }
+}
+const final = await run.final;
+// Commit solo aquí, con política según final.stopReason
+```
+
+**Resultado:** El usuario ve texto crecer en tiempo real. El historial solo cambia tras `final` y la política de commit.
+
+**Nota:** Renderizar output parcial y commitear un turno son operaciones separadas.
+
+### Cancellation
+
+**Definición:** Detener una completion en vuelo usando el `requestId` del `CompletionRun` activo.
+
+**Uso:** Comando `/cancel` o acción equivalente del producto. Acción normal, no error inesperado.
+
+**Sintaxis / API:**
+
+```ts
+import { cancel } from "@qvac/sdk";
+
+await cancel({ requestId: activeRun.requestId });
+```
+
+**Resultado:** El stream termina con `stopReason: "cancelled"`. El output parcial no debe commitearse por defecto.
+
+**Nota:** Distingue cancelación de usuario, error de runtime, parada por `length` y fin natural (`eos`). No etiquetes todos los errores como "cancelled".
+
+### Persistence
+
+**Definición:** Almacenamiento local del historial comprometido en un schema explícito de la aplicación.
+
+**Uso:** Restaurar conversación tras reinicio del proceso. QVAC no provee chat database ni autosave.
+
+**Schema mínimo:**
+
+```json
+{
+  "version": 1,
+  "conversationId": "uuid",
+  "createdAt": "2026-08-26T...",
+  "updatedAt": "2026-08-26T...",
+  "messages": [
+    { "role": "user", "content": "..." },
+    { "role": "assistant", "content": "..." }
+  ]
+}
+```
+
+**Prácticas:**
+
+- validar schema al cargar;
+- escribir de forma atómica (archivo temporal + rename);
+- manejar corrupción con mensaje claro al usuario.
+
+**Resultado:** Tras restart, `load()` restaura mensajes comprometidos. Pesos del modelo y transcript son activos separados.
+
+**Nota:** No mezcles transcript, logs técnicos y caché del modelo. Tienen retenciones distintas.
+
+### Three lifecycles
+
+**Definición:** Tres ciclos de vida independientes que la app debe orquestar: modelo, request y conversación.
+
+**Uso:** Evitar confundir recargar modelo con restaurar chat, o persistir durante el stream.
+
+**1. Model lifecycle:**
 
 ```text
 find → download → validate → loadModel → reuse → unloadModel → close
 ```
 
-El modelo es un activo pesado. Cargarlo una vez y reutilizarlo entre turnos es decisión de aplicación — y de rendimiento.
-
-### 2. Request lifecycle
+**2. Request lifecycle:**
 
 ```text
 completion() → events stream → final → (cancel?) → terminal state
 ```
 
-Cada turno del usuario dispara un request con su propio `requestId`. Puede completarse, cancelarse o fallar.
-
-### 3. Conversation lifecycle
+**3. Conversation lifecycle:**
 
 ```text
 load history → append user turn → generate → commit assistant turn → persist → repeat
 ```
-
-La conversación sobrevive requests individuales. Es estado de producto, no de runtime.
 
 ```mermaid
 flowchart TB
@@ -112,284 +257,304 @@ flowchart TB
   M -.-> G
 ```
 
----
+**Resultado:** Cada turno del usuario dispara un request con su propio `requestId`. La conversación sobrevive requests individuales.
 
-## Application state vs QVAC state
-
-| Application state | Model / runtime state |
-|---|---|
-| conversation history | loaded weights |
-| conversation id | runtime/backend |
-| UI state | KV cache |
-| persistence path | in-flight inference |
-| active request id | |
-| per-turn metrics | |
-
-**Regla:** Si borras el archivo de transcript pero mantienes el modelo, pierdes la conversación pero puedes inferir. Si borras el modelo pero mantienes el transcript, tienes texto pero no puedes generar hasta volver a cargar/provisionar.
+**Nota:** KV cache puede acelerar follow-ups cuando el runtime lo soporta (Clase 3). No es requisito para v1 ni sustituto de persistencia.
 
 ---
 
-## Conversation history
+## Referencia QVAC
 
-Multi-turn behavior se produce pasando **historial previo** en cada `completion()`. El modelo no "recuerda" automáticamente entre llamadas aisladas.
+Funciones documentadas en v0.18.x para esta clase.
 
-```typescript
-history: [
-  { role: "user", content: "My favorite color for this test is orange." },
-  { role: "assistant", content: "Got it — orange for this test." },
-  { role: "user", content: "What color did I tell you?" },
-]
+### `loadModel()`
+
+**Definición:** Carga un modelo desde caché o fuente remota hacia memoria.
+
+**Uso:** Obtener un `modelId` reutilizable entre turnos. Cargar una vez por sesión, no por mensaje.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `modelSrc` | `CatalogConstant \| string` | Origen del modelo |
+| `modelConfig` | `{ ctx_size?: number, ... }` | Configuración del runtime |
+
+**Ejemplo:**
+
+```ts
+const modelId = await loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});
 ```
 
-Esto es **estado de aplicación**, no memoria a largo plazo del modelo.
+**Resultado:** `modelId` string válido para múltiples llamadas a `completion()`.
 
----
+**Nota:** Tras restart offline, `loadModel()` usa caché local si el modelo ya fue provisionado (Clase 1).
 
-## Dentro de QVAC: CompletionRun
+### `completion()`
 
-En v0.18.x, `completion()` devuelve un `CompletionRun`:
+**Definición:** Ejecuta inferencia sobre un modelo cargado. En v0.18.x devuelve un `CompletionRun`.
 
-| Campo | Uso en chat |
-|---|---|
-| `requestId` | Cancelación dirigida |
-| `events` | Streaming incremental (`contentDelta`) |
-| `final` | Texto agregado, stats, `stopReason` |
+**Uso:** Un turno de chat con historial explícito y streaming.
 
-No enseñes superficies legacy como patrón preferido. El bucle de chat moderno lee eventos, renderiza provisionalmente, y espera `final` para decidir commit.
+| Campo / parámetro | Tipo | Descripción |
+|---|---|---|
+| `modelId` | `string` | Modelo cargado |
+| `history` | `{ role, content }[]` | Historial comprometido + turno actual del usuario |
+| `stream` | `boolean` | Si `true`, emite eventos incrementales |
+| `run.requestId` | `string` | ID para `cancel()` |
+| `run.events` | `AsyncIterable` | Stream con `contentDelta`, etc. |
+| `run.final` | `Promise` | Texto agregado, stats, `stopReason` |
 
----
+**Ejemplo:**
 
-## Streaming UX
+```ts
+const run = completion({
+  modelId,
+  history,
+  stream: true,
+  generationParams: { temp: 0.7, predict: 256 },
+});
 
-`contentDelta` permite mostrar texto mientras se genera. Pero **renderizar output parcial** y **commitear un turno de conversación** son operaciones separadas.
+let provisional = "";
+for await (const event of run.events) {
+  if (event.type === "contentDelta") {
+    provisional += event.delta;
+    process.stdout.write(event.delta);
+  }
+}
 
-Flujo recomendado:
-
-```text
-buffer provisional (pantalla)
-        ≠
-committed history (durable)
-```
-
-El usuario ve el buffer crecer. Solo tras `final` con política de éxito mueves contenido al historial comprometido.
-
----
-
-## La frontera de commit
-
-Introduce explícitamente:
-
-- **Provisional assistant output** — lo que se está streamando
-- **Committed assistant turn** — lo que sobrevive restart
-
-Política mínima:
-
-| stopReason | ¿Commitear? |
-|---|---|
-| `eos` | Sí |
-| `length` | Sí (parcial pero terminal) |
-| `stopSequence` | Sí |
-| `cancelled` | No (o según política documentada) |
-| error mid-stream | No |
-
-**Predict:** Si el usuario cancela tras 40 caracteres streamados, ¿deben persistirse como mensaje completo del asistente? Debes decidir y defender la política.
-
----
-
-## Cancelación
-
-Cancelación dirigida usa el `requestId` del run activo:
-
-```typescript
-import { cancel } from "@qvac/sdk";
-
-await cancel({ requestId: activeRun.requestId });
-```
-
-Distingue:
-
-- **User cancellation** — acción normal del producto (`/cancel`)
-- **Runtime failure** — error inesperado
-- **Length stop** — límite configurado, no error
-- **Normal EOS** — fin natural
-
-No captures todos los errores y los etiquetes "cancelled".
-
----
-
-## Persistencia es responsabilidad de la aplicación
-
-QVAC no provee chat database, conversation IDs, ni autosave. Implementa persistencia local con schema explícito:
-
-```json
-{
-  "version": 1,
-  "conversationId": "uuid",
-  "createdAt": "2026-08-26T...",
-  "updatedAt": "2026-08-26T...",
-  "messages": [
-    { "role": "user", "content": "..." },
-    { "role": "assistant", "content": "..." }
-  ]
+const final = await run.final;
+if (final.stopReason !== "cancelled") {
+  history.push({ role: "assistant", content: final.contentText });
 }
 ```
 
-Prácticas mínimas:
+**Resultado:** Eventos incrementales durante generación; `final` entrega estado terminal para decidir commit.
 
-- validar schema al cargar;
-- escribir de forma atómica (write temp + rename);
-- manejar corrupción con mensaje claro al usuario.
+**Nota:** Preferir `events` + `final` sobre superficies legacy.
 
-No conviertas esto en una charla de bases de datos — JSON local es suficiente para v1.
+### `cancel()`
 
----
+**Definición:** Cancela una operación en vuelo identificada por `requestId`.
 
-## Restaurar una sesión
+**Uso:** Comando `/cancel` mientras un turno se está generando.
 
-Al restart:
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `requestId` | `string` | ID del `CompletionRun` activo |
 
-```text
-1. load persisted history
-2. loadModel (desde caché local si provisionado)
-3. enter chat loop con history restaurada
+**Ejemplo:**
+
+```ts
+import { cancel } from "@qvac/sdk";
+
+console.log("requestId:", run.requestId);
+await cancel({ requestId: run.requestId });
+const final = await run.final;
+console.log("stopReason:", final.stopReason); // "cancelled"
 ```
 
-Pesos del modelo y transcript son **activos separados**. Provisionar modelo ≠ restaurar conversación.
+**Resultado:** El stream termina. La app no debe commitear output parcial salvo política explícita.
+
+**Nota:** `requestId` está disponible sincrónicamente al crear el run.
+
+### `unloadModel()` y `close()`
+
+**Definición:** `unloadModel()` libera el modelo de memoria. `close()` cierra la infraestructura del SDK.
+
+**Uso:** Graceful shutdown tras cancelar requests activos y persistir estado confirmado.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `modelId` | `string` | Modelo a descargar |
+| `clearStorage` | `boolean` | Si `true`, borra estado asociado |
+
+**Ejemplo:**
+
+```ts
+// Secuencia controlada
+if (activeRun) await cancel({ requestId: activeRun.requestId });
+await saveHistory(committedHistory);
+await unloadModel({ modelId, clearStorage: false });
+void close();
+```
+
+**Resultado:** Memoria liberada. En Node/Electron, descargar el último modelo puede cerrar la conexión RPC automáticamente.
+
+**Nota:** En Bare el comportamiento puede diferir. Verifica en tu runtime — no asumas simetría.
 
 ---
 
-## KV cache en una aplicación de chat
+## Ejemplo completo
 
-Conecta con Clase 3: KV cache puede acelerar follow-ups cuando el runtime mantiene estado compatible. En chat multi-turno con sesión estable, puede ayudar — pero no es requisito para v1.
+Flujo incremental en capas (ver `examples/01–06`):
 
-No confundas KV cache con "memoria conversacional". Es optimización de runtime, no almacenamiento de producto.
+1. Single completion (`01-single-turn.ts`)
+2. Multi-turn con history explícita (`02-multi-turn.ts`)
+3. Streaming render (`03-streaming.ts`)
+4. Cancel mid-stream (`04-cancellation.ts`)
+5. Persist JSON (`05-persistence.ts`)
+6. Restart offline (`06-restart-offline.ts`)
+
+Esqueleto integrado de un turno con commit boundary:
+
+```ts
+import {
+  cancel, close, completion, loadModel,
+  LLAMA_3_2_1B_INST_Q4_0, unloadModel,
+  type HistoryMessage,
+} from "@qvac/sdk";
+
+const modelId = await loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});
+
+let history: HistoryMessage[] = [
+  { role: "user", content: "Resume en una frase qué es un commit boundary." },
+];
+
+const run = completion({ modelId, history, stream: true });
+
+for await (const ev of run.events) {
+  if (ev.type === "contentDelta") process.stdout.write(ev.delta);
+}
+
+const final = await run.final;
+if (["eos", "length", "stopSequence"].includes(final.stopReason)) {
+  history.push({ role: "assistant", content: final.contentText });
+}
+
+await unloadModel({ modelId, clearStorage: false });
+void close();
+```
+
+Ejemplos ejecutables en [`examples/`](examples/). Arquitectura modular de referencia en [`app/src/`](app/src/).
 
 ---
 
-## Métricas por turno
+## Antes de ejecutar
+
+Escribe tus respuestas antes del lab:
+
+1. Si cancelas tras 40 caracteres streamados, ¿deben persistirse como turno completo del asistente?
+2. ¿El modelo "recuerda" el chat sin que la app pase `history`?
+3. Tras restart sin red, ¿qué falla primero: modelo o transcript?
+4. ¿Streaming implica que el output ya es estado durable?
+5. ¿Cancelación y error inesperado deben tratarse igual en la UI?
+
+---
+
+## Práctica guiada
+
+Construye **Offline Chat v1** siguiendo el [lab](lab/README.md):
+
+**Parte 1 — Ejemplos incrementales**
+
+Corre en orden `examples/01` a `06`.
+
+**Parte 2 — CLI modular**
+
+Completa los TODO en `app/src/`:
+
+```text
+index.ts       — startup, chat loop, /exit /cancel /new
+chat.ts        — orquestación de turno (events/final + commit)
+history.ts     — tipos y helpers de historial comprometido
+persistence.ts — load/save JSON local
+metrics.ts     — TTFT, duración, stats por turno
+shutdown.ts    — señales, cancelación activa, unload/close
+```
+
+**Parte 3 — Acceptance tests A–G**
+
+- multi-turn state
+- streaming
+- cancellation
+- persistence
+- offline restart
+- metrics
+- clean shutdown
+
+**Parte 4 — Break It**
+
+Variante defectuosa: persistir output parcial **durante** el stream, cancelar a mitad, restart, inspeccionar transcript. Diagnóstico esperado: confundió provisional con committed. Fix: commit boundary explícita.
+
+**Parte 5 — Airplane Mode**
+
+1. Provisiona modelo con red.
+2. Cierra app con transcript guardado.
+3. Desactiva red.
+4. Restart → restore → nueva completion.
+
+Entregable: CLI que pasa tests A–G con evidencia documentada.
+
+---
+
+## Errores comunes
+
+| Síntoma | Causa probable | Corrección |
+|---|---|---|
+| Modelo no recuerda turnos previos | No se pasa `history` en cada `completion()` | Mantener historial comprometido en memoria y pasarlo completo |
+| Texto parcial tras restart | Persistir durante el stream | Commitear solo tras `final` y política de éxito |
+| Cancelación tratada como error | Captura genérica de excepciones | Distinguir `stopReason: "cancelled"` de fallos de runtime |
+| Transcript corrupto tras crash | Escritura no atómica | write temp + rename; validar schema al cargar |
+| Modelo se recarga cada turno | `loadModel()` por mensaje | Cargar una vez, reutilizar `modelId` |
+| Falla offline tras restart | Modelo no provisionado | Provisionar con red primero (Clase 1) |
+| Unload y close idénticos en todo runtime | Asumir comportamiento Node en Bare | Verificar docs del runtime concreto |
+
+### Notas adicionales
+
+1. **"El modelo recuerda el chat automáticamente."** No; la app debe pasar history.
+2. **"Streaming output ya es estado durable."** No; es provisional hasta commit.
+3. **"Offline significa que nunca necesité provisionar."** Falso; solo reutilizas lo ya local.
+4. **"KV cache es memoria conversacional."** No; es optimización de runtime.
+
+---
+
+## Medición
 
 Por cada turno completado, registra lo que la API expone:
 
-- TTFT (wall-clock al primer `contentDelta`)
-- duración total de generación
-- `final.stats.tokensPerSecond` si disponible
-- `final.stopReason`
+| Métrica | Cómo obtenerla | Unidad | Interpretación |
+|---|---|---|---|
+| TTFT | Primer `contentDelta` − envío del prompt (`performance.now()`) | ms | Latencia percibida hasta primer carácter |
+| Duración total | `final` resuelto − inicio del request | ms | Tiempo completo del turno |
+| Tokens/segundo | `final.stats.tokensPerSecond` | tok/s | Throughput de decode en ese turno |
+| stopReason | `final.stopReason` | enum | Por qué terminó (eos, length, cancelled, …) |
 
-Estas métricas describen **ese turno en tu máquina**, no "rendimiento de QVAC en general".
+Compara turno normal vs turno cancelado. Estas métricas describen **ese turno en tu máquina**, no rendimiento universal de QVAC.
 
----
-
-## Graceful shutdown
-
-Secuencia controlada:
+Evento estructurado recomendado por turno:
 
 ```text
-cancel active request (si hay)
-→ commit/persist pending state
-→ unloadModel
-→ close()  // shutdown explícito del SDK
+turnId, modelId, startedAt, firstDeltaAt, endedAt,
+stopReason, tokensObserved, committed, persistenceVersion
 ```
 
-En Node/Electron, `unloadModel()` del último modelo puede cerrar la conexión RPC automáticamente. En Bare el comportamiento difiere. Verifica en tu runtime — no asumas simetría.
+Conserva evidencia sin capturar contenido sensible por defecto.
 
 ---
 
-## Worked Example — CLI incremental
+## Resumen
 
-Construye en capas (no dumps monolíticos):
+- Un chat confiable es una máquina de estados alrededor de inferencia, no un loop alrededor de una función prompt.
+- Tres ciclos independientes: modelo, request y conversación.
+- El historial multi-turno es estado de aplicación; pásalo en cada `completion()`.
+- Streaming actualiza buffer provisional; commit ocurre tras `final` según política.
+- Cancelación usa `requestId`; no commitees output parcial por defecto.
+- Persistencia local es responsabilidad de la app; modelo y transcript son activos separados.
+- Métricas por turno dependen del hardware; mídelas en tu equipo.
 
-1. Single completion (`examples/01`)
-2. Multi-turn con history explícita (`02`)
-3. Streaming render (`03`)
-4. Cancel mid-stream (`04`)
-5. Persist JSON (`05`)
-6. Restart offline (`06`)
-
-Luego integra en `app/src/` modular.
-
----
-
-## Predict
-
-> Si el usuario cancela después de 40 caracteres streamados, ¿esos caracteres deben almacenarse como mensaje completo del asistente?
-
-Escribe tu política **antes** de implementar. No hay respuesta universal — hay tradeoffs de UX y consistencia.
+**Siguiente clase:** embeddings como representación de significado externo (Clase 5). RAG añade conocimiento privado a esta arquitectura (Clase 6).
 
 ---
 
-## Build — Offline Chat v1
+## Fuentes
 
-Implementa CLI que pasa acceptance tests A–G (ver README). Comandos sugeridos: `/exit`, `/cancel`, `/new`, `/history`, `/metrics`.
-
----
-
-## Break It — Cancel Between Stream and Commit
-
-Starter defectuoso (deliberado): escribe output parcial al archivo de historial **durante** el stream. Cancela a mitad. Restart. Inspecciona.
-
-Diagnóstico esperado: la app confundió output provisional con estado durable. Fix: commit boundary explícita.
-
----
-
-## Measure It
-
-Tabla por turno con TTFT, duración, tok/s, stopReason. Compara turno normal vs cancelado.
-
----
-
-## Airplane-Mode Verification
-
-Precondición exacta: **activos del modelo ya provisionados localmente**.
-
-```text
-close app
-→ disable network
-→ restart app
-→ restore transcript
-→ loadModel from cache
-→ new completion
-```
-
-Sin red no puedes provisionar por primera vez — eso es Clase 1, no Clase 4.
-
----
-
-## Misconcepciones comunes
-
-1. **El modelo recuerda el chat automáticamente** — No; la app debe pasar history.
-2. **Streaming output ya es estado durable** — No; es provisional hasta commit.
-3. **Cancelación siempre es error inesperado** — No; es acción normal del producto.
-4. **Persistir user y assistant en momentos arbitrarios no corrompe semántica** — Sí puede; define frontera de commit.
-5. **Unload y close son idénticos en todo runtime** — Verifica documentación actual.
-6. **Offline significa que nunca necesité provisionar** — Falso; solo reutilizas lo ya local.
-
----
-
-## Conexiones arquitectónicas
-
-**Backward:** Clase 3 — primitivos de inferencia (`events`/`final`, TTFT, stopReason).
-
-**Forward:**
-
-- Clase 5 — embeddings como representación de significado externo
-- Clase 6 — RAG añade conocimiento privado a esta arquitectura de chat
-
----
-
-## Checkpoint
-
-Responde las 7 preguntas en [`assessment/checkpoint.md`](assessment/checkpoint.md).
-
----
-
-## Takeaway
-
-> **Un chat confiable es una máquina de estados alrededor de inferencia, no un loop alrededor de una función prompt.**
-
----
-
-## Fuentes utilizadas
-
-- QVAC Text Generation docs v0.18.x
-- QVAC API Summary / JS SDK docs
-- Release notes verificadas 2026-08-26
+- QVAC — Text generation: https://docs.qvac.tether.io/ai-capabilities/text-generation/
+- QVAC — API Summary v0.18.x: https://docs.qvac.tether.io/reference/api/
+- QVAC — How it works: https://docs.qvac.tether.io/about/how-it-works/
+- QVAC — Release notes: https://docs.qvac.tether.io/reference/release-notes/
+- npm @qvac/sdk 0.18.1: https://www.npmjs.com/package/@qvac/sdk

@@ -319,3 +319,29 @@ table.booktabs th {
 .slide--divider .footline .sec {
   color: var(--slide-fg);
 }
+
+/* Teaching decks 05–10 use the compact .deck vocabulary rather than the
+   Beamer classes above. Keep their three runtime modes on the same tokens. */
+.slides-dark body, .ninja-slides body { background: var(--slide-bg) !important; color: var(--slide-fg); }
+.slides-dark .deck { background: var(--slide-bg) !important; }
+.slides-dark .deck .slide:not(.dark) { background: var(--slide-card) !important; color: var(--slide-fg) !important; }
+.slides-dark .deck .slide.dark { background: #172554 !important; color: #f8fafc !important; }
+.slides-dark .deck h1, .slides-dark .deck h2, .slides-dark .deck .card h3 { color: var(--slide-fg) !important; }
+.slides-dark .deck .lede, .slides-dark .deck .card p { color: var(--slide-muted) !important; }
+.slides-dark .deck .flow, .slides-dark .deck code { background: var(--slide-code-bg) !important; color: var(--slide-code-fg) !important; border-color: var(--slide-border) !important; }
+.slides-dark .deck .card { background: var(--slide-accent-soft) !important; border-color: var(--slide-border) !important; }
+.slides-dark .deck h2::after { background: linear-gradient(90deg, var(--slide-accent) 0 38%, var(--slide-border) 38% 100%) !important; }
+.slides-dark .deck .footline { border-color: var(--slide-border) !important; color: var(--slide-muted) !important; }
+.slides-dark .deck .footline .section, .slides-dark .deck .progress { color: var(--slide-accent) !important; background: var(--slide-accent) !important; }
+
+.ninja-slides .deck { background: var(--slide-bg) !important; }
+.ninja-slides .deck .slide:not(.dark) { background: var(--slide-bloom), var(--slide-card) !important; color: var(--slide-fg) !important; }
+.ninja-slides .deck .slide.dark { background: var(--slide-bloom), #171022 !important; color: #fafafa !important; }
+.ninja-slides .deck h1, .ninja-slides .deck h2, .ninja-slides .deck .card h3 { color: var(--slide-fg) !important; }
+.ninja-slides .deck .lede, .ninja-slides .deck .card p { color: var(--slide-muted-strong) !important; }
+.ninja-slides .deck .flow, .ninja-slides .deck code { background: var(--slide-code-bg) !important; color: var(--slide-code-fg) !important; border-color: var(--slide-border-strong) !important; }
+.ninja-slides .deck .card { background: var(--slide-accent-soft) !important; border-color: var(--slide-border-strong) !important; }
+.ninja-slides .deck h2::after { background: var(--slide-accent-gradient) !important; }
+.ninja-slides .deck .footline { border-color: var(--slide-border-strong) !important; color: var(--slide-muted) !important; }
+.ninja-slides .deck .footline .section { color: var(--slide-accent) !important; }
+.ninja-slides .deck .progress { background: var(--slide-accent-gradient) !important; }

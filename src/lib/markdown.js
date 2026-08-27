@@ -16,6 +16,8 @@ export function markdownBackLink(staticPath) {
   if (staticPath.includes('class-04-build-offline-chat')) return '/class/04'
   if (staticPath.includes('class-05-embeddings-meaning-as-geometry')) return '/class/05'
   if (staticPath.includes('class-06-local-rag-private-knowledge')) return '/class/06'
+  if (staticPath.includes('class-07-speech-systems')) return '/class/07'
+  if (staticPath.includes('class-08-translation-voice-relay')) return '/class/08'
   return '/curriculum'
 }
 

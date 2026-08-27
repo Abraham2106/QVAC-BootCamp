@@ -692,6 +692,12 @@ table.booktabs { width: 100%; border-collapse: collapse; margin-top: 20px; font-
 .booktabs td { padding: 10px 14px; line-height: 1.4; vertical-align: top; }
 .booktabs tbody tr + tr { border-top: 1px solid var(--hairline); }
 
+/* Referencia API estilo W3Schools */
+table.api-ref th:first-child { width: 28%; }
+table.api-ref td code.inline { font-size: .9em; }
+.term-lead { font-size: 15px; color: var(--ink-soft); margin-top: 8px; }
+article.lesson p strong:first-child { color: var(--ink); }
+
 /* === FOOTER ============================================================= */
 body.lesson-page .site-foot { margin-top: 0; }
 .site-foot {

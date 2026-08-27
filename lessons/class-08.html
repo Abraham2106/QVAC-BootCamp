@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 8 — Translation and the Voice Relay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-08">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/08">Clase 8</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 08 · Módulo 3</span>
+      <h1 class="lesson-sidebar__name">Translation and the Voice Relay</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+      <span class="toc-head">INTRODUCCIÓN</span>
+      <a href="#intro">Introducción</a>
+      <a href="#outcomes">Qué aprenderás</a>
+      <a href="#contexto">Definición y contexto</a>
+      <span class="toc-head">TÉRMINOS</span>
+      <a href="#terminos">Índice de términos</a>
+      <a href="#four-clocks">Four clocks</a>
+      <a href="#segment-id">segmentId</a>
+      <a href="#backpressure">Backpressure</a>
+      <a href="#partial-translation">Partial translation</a>
+      <a href="#relay-state">Relay state</a>
+      <a href="#fabric-bergamot">qvac-fabric-llm vs Bergamot</a>
+      <a href="#rtf">RTF</a>
+      <span class="toc-head">REFERENCIA QVAC</span>
+      <a href="#referencia">Referencia QVAC</a>
+      <a href="#contratos">Contratos mínimos</a>
+      <a href="#traduccion-llm">Traducción con LLM</a>
+      <a href="#traduccion-bergamot">Traducción con Bergamot</a>
+      <a href="#asr-tts">ASR y TTS (Clase 07)</a>
+      <span class="toc-head">EJEMPLOS</span>
+      <a href="#ejemplo">Ejemplo completo</a>
+      <span class="toc-head">PRÁCTICA</span>
+      <a href="#predict">Antes de ejecutar</a>
+      <a href="#build">Práctica guiada</a>
+      <a href="#errores">Errores comunes</a>
+      <a href="#medicion">Medición</a>
+      <a href="#resumen">Resumen</a>
+      <a href="#done">Definition of Done</a>
+      <a href="#checkpoint">Checkpoint</a>
+      <a href="#fuentes">Fuentes</a>
+    </nav>
+  </aside>
+
+  <article class="lesson">
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm el 2026-08-25.</p>
+
+    <section id="intro">
+      <h2>Introducción</h2>
+      <p>Un intérprete local encadena captura PCM, ASR, traducción y TTS sin enviar voz ni texto a la nube. La voz añade tiempo y estado que no aparecen en un chat de texto: hipótesis parciales, resultados fuera de orden y colas de reproducción. Sin contratos y políticas de cola, el relay repite palabras, habla frases viejas o acumula buffers imposibles de vaciar.</p>
+      <p>Esta clase extiende el voice relay de la Clase 07 con traducción local, cuatro relojes independientes, backpressure y medición de real-time factor (RTF).</p>
+    </section>
+
+    <section id="outcomes">
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Descomponer</strong> un intérprete en contratos de captura PCM, ASR, traducción y TTS.</li>
+        <li><strong>Distinguir</strong> frames PCM, hipótesis parciales y segmentos finales.</li>
+        <li><strong>Elegir</strong> una ruta local: <code class="inline">qvac-fabric-llm.cpp</code> para traducción generativa o Bergamot para traducción especializada.</li>
+        <li><strong>Encadenar</strong> ASR → traducción → TTS sin bloquear la captura.</li>
+        <li><strong>Aplicar</strong> <code class="inline">segmentId</code>, backpressure, cancelación y descarte de resultados obsoletos.</li>
+        <li><strong>Medir</strong> primer audio, duración por etapa, RTF y errores por stage.</li>
+        <li><strong>Defender</strong> qué datos permanecen locales y cómo falla cada etapa.</li>
+      </ol>
+    </section>
+
+    <section id="contexto">
+      <h2>Definición y contexto</h2>
+      <p>La ruta local es: micrófono → PCM → ASR → texto → traductor → texto → TTS → altavoz. Ningún paso necesita un proveedor remoto si los modelos están provisionados con antelación. La privacidad se demuestra observando dependencias, sockets y artefactos en caché — no con una etiqueta.</p>
+      <p>Un ASR puede emitir hipótesis parciales que cambian al cerrar la frase. Una traducción parcial puede revertirse cuando llega el final. TTS necesita audio reproducible en orden. Si conectamos callbacks sin contratos, el sistema habla contenido obsoleto o se bloquea.</p>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart LR
+  A[Captura PCM] --> B[ASR partial/final]
+  B --> C[Traducción]
+  C --> D[Cola TTS]
+  D --> E[Altavoz]</pre>
+</div>
+      <p>Tiempo real no significa que todas las etapas terminen a la vez. Cada etapa tiene su propio reloj.</p>
+    </section>
+
+    <section id="terminos">
+      <h2>Términos</h2>
+      <h3>Índice rápido</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Definición breve</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Four clocks</strong></td><td>Cuatro dominios temporales: captura, ASR, traducción, TTS</td></tr>
+          <tr><td><strong>segmentId</strong></td><td>ID monótono que correlaciona eventos de un segmento</td></tr>
+          <tr><td><strong>Backpressure</strong></td><td>Política cuando el productor supera al consumidor</td></tr>
+          <tr><td><strong>Partial translation</strong></td><td>Traducción de hipótesis aún no final — puede cambiar</td></tr>
+          <tr><td><strong>Relay state</strong></td><td>Estado observable del pipeline por segmento y global</td></tr>
+          <tr><td><strong>qvac-fabric-llm vs Bergamot</strong></td><td>LLM generativo vs. traductor neuronal especializado</td></tr>
+          <tr><td><strong>RTF</strong></td><td>Real-time factor: tiempo de síntesis / duración del audio</td></tr>
+        </tbody>
+      </table>
+
+      <section id="four-clocks">
+        <h3>Four clocks</h3>
+        <p><strong>Definición:</strong> Cuatro dominios temporales independientes en un intérprete: captura PCM, ASR, traducción y TTS/reproducción.</p>
+        <p><strong>Uso:</strong> Diagnosticar cuellos de botella sin mezclar latencias. Cada reloj avanza a su ritmo.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Reloj</th><th>Entrada</th><th>Salida</th><th>Bloquea captura</th></tr></thead>
+          <tbody>
+            <tr><td>Captura</td><td>Micrófono</td><td>Frames PCM mono</td><td>—</td></tr>
+            <tr><td>ASR</td><td>PCM</td><td><code class="inline">transcriptPartial</code> / <code class="inline">transcriptFinal</code></td><td>No</td></tr>
+            <tr><td>Traducción</td><td>Texto final</td><td><code class="inline">translation</code></td><td>No</td></tr>
+            <tr><td>TTS</td><td>Texto traducido</td><td>PCM + reproducción</td><td>No</td></tr>
+          </tbody>
+        </table>
+<pre class="codebox"><code>const metrics = {
+  captureToFinalMs: 820,
+  translationMs: 140,
+  ttsMs: 310,
+  firstAudioMs: 45,
+}
+console.log(metrics)</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Tabla de latencias por etapa, no un solo número agregado.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">TTS lento no debe bloquear la captura del siguiente segmento — eso es trabajo del relay y su política de colas.</div></div>
+      </section>
+
+      <section id="segment-id">
+        <h3>segmentId</h3>
+        <p><strong>Definición:</strong> Identificador monótono asignado a cada segmento de habla; correlaciona transcript, traducción y audio sintetizado.</p>
+        <p><strong>Uso:</strong> Evitar que un evento tardío con ID anterior sobrescriba el estado actual.</p>
+<pre class="codebox"><code>{ type: 'transcript', segmentId: 2, text: '…', final: true }
+{ type: 'translation', segmentId: 2, sourceText: '…', targetText: '…' }
+{ type: 'audio', segmentId: 2, pcm, sampleRate: 22050, final: true }</code></pre>
+<pre class="codebox"><code>let latestSegment = -1
+function acceptSegment(segmentId: number): boolean {
+  if (segmentId &lt; latestSegment) return false
+  latestSegment = Math.max(latestSegment, segmentId)
+  return true
+}</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Eventos fuera de orden se descartan sin corromper la cola TTS.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body"><code class="inline">segmentId</code> es distinto de <code class="inline">turnId</code> (Clase 07). Un turno puede contener varios segmentos.</div></div>
+      </section>
+
+      <section id="backpressure">
+        <h3>Backpressure</h3>
+        <p><strong>Definición:</strong> Mecanismo que limita el crecimiento de colas cuando el productor (ASR/traducción) supera al consumidor (TTS/reproductor).</p>
+        <p><strong>Uso:</strong> Evitar buffers ilimitados y latencia acumulada en conversaciones rápidas.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Política</th><th>Comportamiento</th><th>Cuándo usar</th></tr></thead>
+          <tbody>
+            <tr><td>Bloquear con límite</td><td>Espera si cola ≥ N</td><td>Conversaciones pausadas</td></tr>
+            <tr><td>Descartar parciales</td><td>Solo conserva último partial</td><td>UI reactiva, TTS solo final</td></tr>
+            <tr><td>Degradar a texto</td><td>Omite TTS, muestra traducción</td><td>TTS no alcanza tiempo real</td></tr>
+            <tr><td>FIFO acotada</td><td>Cola ordenada con tamaño máximo</td><td>Conversación continua</td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body"><code class="inline">queueDepthMax</code> acotado y documentado en logs.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">En el lab: conservar el último partial; limitar cola de finales a dos segmentos. Una conversación rápida puede requerir FIFO ordenado.</div></div>
+      </section>
+
+      <section id="partial-translation">
+        <h3>Partial translation</h3>
+        <p><strong>Definición:</strong> Traducción emitida antes de que ASR confirme el segmento final — puede cambiar o invalidarse.</p>
+        <p><strong>Uso:</strong> Mostrar preview en UI; no reproducir como frase definitiva en TTS.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Origen ASR</th><th>Política segura</th><th>Política de menor latencia</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">final: false</code></td><td>UI únicamente</td><td>Traducir + TTS provisional</td></tr>
+            <tr><td><code class="inline">final: true</code></td><td>Traducir + encolar TTS</td><td>Traducir + reemplazar provisional</td></tr>
+          </tbody>
+        </table>
+<pre class="codebox"><code>async function pushTranscript({ segmentId, text, final = false }) {
+  onEvent({ type: 'asr', segmentId, text, final })
+  if (!final) return // parcial: UI únicamente
+  const targetText = await translate(text)
+  onEvent({ type: 'translation', segmentId, sourceText: text, targetText })
+}</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Parciales visibles en UI; TTS recibe solo contenido estable.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Si usas TTS provisional, debes cancelar o reemplazar el audio cuando llegue el final corregido.</div></div>
+      </section>
+
+      <section id="relay-state">
+        <h3>Relay state</h3>
+        <p><strong>Definición:</strong> Estado observable del pipeline: qué segmentos están en captura, transcripción, traducción, síntesis o reproducción.</p>
+        <p><strong>Uso:</strong> Diagnosticar bloqueos, cancelaciones y resultados obsoletos.</p>
+<pre class="codebox"><code>type RelayState = {
+  open: boolean
+  latestSegment: number
+  queueDepth: number
+  segments: Map&lt;number, {
+    asr: 'partial' | 'final' | 'error'
+    translation: 'pending' | 'done' | 'error'
+    tts: 'pending' | 'playing' | 'done' | 'error'
+  }&gt;
+}</code></pre>
+<pre class="codebox"><code>export function createVoiceRelay({ translate, tts, onEvent = () => {} }) {
+  let latestSegment = -1
+  let closed = false
+  return {
+    async pushTranscript({ segmentId, text, final = false }) {
+      if (closed || segmentId &lt; latestSegment) return
+      latestSegment = Math.max(latestSegment, segmentId)
+      onEvent({ type: 'asr', segmentId, text, final })
+      if (!final) return
+      try {
+        const targetText = await translate(text)
+        if (closed || segmentId !== latestSegment) return
+        const audio = await tts(targetText)
+        if (closed || segmentId !== latestSegment) return
+        await audio.play()
+        onEvent({ type: 'played', segmentId })
+      } catch (error) {
+        onEvent({ type: 'stage-error', segmentId, error: String(error) })
+      }
+    },
+    close() { closed = true; onEvent({ type: 'closed' }) },
+  }
+}</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Estado consultable en cualquier momento; cancelación vía <code class="inline">close()</code> detiene trabajo pendiente.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Verifica <code class="inline">closed</code> y <code class="inline">segmentId !== latestSegment</code> antes de reproducir — evita audio fantasma tras cancelar.</div></div>
+      </section>
+
+      <section id="fabric-bergamot">
+        <h3>qvac-fabric-llm vs Bergamot</h3>
+        <p><strong>Definición:</strong> Dos rutas locales de traducción: un LLM generativo vía <code class="inline">qvac-fabric-llm.cpp</code> vs. un traductor neuronal especializado (Bergamot).</p>
+        <p><strong>Uso:</strong> Elegir según cobertura de idiomas, latencia, tamaño, calidad y licencia — la clase no prescribe una ruta universal.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Criterio</th><th>qvac-fabric-llm.cpp</th><th>Bergamot</th></tr></thead>
+          <tbody>
+            <tr><td>Flexibilidad</td><td>Alta — cualquier par vía prompt</td><td>Baja — pares soportados</td></tr>
+            <tr><td>Predecibilidad</td><td>Riesgo de texto extra del LLM</td><td>Salida más estructurada</td></tr>
+            <tr><td>Latencia</td><td>Depende del modelo GGUF</td><td>Típicamente menor para pares soportados</td></tr>
+            <tr><td>Tamaño</td><td>Modelo LLM multi-GB</td><td>Modelos por par, más compactos</td></tr>
+            <tr><td>Formato de salida</td><td>Exige prompt estricto</td><td>API de traducción directa</td></tr>
+            <tr><td>Offline</td><td>Sí, con GGUF provisionado</td><td>Sí, con modelos Bergamot en caché</td></tr>
+          </tbody>
+        </table>
+<pre class="codebox"><code>import { completion, loadModel } from '@qvac/sdk'
+
+const run = completion({
+  modelId,
+  history: [{
+    role: 'user',
+    content: `Traduce al inglés. Responde SOLO con la traducción.\n\n${sourceText}`,
+  }],
+  stream: false,
+})
+const final = await run.final
+const targetText = final.content.trim()</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Traducción local sin red. Calidad y formato dependen del prompt y del modelo.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Bergamot puede ser más predecible para pares soportados. Compara ambas rutas con la misma entrada ASR en el lab.</div></div>
+      </section>
+
+      <section id="rtf">
+        <h3>RTF</h3>
+        <p><strong>Definición:</strong> Real-time factor — ratio entre tiempo de síntesis TTS y duración del audio producido: <code class="inline">RTF = ttsMs / audioDurationMs</code>.</p>
+        <p><strong>Uso:</strong> Saber si TTS alcanza tiempo real. RTF &lt; 1 significa síntesis más rápida que reproducción; RTF &gt; 1 significa que no alcanza.</p>
+<pre class="codebox"><code>const rtf = ttsMs / audioDurationMs
+// rtf &lt; 1 → TTS más rápido que reproducción
+// rtf &gt; 1 → TTS más lento (cola crece)</code></pre>
+        <table class="booktabs">
+          <thead><tr><th>segmentId</th><th>ttsMs</th><th>audioDurationMs</th><th>RTF</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>280</td><td>1200</td><td>0.23</td></tr>
+            <tr><td>2</td><td>1500</td><td>900</td><td>1.67</td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Segmento 2 no alcanza tiempo real — requiere backpressure o degradación.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">En voz importa sostener el ritmo de reproducción, no solo la media de tok/s del LLM.</div></div>
+      </section>
+    </section>
+
+    <section id="referencia">
+      <h2>Referencia QVAC</h2>
+
+      <h3 id="contratos">Contratos mínimos del relay</h3>
+      <p><strong>Definición:</strong> Tipos de evento que atraviesan el pipeline. Todos llevan <code class="inline">segmentId</code>.</p>
+      <p><strong>Uso:</strong> Interfaz entre captura, ASR, traducción y TTS sin acoplar implementaciones.</p>
+<pre class="codebox"><code>{ type: "audio", pcm, sampleRate: 16000, timestampMs }
+{ type: "transcript", segmentId, text, final: false }
+{ type: "transcript", segmentId, text, final: true }
+{ type: "translation", segmentId, sourceText, targetText }
+{ type: "audio", segmentId, pcm, sampleRate, final: true }</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">No confundas partial con contenido durable. La política segura traduce y sintetiza únicamente <code class="inline">final: true</code>.</div></div>
+
+      <h3 id="traduccion-llm">Traducción con qvac-fabric-llm.cpp</h3>
+      <p><strong>Definición:</strong> Usar <code class="inline">completion()</code> sobre un modelo GGUF cargado como traductor mediante prompt.</p>
+      <p><strong>Uso:</strong> Pares de idioma no cubiertos por Bergamot o cuando ya tienes un LLM cargado.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelId</code></td><td><code class="inline">string</code></td><td>Modelo cargado con <code class="inline">loadModel()</code></td></tr>
+          <tr><td><code class="inline">history</code></td><td><code class="inline">{ role, content }[]</code></td><td>Prompt con instrucción estricta de traducción</td></tr>
+          <tr><td><code class="inline">stream</code></td><td><code class="inline">boolean</code></td><td><code class="inline">false</code> para traducción batch por segmento</td></tr>
+        </tbody>
+      </table>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Texto traducido en <code class="inline">final.content</code>. Filtra prefijos/sufijos no deseados del LLM.</div></div>
+
+      <h3 id="traduccion-bergamot">Traducción con Bergamot</h3>
+      <p><strong>Definición:</strong> Motor de traducción neuronal local especializado, integrado como adaptador en el relay.</p>
+      <p><strong>Uso:</strong> Pares de idioma soportados donde predecibilidad y eficiencia superan la flexibilidad del LLM.</p>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Traducción directa sin prompt engineering. Latencia típicamente menor que un LLM 4B+.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Provisiona modelos con antelación. Sin artefacto local, el intérprete falla offline aunque ASR/TTS funcionen.</div></div>
+
+      <h3 id="asr-tts">ASR y TTS (Clase 07)</h3>
+      <p>Reutiliza los contratos de la Clase 07: provisionar con <code class="inline">downloadAsset()</code>, cargar con <code class="inline">loadModel()</code>, validar PCM antes de ASR, sintetizar solo texto final.</p>
+    </section>
+
+    <section id="ejemplo">
+      <h2>Ejemplo completo</h2>
+      <p>Relay didáctico con traducción y TTS inyectables. Sustituye adaptadores por clientes QVAC reales.</p>
+<pre class="codebox"><code>export function createVoiceRelay({ translate, tts, onEvent = () => {} }) {
+  let latestSegment = -1
+  let closed = false
+
+  return {
+    async pushTranscript({ segmentId, text, final = false }) {
+      if (closed || segmentId &lt; latestSegment) return
+      latestSegment = Math.max(latestSegment, segmentId)
+      onEvent({ type: 'asr', segmentId, text, final })
+      if (!final) return
+
+      try {
+        const started = performance.now()
+        const targetText = await translate(text)
+        onEvent({
+          type: 'translation', segmentId, sourceText: text,
+          targetText, durationMs: performance.now() - started,
+        })
+        if (closed || segmentId !== latestSegment) return
+
+        const ttsStarted = performance.now()
+        const audio = await tts(targetText)
+        if (closed || segmentId !== latestSegment) return
+
+        await audio.play()
+        onEvent({
+          type: 'played', segmentId,
+          ttsMs: performance.now() - ttsStarted,
+        })
+      } catch (error) {
+        onEvent({ type: 'stage-error', segmentId, error: String(error) })
+      }
+    },
+    close() { closed = true; onEvent({ type: 'closed' }) },
+  }
+}
+
+export const fakeTranslate = async (text) => text.replace('hola', 'hello')
+export const fakeTts = async (text) => ({ play: async () => text })</code></pre>
+      <p>Ejemplo ejecutable en <a href="../class-08-translation-voice-relay/examples/relay-pipeline.js">examples/relay-pipeline.js</a>.</p>
+    </section>
+
+    <section id="predict">
+      <h2>Antes de ejecutar</h2>
+      <p>Predice antes del lab:</p>
+      <ol>
+        <li>TTS tarda más que ASR: ¿crece la cola o se descartan segmentos?</li>
+        <li>Traducción falla en segmento 3: ¿se bloquean segmentos 4 y 5?</li>
+        <li>Final del segmento 2 llega después del 3: ¿se reproduce audio obsoleto?</li>
+        <li>Cierras el relay durante TTS: ¿se oye audio después de apagarlo?</li>
+        <li>Cortas la red antes de iniciar: ¿qué artefacto local falta?</li>
+      </ol>
+    </section>
+
+    <section id="build">
+      <h2>Práctica guiada</h2>
+      <p><strong>Lab — Construye un intérprete local.</strong> Guía en <a href="../class-08-translation-voice-relay/lab/README.md">lab/README.md</a>.</p>
+      <ol>
+        <li>Provisiona modelos ASR y TTS de la Clase 07.</li>
+        <li>Elige y registra Bergamot o <code class="inline">qvac-fabric-llm.cpp</code>.</li>
+        <li>Comprueba caché y dependencias; deshabilita la red antes de la corrida.</li>
+        <li>Define contratos PCM, transcript, traducción y audio.</li>
+        <li>Muestra parciales en UI; envía solo final a traducción.</li>
+        <li>Fuerza TTS lento, falla traducción en un segmento y cierra durante TTS.</li>
+        <li>Guarda eventos JSON, latencias y decisión de arquitectura.</li>
+      </ol>
+      <table class="booktabs">
+        <thead><tr><th>segmentId</th><th>ASR final ms</th><th>traducción ms</th><th>TTS ms</th><th>primer audio ms</th><th>RTF</th><th>resultado</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>3</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>4</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>5</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <p>No basta con oír una frase: demuestra ausencia de red, orden, manejo de parciales y recuperación ante fallos.</p>
+    </section>
+
+    <section id="errores">
+      <h2>Errores comunes</h2>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td>Repite palabras en TTS</td><td>Partial traducido y sintetizado</td><td>Solo final a traducción/TTS</td></tr>
+          <tr><td>Habla frases viejas</td><td>Evento tardío sin check de <code class="inline">segmentId</code></td><td>Descartar si <code class="inline">segmentId &lt; latestSegment</code></td></tr>
+          <tr><td>Cola crece sin límite</td><td>Sin backpressure; RTF &gt; 1</td><td>FIFO acotada, degradar a texto o descartar</td></tr>
+          <tr><td>Bloqueo tras error en traducción</td><td>Sin aislamiento por segmento</td><td><code class="inline">stage-error</code> por segmento; continuar siguientes</td></tr>
+          <tr><td>Audio tras cancelar</td><td>No verificar <code class="inline">closed</code> antes de reproducir</td><td>Guard <code class="inline">closed</code> y <code class="inline">segmentId !== latestSegment</code></td></tr>
+          <tr><td>LLM añade explicación</td><td>Prompt laxo</td><td>Instrucción estricta: solo traducción</td></tr>
+          <tr><td>Falla offline sin diagnóstico</td><td>Modelo de traducción no provisionado</td><td>Verificar caché antes de cortar red</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="medicion">
+      <h2>Medición</h2>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Métrica</th><th>Cómo obtenerla</th><th>Unidad</th><th>Interpretación</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">captureToFinalMs</code></td><td>Final ASR − inicio captura del segmento</td><td>ms</td><td>Latencia de transcripción</td></tr>
+          <tr><td><code class="inline">translationMs</code></td><td>Fin traducción − inicio traducción</td><td>ms</td><td>Costo del traductor</td></tr>
+          <tr><td><code class="inline">ttsMs</code></td><td>Fin síntesis − inicio TTS</td><td>ms</td><td>Costo del sintetizador</td></tr>
+          <tr><td><code class="inline">firstAudioMs</code></td><td>Primer sample reproducido − final ASR</td><td>ms</td><td>Latencia end-to-end percibida</td></tr>
+          <tr><td><code class="inline">audioDurationMs</code></td><td>Duración del PCM sintetizado</td><td>ms</td><td>Longitud del audio hablado</td></tr>
+          <tr><td><code class="inline">queueDepthMax</code></td><td>Máximo de segmentos en cola TTS</td><td>count</td><td>Presión del pipeline</td></tr>
+          <tr><td><code class="inline">droppedPartials</code></td><td>Parciales descartados por política</td><td>count</td><td>Agresividad de backpressure</td></tr>
+          <tr><td><code class="inline">stageErrors</code></td><td>Errores por etapa</td><td>count</td><td>Aislamiento de fallos</td></tr>
+          <tr><td><strong>RTF</strong></td><td><code class="inline">ttsMs / audioDurationMs</code></td><td>ratio</td><td>&lt; 1 = tiempo real; &gt; 1 = cola crece</td></tr>
+        </tbody>
+      </table>
+      <p>Reporta traductor elegido (Bergamot vs LLM), modelos, hardware y política de cola.</p>
+    </section>
+
+    <section id="resumen">
+      <h2>Resumen</h2>
+      <ul>
+        <li>Un intérprete local es una cadena de contratos: PCM → transcript → translation → audio.</li>
+        <li>Cuatro relojes independientes: captura, ASR, traducción, TTS — no mezclar métricas.</li>
+        <li><code class="inline">segmentId</code> evita resultados fuera de orden; partial actualiza UI, final alimenta downstream.</li>
+        <li>Backpressure es obligatoria cuando RTF &gt; 1 o la conversación es rápida.</li>
+        <li>Bergamot y <code class="inline">qvac-fabric-llm.cpp</code> son rutas distintas — elige con cobertura, latencia y predecibilidad.</li>
+        <li>La privacidad se demuestra con modelos provisionados, red bloqueada y logs de sockets.</li>
+      </ul>
+      <p><strong>Fin del Módulo 3 — Beyond Text.</strong></p>
+    </section>
+
+    <section id="done">
+      <h2>Definition of Done</h2>
+      <ul class="check">
+        <li>Cinco segmentos traducidos y sintetizados sin red.</li>
+        <li>Parciales actualizan UI, pero no se reproducen como frases definitivas.</li>
+        <li><code class="inline">segmentId</code> evita resultados fuera de orden.</li>
+        <li>Fallos de traducción/TTS se reportan por etapa.</li>
+        <li>Backpressure y <code class="inline">queueDepthMax</code> están documentados.</li>
+        <li>Break It incluye predicción, observación y explicación.</li>
+        <li>Tabla de latencias para al menos cinco segmentos.</li>
+      </ul>
+    </section>
+
+    <section id="checkpoint">
+      <h2>Checkpoint</h2>
+      <ol>
+        <li>¿Por qué el relay necesita cuatro contratos?</li>
+        <li>¿Cuál es la diferencia entre partial y final de ASR?</li>
+        <li>¿Cuándo elegirías Bergamot frente a un LLM local?</li>
+        <li>¿Qué hace <code class="inline">segmentId</code> ante resultados fuera de orden?</li>
+        <li>¿Qué significa RTF?</li>
+        <li>¿Qué política aplicarías si TTS no alcanza tiempo real?</li>
+        <li>¿Qué evidencia demuestra que no hubo red?</li>
+      </ol>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes</h2>
+      <ul>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/">QVAC — AI capabilities</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/api/">QVAC — API reference v0.18.x</a></li>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">QVAC — Text generation (qvac-fabric-llm.cpp)</a></li>
+        <li><a href="https://github.com/mozilla/bergamot-translator">Bergamot (Mozilla)</a></li>
+        <li><a href="../class-07-speech-systems/lesson.md">Clase 07 — Speech Systems</a></li>
+      </ul>
+    </section>
+  </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Introducción</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/08">Clase</a></li>
+        <li><a href="/class-08-translation-voice-relay/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-08-translation-voice-relay/lab/README.md">Lab</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 8 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-08-translation-voice-relay/">← Volver a la Clase 8</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

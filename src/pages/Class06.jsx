@@ -46,7 +46,7 @@ export default function Class06() {
         <Reveal>
           <h2 className="stitle" id="slides-title">Presentación de la clase</h2>
           <p className="lede section-intro">Document → chunk → embed → store → retrieve → evidence → grounded completion. Retrieval y generation quedan separados para poder depurar.</p>
-          <SlidesEmbed src={`${BASE}/slides.html`} title="Slides de la Clase 6: Local RAG" previewLabel="Private Knowledge" hint={17} />
+          <SlidesEmbed src={`${BASE}/slides.html`} title="Slides de la Clase 6: Local RAG" previewLabel="Private Knowledge" hint={25} />
         </Reveal>
       </section>
 

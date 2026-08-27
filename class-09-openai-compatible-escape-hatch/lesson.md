@@ -113,7 +113,7 @@ Por eso “OpenAI-compatible” no equivale automáticamente a “offline”. De
 
 No conviertas todo en “fallback cloud”. Para datos privados, el comportamiento seguro ante servidor local caído es explicar el bloqueo y pedir una decisión explícita.
 
-## Break It · Measure It
+## Diagnóstico y medición
 
 Antes de cada experimento escribe una predicción:
 
@@ -143,3 +143,27 @@ Comandos, fecha, modelo, TTFT, duración y logs sanitizados.
 ## Checkpoint
 
 Puedes defender la migración si explicas el contrato, ejecutas normal + SSE, identificas tres incompatibilidades, demuestras el caso offline y justificas el fallback con un ADR.
+## Build — Compatibility Probe
+
+Implementa un probe que pueda ejecutarse contra dos `baseURL` sin cambiar el resto del cliente:
+
+1. consulta `/v1/models` y guarda los `id` disponibles;
+2. ejecuta una completion determinista con `temperature: 0`;
+3. repite con SSE y acumula `delta.content` hasta `[DONE]`;
+4. normaliza errores HTTP, timeout y respuesta malformada en un mismo resultado diagnóstico;
+5. registra modelo, capacidades observadas, TTFT, duración y ruta, nunca el prompt sensible.
+
+El probe no debe asumir que una respuesta compatible implica capacidades idénticas. Prueba al menos un parámetro soportado en cloud pero rechazado localmente y documenta la diferencia.
+
+## Definition of Done
+
+- [ ] El mismo cliente funciona con dos endpoints configurables.
+- [ ] `/v1/models`, completion normal y SSE tienen pruebas separadas.
+- [ ] `ECONNREFUSED`, `404`, `400` y timeout se distinguen.
+- [ ] Existe una matriz de capacidades verificada, no inferida por nombre.
+- [ ] El caso privado falla cerrado cuando la ruta local no está disponible.
+- [ ] ADR-009 contiene evidencia fechada y métricas comparables.
+
+## Checkpoint práctico
+
+Entrega una captura o log de cada contrato, explica qué parte conserva el adapter y qué parte debe verificarse de nuevo, y demuestra que detener el servidor local no dispara un fallback remoto silencioso.

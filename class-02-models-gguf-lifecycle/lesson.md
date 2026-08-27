@@ -5,106 +5,77 @@
 
 ---
 
-## Pregunta esencial
+## Introducción
 
-> **¿Qué estamos cargando realmente cuando "cargamos un modelo"?**
+La Clase 1 trató el modelo como una caja negra: `downloadAsset()` trajo ~0.6 GB y `loadModel()` lo puso en memoria. Esta clase abre ese paquete: qué contiene un archivo GGUF, cómo leer nombres de catálogo y cómo gestionar el ciclo de vida completo en QVAC.
+
+Al terminar, un nombre como `QWEN3_4B_INST_Q4_K_M` será un contrato legible: familia, escala, ajuste y cuantización — evaluable contra tu hardware antes de descargar.
 
 ---
 
-## Resultados de aprendizaje
+## Qué aprenderás
 
-Al terminar esta clase puedes:
-
-1. **Explicar** qué contiene un modelo: arquitectura, tensors, pesos aprendidos, tokenizer, metadata y chat template.
+1. **Explicar** qué contiene un modelo: arquitectura, tensors, pesos, tokenizer, metadata y chat template.
 2. **Explicar** el papel de GGUF como formato de inferencia, distinguiéndolo de un checkpoint de entrenamiento.
-3. **Razonar** sobre cuantización: qué se gana en memoria/velocidad y qué se arriesga en calidad al bajar de F16 a Q4.
-4. **Interpretar** nombres de modelos de catálogo: familia, escala de parámetros, INST/base, variante de cuantización.
-5. **Gestionar** el ciclo de vida completo: find → download → validate → load → infer → reuse → unload → close.
-6. **Comparar** variantes con mediciones propias (disco, carga, memoria observable, TTFT, tok/s) y **justificar** una elección con la matriz de decisión.
+3. **Razonar** sobre cuantización: qué se gana en memoria/velocidad y qué se arriesga al bajar de F16 a Q4.
+4. **Interpretar** nombres de catálogo: familia, escala, INST/base, variante de cuantización.
+5. **Gestionar** el ciclo de vida: find → download → validate → load → infer → reuse → unload → close.
+6. **Comparar** variantes con mediciones (disco, carga, memoria, TTFT, tok/s) y justificar una elección.
 
 ---
 
-## Por qué importa esto
+## Definición y contexto
 
-La Clase 1 trató el modelo como una caja negra: `downloadAsset()` trajo ~0.6 GB y `loadModel()`
-los puso en memoria. Funcionó — pero quedaron preguntas sin responder. ¿Por qué 0.6 GB y no 6?
-¿Qué diferencia hay entre `Q4_0` y `Q4_K_M`? ¿Por qué un 7B no cabe en tu laptop de 8 GB?
-¿Qué significa `INST`?
+Elegir el modelo equivocado produce una de dos fallas: la aplicación **no carga** (memoria insuficiente) o **decepciona** (calidad por debajo de la tarea). En local, la elección de modelo es decisión de arquitectura: determina memoria, latencia, almacenamiento y techo de calidad.
 
-Estas preguntas no son académicas. Elegir el modelo equivocado produce una de dos fallas
-garantizadas: la aplicación que **no carga** (memoria insuficiente) o la aplicación que
-**decepciona** (calidad por debajo de la tarea). Y a diferencia de la nube — donde cambias
-un string de modelo y el proveedor absorbe el costo — en local la elección de modelo ES la
-decisión de arquitectura: determina memoria, latencia, almacenamiento y el techo de calidad
-de todo tu producto.
-
-Hoy abrimos la caja negra. Al cerrarla, un nombre como `QWEN3_4B_INST_Q4_K_M` dejará de ser
-ruido: será un contrato que puedes leer, evaluar contra tu hardware y defender.
+A diferencia de la nube — donde cambias un string y el proveedor absorbe el costo — en local tú provisionas el artefacto, reservas RAM/VRAM y validas la caché. El SDK v0.18.x no trae pesos embebidos: las constantes de catálogo son punteros al registro distribuido.
 
 ---
 
-## Concepto
+## Términos
 
-### Anatomía: qué hay dentro de un "modelo"
+### Índice rápido
 
-Cuando decimos "un modelo" hablamos de un paquete con varias piezas distintas:
+| Término | Definición breve |
+|---|---|
+| **GGUF** | Formato binario autocontenido para inferencia (pesos + tokenizer + metadata) |
+| **Cuantización** | Reducir bits por peso para ahorrar disco/memoria a costa posible de calidad |
+| **Tokenizer** | Vocabulario y reglas que convierten texto en tokens |
+| **Chat template** | Formato de conversación con que el modelo fue entrenado |
+| **Ciclo de vida** | Secuencia find → download → validate → load → infer → reuse → unload → close |
+| **Checkpoint** | Artefacto de entrenamiento; no es el mismo formato que GGUF |
 
-| Pieza | Qué es | Por qué importa |
-|---|---|---|
-| **Arquitectura** | El diseño de la red (capas, atención, dimensiones) | Define CÓMO se computa; sin ella los pesos son números sueltos |
-| **Tensors** | Los arreglos multi-dimensionales que organizan los números | La unidad de almacenamiento y cómputo |
-| **Pesos aprendidos** | Los valores numéricos ajustados durante el entrenamiento | El "conocimiento"; la mayor parte del tamaño del archivo |
-| **Tokenizer** | El vocabulario + reglas para partir texto en tokens | Sin el tokenizer correcto, los pesos son inútiles: la entrada no coincide con lo aprendido |
-| **Metadata** | Contexto máximo, chat template, cuantización, versión | Lo que el runtime necesita para usar el resto correctamente |
-| **Chat template** | El formato exacto de conversación con que fue entrenado | Prompt mal formateado = respuestas malas aunque el modelo sea bueno |
+### GGUF
 
-En sistemas multimodales existen piezas adicionales (adapters, projection models) — quedan
-apuntadas para la clase correspondiente; hoy nos enfocamos en LLMs de texto.
+**Definición:** Formato binario del ecosistema GGML/llama.cpp que empaqueta en un solo archivo tensors (con cuantización), tokenizer y metadata.
 
-### Checkpoint ≠ formato de inferencia
+**Uso:** Formato que consume el motor de inferencia de texto de QVAC (`qvac-fabric-llm.cpp`). Cualquier modelo `.gguf` compatible con llama.cpp puede cargarse.
 
-El archivo que descargaste NO es el checkpoint de entrenamiento. Son formatos distintos para
-etapas distintas:
+**Sintaxis / API:** No es una función del SDK; es el tipo de archivo referenciado por `modelSrc` o constantes de catálogo.
+
+**Ejemplo:**
 
 ```text
-Training checkpoint
-    ↓ (PyTorch / Safetensors — pensado para seguir entrenando)
-Conversión
+Training checkpoint (PyTorch / Safetensors)
+    ↓ conversión
+GGUF (+ cuantización opcional)
     ↓
-GGUF
-    ↓ (cuantización opcional)
-Inferencia local
+Inferencia local con loadModel()
 ```
 
-### GGUF: el formato de inferencia del ecosistema GGML/llama.cpp
+**Resultado:** Un archivo validable por checksum, portable y listo para inferencia sin frameworks de entrenamiento.
 
-**GGUF** es un formato binario que empaqueta en UN solo archivo todo lo que el runtime de
-inferencia necesita: los tensors (con sus cuantizaciones, posiblemente mixtas), el tokenizer,
-y metadata rica (arquitectura, contexto, template). El motor de inferencia de texto de QVAC
-(`qvac-fabric-llm.cpp`) consume exactamente este formato: cualquier modelo
-`llama.cpp`-compatible en `.gguf` puede cargarse.
+**Nota:** GGUF ≠ checkpoint de entrenamiento. El checkpoint sirve para seguir entrenando; GGUF sirve para inferir.
 
-La propiedad clave para local-first: **un GGUF es autocontenido y portable**. Un archivo,
-validado por checksum, listo para correr sin instalar frameworks de entrenamiento ni
-dependencias de runtime adicionales.
+### Cuantización
 
-### Cuantización: la negociación central
+**Definición:** Re-expresar pesos entrenados en alta precisión (F32/BF16/F16) con menos bits por peso (Q8, Q6, Q5, Q4, esquemas mixtos como Q4_K_M).
 
-Los pesos se entrenan en precisión alta (F32/BF16/F16 — 32 o 16 bits por peso). La
-**cuantización** los re-expresa en menos bits: Q8 (8), Q6, Q5, Q4 (4), o esquemas mixtos
-(como Q4_K_M, que cuantiza distinto las capas sensibles).
+**Uso:** Reducir almacenamiento, memoria y — típicamente — aumentar velocidad de inferencia en hardware modesto.
 
-La regla de negociación:
+**Sintaxis / API:** Aparece en el nombre del modelo de catálogo (p. ej. `Q4_0`, `Q4_K_M`) y en metadata del GGUF.
 
-```text
-menos bits por peso
-   ↓
-menos almacenamiento + menos memoria + inferencia típicamente más rápida
-   ↓
-posible pérdida de calidad (tarea-dependiente)
-```
-
-Números de referencia para calibrar intuición (por mil millones de parámetros):
+**Ejemplo:** Órdenes de magnitud por mil millones de parámetros:
 
 | Precisión | Bits/peso | Tamaño aprox. por 1B |
 |---|---|---|
@@ -113,137 +84,280 @@ Números de referencia para calibrar intuición (por mil millones de parámetros
 | Q8 | 8 | ~1.0 GB |
 | Q4 | 4 | ~0.5–0.6 GB |
 
-Estos son órdenes de magnitud para razonar, no promesas: el tamaño final depende del esquema
-exacto, la metadata y los embeddings del vocabulario. **Siempre mide el archivo real.**
+**Resultado:** Menos bits → menos disco y RAM → inferencia típicamente más rápida → posible pérdida de calidad (depende de la tarea).
 
-### Leer nombres de modelo: el contrato público
+**Nota:** Son heurísticas, no promesas. El tamaño final depende del esquema, metadata y embeddings. **Mide el archivo real** con `getModelInfo` o `fs.stat`.
 
-Decodifica `QWEN3_4B_INST_Q4_K_M` pieza por pieza:
+### Tokenizer
 
-```text
-QWEN3        → familia (arquitectura + linaje de entrenamiento)
-4B           → escala: ~4 mil millones de parámetros
-INST         → instruction-tuned (sigue instrucciones; sin esto sería "base", un completador crudo)
-Q4_K_M       → cuantización: 4 bits, esquema K-quants, variante M (mixta, capa a capa)
-```
+**Definición:** Componente que define el vocabulario y las reglas para partir texto en tokens que el modelo procesa.
 
-Con esta gramática, el nombre te dice ANTES de descargar: cuánta memoria necesitarás
-(escala × bits), qué tipo de tarea espera (INST), y qué tan agresiva fue la compresión.
+**Uso:** Sin el tokenizer correcto empaquetado en el GGUF, los pesos no reciben la misma representación con que fueron entrenados.
 
-### La matriz de decisión
+**Sintaxis / API:** Incluido en el GGUF; el runtime lo carga automáticamente con `loadModel()`.
 
-Elegir modelo es multi-objetivo. El currículo canónico lo resume en:
+**Ejemplo:** Prompt `"Hola"` → secuencia de IDs de token → tensors de entrada al modelo.
 
-```text
-calidad × ajuste a la tarea × memoria × almacenamiento
-        × latencia × contexto × hardware × modalidad
-```
+**Resultado:** Entrada alineada con el entrenamiento. Tokenizer incompatible produce salida basura aunque la carga "funcione".
 
-No existe "el mejor modelo": existe el mejor modelo PARA una tarea EN un hardware CON una
-restricción de privacidad. La matriz se evalúa con evidencia — que es exactamente lo que
-medirás hoy.
+**Nota:** Si un `.gguf` de terceros genera tokens incoherentes, sospecha primero tokenizer o chat template, no solo cuantización.
 
----
+### Chat template
 
-## Modelo mental
+**Definición:** Formato exacto de conversación (roles, delimitadores, saltos) con que el modelo fue entrenado o ajustado.
 
-Dos metáforas para no confundir nunca más las fases:
+**Uso:** `completion()` con `history: [{ role, content }]` aplica la template declarada en metadata del GGUF.
 
-- **El GGUF es el contenedor de envío; el modelo cargado es la máquina desplegada.**
-  El archivo en disco no "hace" nada: es un paquete sellado. `loadModel()` lo despliega en
-  RAM/VRAM — ahí sí se convierte en algo que computa.
-- **Un worker, muchos modelos.** QVAC usa un worker compartido por aplicación (no uno por
-  modelo). Los modelos cargados permanecen disponibles hasta que los descargas. El ciclo
-  canónico:
+**Sintaxis / API:** Metadata del GGUF; no se configura manualmente salvo casos avanzados.
 
-```text
-find → download → validate → load → infer → reuse → unload → close
-```
+**Ejemplo:** Un modelo `INST` (instruction-tuned) espera mensajes con rol `user`/`assistant`; un modelo `base` es un completador crudo.
 
----
+**Resultado:** Prompt bien formateado → respuestas coherentes. Template incorrecta → respuestas malas aunque el modelo sea capaz.
 
-## Inside QVAC
+**Nota:** `INST` en el nombre de catálogo indica instruction-tuned; sin sufijo suele ser variante base.
 
-### De dónde vienen los modelos (tres fuentes DOCUMENTADAS)
+### Ciclo de vida del modelo
 
-1. **Registro distribuido de QVAC** vía constantes del SDK (`LLAMA_3_2_1B_INST_Q4_0`,
-   `QWEN3_4B_INST_Q4_K_M`…). Las constantes son **punteros al registro** — el paquete npm NO
-   trae pesos embebidos.
-2. **URL HTTP** directa (p. ej. un mirror).
-3. **Ruta local** (`modelSrc: "/opt/models/model.gguf"`, con `modelType` explícito). En este
-   caso la validación contra checksum de catálogo no aplica: la integridad es responsabilidad
-   de tu aplicación.
+**Definición:** Secuencia de operaciones que mueven un modelo desde el catálogo hasta inferencia y liberación de recursos.
 
-### Explorar el registro y el estado de caché
+**Uso:** Gestionar explícitamente cada fase evita recargas innecesarias, fugas de memoria y errores offline mal diagnosticados.
 
-```ts
-import {
-  getModelInfo, getSystemResources,
-  modelRegistryList, modelRegistrySearch,
-} from "@qvac/sdk";
-
-// Todo el catálogo, o búsqueda filtrada
-const all = await modelRegistryList();
-const qwen4b = await modelRegistrySearch({ /* filtros por tipo/engine/cuantización */ });
-
-// Estado de un asset: ¿está en caché? ¿de qué tamaño?
-const info = await getModelInfo({ /* parámetros según .d.ts de tu versión */ });
-
-// Qué puede tu máquina AHORA
-const res = await getSystemResources({ sample: true });
-// res.capabilities.memory.totalBytes → total; sample → uso actual
-```
-
-> Nota honesta de versiones: `modelRegistrySearch` acepta filtros por tipo de modelo, engine
-> y cuantización; `getModelInfo` expone `isCached`, `expectedSize`, `cacheFiles` con checksum.
-> Verifica los nombres exactos de parámetros contra el `.d.ts` de tu versión instalada —
-> la página API Summary es un índice de alto nivel.
-
-### Requisitos duros del host (DOCUMENTADOS en system-requirements)
-
-| Requisito | Valor | Consecuencia |
-|---|---|---|
-| RAM total | ≥ 2 GB (recomendado ≥ 4 GB) | "Por debajo de 4 GB, la mayoría de los LLMs fallan al cargar" |
-| RAM disponible al cargar | ≥ 2 GB | Verificado vía `os.availableMemory()` |
-| Disco libre | ≥ 5 GB | Los modelos son multi-GB |
-| GPU API | Metal (macOS) · Vulkan ≥ 1.4 (Windows/Linux) | En Windows, Vulkan se exige incluso para CPU-only |
-| Node | ≥ 18 (preferible ≥ 20) | `engines` del CLI/SDK |
-
-Y la herramienta de validación: **`qvac doctor`** (con `--json` para CI) chequea el subset
-machine-readable de todo esto.
-
-### El ciclo de vida, función por función
+**Sintaxis / API:**
 
 ```text
 find      → modelRegistryList / modelRegistrySearch / constantes
-download  → downloadAsset() (reanudable, requestId, checksum)
-validate  → automática contra tamaño/checksum del catálogo al reutilizar caché
+download  → downloadAsset() (reanudable, checksum)
+validate  → automática contra tamaño/checksum del catálogo
 load      → loadModel() → modelId (residente hasta unload)
-infer     → completion() ×N (el modelo se reutiliza; cargar 1 vez)
-unload    → unloadModel({ modelId, clearStorage: false }) → libera memoria
-close     → close() explícito (o automático al descargar el último, en Node/Electron)
+infer     → completion() ×N (reutilizar modelId)
+unload    → unloadModel({ modelId, clearStorage: false })
+close     → close() (o automático al descargar el último en Node/Electron)
 ```
 
+**Ejemplo:** Explorar catálogo → descargar si falta → cargar una vez → varias completaciones → descargar modelo → cerrar worker.
+
+**Resultado:** Un worker compartido por aplicación con modelos residentes hasta `unloadModel()`. El GGUF en disco no computa; la instancia cargada sí.
+
+**Nota:** Entre experimentos de diagnóstico, llama `unloadModel()` para no acumular modelos en el worker compartido.
+
+### Anatomía del paquete "modelo"
+
+| Pieza | Qué es | Por qué importa |
+|---|---|---|
+| **Arquitectura** | Diseño de la red (capas, atención) | Sin ella los pesos son números sueltos |
+| **Tensors** | Arreglos multi-dimensionales de pesos | Unidad de almacenamiento y cómputo |
+| **Pesos aprendidos** | Valores ajustados en entrenamiento | Mayor parte del tamaño del archivo |
+| **Tokenizer** | Vocabulario + reglas de segmentación | Entrada debe coincidir con lo aprendido |
+| **Metadata** | Contexto máximo, cuantización, versión | Lo que el runtime necesita para configurarse |
+| **Chat template** | Formato de conversación | Prompt mal formateado degrada la salida |
+
+### Leer nombres de catálogo
+
+Decodifica `QWEN3_4B_INST_Q4_K_M`:
+
+```text
+QWEN3        → familia (arquitectura + linaje)
+4B           → ~4 mil millones de parámetros
+INST         → instruction-tuned (sigue instrucciones)
+Q4_K_M       → 4 bits, esquema K-quants, variante M (mixta capa a capa)
+```
+
+**Uso:** Antes de descargar, estima memoria (escala × bits), tipo de tarea (INST vs base) y agresividad de compresión.
+
 ---
 
-## Under the Hood
+## Referencia QVAC
 
-- **Al cargar se reservan dos cosas**: los pesos (tamaño ≈ el del archivo, ya cuantizados) y
-  la reserva de contexto (`ctx_size`), que crece con la ventana y alimenta el KV-cache. Por
-  eso `ctx_size: 8192` en una máquina justa falla aunque los pesos "caben".
-- **Por qué Q4 cabe donde F16 no**: mismo número de pesos, 4× menos bits por peso. La
-  memoria que ahorras es la que decide si tu app corre en la laptop del usuario o no.
-- **El backend importa**: Metal en macOS (siempre presente), Vulkan ≥ 1.4 en Windows/Linux.
-  Sin Vulkan en Windows ni siquiera hay fallback CPU — es requisito del runtime.
-- **La calidad de Q4 es tarea-dependiente**: para chat general la degradación suele ser
-  pequeña; para razonamiento fino o código delicado puede notarse. No hay respuesta universal:
-  se mide con TU tarea (y el benchmark informal del lab: comparación a ciegas).
+### Fuentes de modelos (v0.18.x)
+
+1. **Registro distribuido** vía constantes del SDK (`LLAMA_3_2_1B_INST_Q4_0`, `QWEN3_4B_INST_Q4_K_M`…). Punteros al registro; el paquete npm no trae pesos.
+2. **URL HTTP** directa (mirror u otro origen).
+3. **Ruta local** (`modelSrc: "/opt/models/model.gguf"`, con `modelType` explícito). Sin checksum de catálogo; integridad es responsabilidad de tu app.
+
+### Requisitos del host (documentados)
+
+| Requisito | Valor | Consecuencia |
+|---|---|---|
+| RAM total | ≥ 2 GB (recomendado ≥ 4 GB) | Por debajo de 4 GB, la mayoría de LLMs fallan al cargar |
+| RAM disponible al cargar | ≥ 2 GB | Verificado vía `os.availableMemory()` |
+| Disco libre | ≥ 5 GB | Modelos multi-GB |
+| GPU API | Metal (macOS) · Vulkan ≥ 1.4 (Windows/Linux) | En Windows, Vulkan se exige incluso para CPU-only |
+| Node | ≥ 18 (preferible ≥ 20) | `engines` del CLI/SDK |
+
+Validación: `qvac doctor` (con `--json` para CI).
+
+### `modelRegistryList()`
+
+**Definición:** Lista todas las entradas del registro distribuido de modelos QVAC.
+
+**Uso:** Fase **find** del ciclo de vida. Requiere red.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| *(ninguno)* | — | Devuelve array de entradas de catálogo |
+
+```ts
+import { modelRegistryList } from "@qvac/sdk";
+
+const entries = await modelRegistryList();
+console.log(`Modelos en registro: ${entries.length}`);
+```
+
+**Resultado:** Array con `name`, `quantization`, `expectedSize`, etc. (campos según versión).
+
+**Nota:** Si el registro no está disponible, la llamada falla; las constantes de catálogo siguen usables si el asset está en caché local.
+
+### `modelRegistrySearch()`
+
+**Definición:** Busca en el registro con filtros por tipo de modelo, engine y cuantización.
+
+**Uso:** Filtrar variantes de una familia sin listar todo el catálogo.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| Filtros | objeto | Tipo, engine, cuantización (ver `.d.ts` de tu versión) |
+
+```ts
+import { modelRegistrySearch } from "@qvac/sdk";
+
+const qwen = await modelRegistrySearch({ /* filtros según .d.ts */ });
+```
+
+**Nota:** Verifica nombres exactos de parámetros contra `node_modules/@qvac/sdk` — el API Summary es índice de alto nivel.
+
+### `getModelInfo()`
+
+**Definición:** Consulta metadata y estado de caché de un asset de catálogo.
+
+**Uso:** Fase **find/validate** — saber si está cacheado, tamaño esperado y checksum antes de cargar.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| Identificador | `CatalogConstant` u objeto según `.d.ts` | Constante o ID del asset |
+
+```ts
+import { getModelInfo, LLAMA_3_2_1B_INST_Q4_0 } from "@qvac/sdk";
+
+const info = await getModelInfo(LLAMA_3_2_1B_INST_Q4_0);
+// info.isCached, info.expectedSize, info.cacheFiles (sha256Checksum)
+```
+
+**Resultado:** `isCached`, `expectedSize`, `cacheFiles` con checksum para validación local.
+
+**Nota:** La firma exacta del parámetro varía entre versiones menores; verifica el `.d.ts` instalado.
+
+### `getSystemResources()`
+
+**Definición:** Reporta capacidades del host (memoria, backend gráfico).
+
+**Uso:** Decidir qué escala/cuantización cabe; medir memoria antes/durante/después de `loadModel()`.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `sample` | `boolean` | Si `true`, incluye uso actual además de totales |
+
+```ts
+import { getSystemResources } from "@qvac/sdk";
+
+const res = await getSystemResources({ sample: true });
+// res.capabilities.memory.totalBytes
+```
+
+### `downloadAsset()`
+
+**Definición:** Descarga un asset al caché sin cargarlo en memoria.
+
+**Uso:** Fase **download** — provisionar antes de uso offline.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `assetSrc` | `CatalogConstant \| string` | Constante, URL o ruta |
+| `onProgress` | `(p) => void` | Callback con `percentage`, `downloaded`, `total` |
+
+```ts
+import { downloadAsset, LLAMA_3_2_1B_INST_Q4_0 } from "@qvac/sdk";
+
+await downloadAsset({
+  assetSrc: LLAMA_3_2_1B_INST_Q4_0,
+  onProgress: (p) => console.log(`${p.percentage.toFixed(0)}%`),
+});
+```
+
+**Resultado:** Asset en caché. Descargas reanudables; validación automática contra checksum de catálogo al reutilizar.
+
+### `loadModel()`
+
+**Definición:** Carga un modelo desde caché o fuente remota hacia RAM/VRAM.
+
+**Uso:** Fase **load** — despliega el GGUF en memoria ejecutable.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `modelSrc` | `CatalogConstant \| string` | Origen del modelo |
+| `modelConfig` | `{ ctx_size?: number, ... }` | Contexto y opciones del runtime |
+
+```ts
+const modelId = await loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});
+```
+
+**Resultado:** `modelId` string. El modelo permanece residente hasta `unloadModel()`.
+
+**Nota:** Al cargar se reservan pesos (~tamaño del archivo) **y** contexto (`ctx_size`) para KV-cache. `ctx_size: 8192` puede fallar aunque los pesos "caben".
+
+### `completion()`
+
+**Definición:** Ejecuta inferencia sobre un modelo cargado.
+
+**Uso:** Fase **infer** — reutiliza el mismo `modelId` para múltiples turnos.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `modelId` | `string` | ID devuelto por `loadModel()` |
+| `history` | `{ role, content }[]` | Mensajes de conversación |
+| `stream` | `boolean` | Emite eventos incrementales |
+| `generationParams` | `{ temp?, seed?, predict? }` | Parámetros de generación |
+
+```ts
+const run = completion({
+  modelId,
+  history: [{ role: "user", content: PROMPT }],
+  stream: true,
+  generationParams: { temp: 0, seed: 42, predict: 128 },
+});
+for await (const ev of run.events) {
+  if (ev.type === "contentDelta") process.stdout.write(ev.text);
+}
+const final = await run.final;
+```
+
+**Resultado:** Tokens en stream; `final.stats.tokensPerSecond` para tok/s.
+
+### `unloadModel()` y `close()`
+
+**Definición:** Libera memoria del modelo (`unloadModel`) y cierra la infraestructura compartida (`close`).
+
+**Uso:** Fases **unload** y **close** del ciclo de vida.
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| `modelId` | `string` | Modelo a descargar de memoria |
+| `clearStorage` | `boolean` | Si `true`, borra también el asset de disco |
+
+```ts
+await unloadModel({ modelId, clearStorage: false });
+void close();
+```
+
+**Nota:** En v0.18.x, descargar el último modelo cierra la conexión RPC automáticamente en Node/Electron.
 
 ---
 
-## Worked Example
+## Ejemplo completo
 
-Comparar dos modelos con el MISMO prompt determinista (temperatura 0, semilla fija):
+Comparar dos modelos con el mismo prompt determinista (temperatura 0, semilla fija):
 
 ```ts
 import {
@@ -261,9 +375,12 @@ for (const modelSrc of [QWEN3_600M_INST_Q4, LLAMA_3_2_1B_INST_Q4_0]) {
 
   const sentAt = performance.now();
   let ttft: number | null = null;
-  const run = completion({ modelId,
-    history: [{ role: "user", content: PROMPT }], stream: true,
-    generationParams: GEN });
+  const run = completion({
+    modelId,
+    history: [{ role: "user", content: PROMPT }],
+    stream: true,
+    generationParams: GEN,
+  });
   for await (const ev of run.events) {
     if (ev.type === "contentDelta" && ttft === null) ttft = performance.now() - sentAt;
   }
@@ -278,113 +395,84 @@ Ejecutables completos en [`examples/`](examples/).
 
 ---
 
-## Predict
+## Antes de ejecutar
 
-Escribe tus respuestas antes de ejecutar:
+Escribe tus respuestas antes del lab:
 
-1. `QWEN3_600M_INST_Q4` vs `LLAMA_3_2_1B_INST_Q4_0`: ¿cuál esperas que cargue más rápido y cuál genere con más tok/s? ¿Por qué?
+1. `QWEN3_600M_INST_Q4` vs `LLAMA_3_2_1B_INST_Q4_0`: ¿cuál cargará más rápido y cuál generará con más tok/s? ¿Por qué?
 2. El mismo modelo cargado dos veces (frío vs tibio): ¿qué fase cambia y cuál no?
 3. Pides `ctx_size: 32768` en una máquina con 8 GB libres: ¿dónde falla — descarga, carga o primera inferencia?
 4. Registro caído pero caché válida: ¿funciona `loadModel()` con constante de catálogo? ¿Y `modelRegistryList()`?
 
 ---
 
-## Build — Model Explorer
+## Práctica guiada
 
-Construye la utilidad del currículo (§4.10) que:
+Construye **Model Explorer** (utilidad del currículo §4.10):
 
-- lista/busca modelos del registro (con manejo de registro no disponible);
-- muestra metadata y estado de caché del modelo elegido;
-- mide el tiempo de carga;
-- ejecuta una generación corta determinista;
-- descarga el modelo (`unloadModel`);
-- repite con una segunda variante;
-- imprime la tabla comparativa final.
+1. Lista o busca modelos del registro (con manejo de registro no disponible).
+2. Muestra metadata y estado de caché del modelo elegido (`getModelInfo`).
+3. Mide el tiempo de carga (`performance.now()` alrededor de `loadModel()`).
+4. Ejecuta una generación corta determinista (`completion` con `temp: 0`, `seed` fija).
+5. Descarga el modelo (`unloadModel`).
+6. Repite con una segunda variante.
+7. Imprime la tabla comparativa final.
 
-Guía completa en [`lab/`](lab/README.md) con starter y auto-verificación.
+Guía completa en [`lab/README.md`](lab/README.md) con starter y auto-verificación.
 
----
-
-## Break It
-
-Predice primero. Regla de seguridad: **descarga el modelo entre intentos**
-(`unloadModel`) para no tumbar la infraestructura compartida del worker.
-
-| Escenario controlado | Predicción antes |
-|---|---|
-| Cargar un modelo mayor a la RAM disponible | ¿en qué fase muere? ¿qué mensaje? |
-| `ctx_size: 32768` con memoria justa | ¿carga y falla al inferir, o falla al cargar? |
-| Registro no disponible + constante SIN caché | ¿se distingue del error con caché válida? |
-| Ruta local a un archivo truncado/corrupto | ¿quién valida aquí? (pista: no hay checksum de catálogo) |
+**Regla de seguridad:** descarga el modelo entre intentos de diagnóstico (`unloadModel`) para no tumbar el worker compartido.
 
 ---
 
-## Measure It
+## Errores comunes
 
-Tu tabla de comparación (frío y tibio por modelo):
-
-| Métrica | Cómo |
-|---|---|
-| Tamaño en disco | `getModelInfo` (expected/actual) o `fs.stat` del asset |
-| Tiempo de carga | `performance.now()` alrededor de `loadModel()` |
-| Memoria observable | `getSystemResources({ sample: true })` antes/durante/después |
-| TTFT | primer `contentDelta` − envío del prompt |
-| Tokens/segundo | `run.final.stats.tokensPerSecond` |
-
----
-
-## Misconcepciones comunes
-
-1. **"Más parámetros siempre es mejor."** Un 7B mal ajustado a la tarea pierde contra un 1B
-   bien elegido; y en hardware modesto el 7B directamente no carga. La matriz es multi-factor.
-2. **"Q4 destruye la calidad."** La degradación existe pero es tarea-dependiente y suele ser
-   pequeña para chat general. La comparación honesta se hace a ciegas y con TU caso de uso.
-3. **"El archivo GGUF se ejecuta solo."** Es un paquete de datos + metadata. Sin runtime
-   (worker QVAC/llama.cpp), tokenizer y memoria, no es nada.
-4. **"El SDK de npm trae los modelos incluidos."** Las constantes son punteros al registro
-   distribuido; los pesos se descargan aparte, se validan y se cachean.
+| Síntoma | Causa probable | Corrección |
+|---|---|---|
+| Modelo no carga en laptop de 8 GB con 7B F16 | Memoria insuficiente para pesos sin cuantizar | Probar Q4 o escala menor; medir con `getSystemResources` |
+| Carga OK pero falla al inferir con `ctx_size` alto | KV-cache excede RAM disponible | Reducir `ctx_size` o liberar memoria de la app |
+| `modelRegistryList()` falla offline | Registro requiere red | Usar constantes + caché local; manejar error en UI |
+| `loadModel()` OK offline con constante | Caché validada por checksum local | Normal: el registro no es necesario si el asset está cacheado |
+| Tokens basura con `.gguf` de terceros | Tokenizer o chat template incompatible | Verificar familia, template y origen del archivo |
+| Dos modelos residentes, RAM agotada | No llamaste `unloadModel` entre cargas | Descargar cada modelo antes del siguiente |
+| "Q4 es 4× más inteligente porque es más rápido" | Confundir velocidad con calidad | Medir calidad con tu tarea; velocidad ≠ fidelidad |
+| SDK npm "incluye" modelos | Constantes son punteros, no pesos | Descargar con `downloadAsset` o dejar que `loadModel` provisione |
 
 ---
 
-## Conexiones de arquitectura
+## Medición
 
-- **Clase 1:** la caja negra de hoy era el asset de ayer; el Airplane-Mode Test sigue siendo
-  tu verificador (ahora con dos modelos).
-- **Clase 3:** el TTFT y tok/s que mediste se descomponen en tokenización, prefill y
-  decodificación con KV-cache — la mecánica interna de la inferencia.
-- **Clase 10:** la matriz de decisión de hoy se formaliza como Architecture Decision Record.
+| Métrica | Cómo obtenerla | Unidad | Interpretación |
+|---|---|---|---|
+| Tamaño en disco | `getModelInfo` (`expectedSize`) o `fs.stat` | bytes / MB | Presupuesto de almacenamiento |
+| Tiempo de carga | `performance.now()` alrededor de `loadModel()` | ms | Carga fría vs tibio (caché en disco) |
+| Memoria observable | `getSystemResources({ sample: true })` antes/durante/después | bytes / GB | ¿Cabe con margen para contexto? |
+| TTFT | Primer `contentDelta` − envío del prompt | ms | Latencia percibida al usuario |
+| Tokens/segundo | `run.final.stats.tokensPerSecond` | tok/s | Fluidez de generación |
 
----
-
-## Checkpoint
-
-1. *(Recall)* ¿Qué significa `INST` y `Q4_K_M` en `QWEN3_4B_INST_Q4_K_M`?
-2. *(Explicación)* ¿Por qué un checkpoint de entrenamiento y un GGUF no son lo mismo? Nombra dos diferencias.
-3. *(Explicación)* Tu compañero dice: "bajé el modelo a Q4 y ahora es 4× más inteligente porque es más rápido". ¿Qué dos errores hay en esa frase?
-4. *(Aplicación)* Máquina con 6 GB libres, tarea: chat general offline. ¿Qué escala y cuantización probarías primero y por qué?
-5. *(Aplicación/Predicción)* `loadModel()` de un 7B Q4 (~4 GB) con 3 GB disponibles: ¿en qué fase falla y qué mensaje esperas?
-6. *(Diagnóstico)* `modelRegistryList()` falla con error de red pero tu app sigue cargando modelos por constante. ¿Cómo es posible? Explica el flujo.
-7. *(Diagnóstico)* Cargaste por ruta local un `.gguf` que otro equipo te pasó y produce tokens basura. ¿Qué pieza de la anatomía sospechas primero y por qué?
-8. *(Evaluación/Diseño)* Con TU máquina medida y la tarea "resumir documentos personales offline", completa la matriz de decisión y defiende tu elección en 5 líneas.
+Comparación justa: mismo prompt, `temp: 0`, misma semilla, mismo backend, `unloadModel` entre modelos.
 
 ---
 
-## Takeaway
+## Resumen
 
-> "Cargar un modelo" = desplegar a memoria un GGUF validado: pesos cuantizados + tokenizer +
-> metadata, elegidos con una matriz de decisión y confirmados con mediciones.
-> El nombre del modelo es un contrato; tu hardware es la contraparte. Lee ambos antes de prometer nada.
+- Un "modelo" es un paquete: arquitectura + pesos + tokenizer + metadata + chat template.
+- GGUF es el formato de inferencia autocontenido; no es un checkpoint de entrenamiento.
+- Cuantización negocia disco/memoria/velocidad contra calidad; la degradación es tarea-dependiente.
+- El nombre de catálogo (`QWEN3_4B_INST_Q4_K_M`) es un contrato legible antes de descargar.
+- El ciclo QVAC: find → download → validate → load → infer → reuse → unload → close.
+- Las constantes del SDK son punteros al registro; los pesos se descargan y validan por separado.
+- La elección de modelo requiere mediciones en tu hardware y tu tarea, no solo el catálogo.
 
-**Siguiente clase:** qué ocurre DENTRO de la inferencia — tokens, sampling, KV-cache y por qué
-el TTFT y el tok/s se comportan como se comportan.
+**Siguiente clase:** qué ocurre dentro de la inferencia — tokenización, prefill, decodificación y KV-cache.
 
 ---
 
-## Sources Used
+## Fuentes
 
 - QVAC — Download lifecycle: https://docs.qvac.tether.io/models/download-lifecycle/
 - QVAC — Text generation: https://docs.qvac.tether.io/ai-capabilities/text-generation/
-- QVAC — System requirements (RAM/disco/Vulkan, `qvac doctor`): https://docs.qvac.tether.io/system-requirements/
-- QVAC — API Summary v0.18.x · Release Notes v0.18.x
-- npm @qvac/sdk 0.18.1 · llama.cpp/GGUF: https://github.com/ggml-org/llama.cpp
+- QVAC — System requirements: https://docs.qvac.tether.io/system-requirements/
+- QVAC — API Summary v0.18.x: https://docs.qvac.tether.io/reference/api/
+- npm @qvac/sdk 0.18.1
+- llama.cpp / GGUF: https://github.com/ggml-org/llama.cpp
 - Currículo canónico: `QVAC_Course_Expanded_Learning_Edition.md`, Cap. 4 §4.1–4.10

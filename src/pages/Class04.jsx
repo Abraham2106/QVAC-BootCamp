@@ -59,14 +59,14 @@ export default function Class04() {
             Presentación de la clase
           </h2>
           <p className="lede section-intro">
-            22 diapositivas · tres ciclos de vida · commit boundary · cancel · persist · restart offline.
+            25 diapositivas · tres ciclos de vida · commit boundary · cancel · persist · restart offline.
             Complementarias a la lección — expande para navegar con ← → o pantalla completa.
           </p>
           <SlidesEmbed
             src={`${BASE}/slides.html`}
             title="Slides de la Clase 4: Build the Offline Chat"
             previewLabel="De script a conversación"
-            hint={22}
+            hint={25}
           />
         </Reveal>
       </section>

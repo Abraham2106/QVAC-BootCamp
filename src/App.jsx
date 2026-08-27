@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import DocsLayout from './layouts/DocsLayout'
 import Home from './pages/Home'
@@ -37,6 +38,25 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const replacements = [
+      [/Break It · Measure It/gi, 'Diagnóstico · evidencia'],
+      [/Break It\/Measure It/gi, 'Diagnóstico y medición'],
+      [/Break It/gi, 'Diagnóstico'],
+      [/Measure It/gi, 'Medición'],
+    ]
+    const normalize = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        replacements.forEach(([pattern, replacement]) => { node.nodeValue = node.nodeValue.replace(pattern, replacement) })
+      } else if (node.nodeType === Node.ELEMENT_NODE && !['SCRIPT', 'STYLE'].includes(node.tagName)) {
+        node.childNodes.forEach(normalize)
+      }
+    }
+    normalize(document.body)
+    const observer = new MutationObserver((mutations) => mutations.forEach(({ addedNodes }) => addedNodes.forEach(normalize)))
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
   return (
     <BrowserRouter>
       <AppRoutes />

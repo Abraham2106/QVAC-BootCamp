@@ -46,7 +46,7 @@ export default function Class05() {
         <Reveal>
           <h2 className="stitle" id="slides-title">Presentación de la clase</h2>
           <p className="lede section-intro">Meaning → vector → similarity → ranking. Predice antes de ejecutar y rompe la búsqueda con una query ambigua.</p>
-          <SlidesEmbed src={`${BASE}/slides.html`} title="Slides de la Clase 5: Embeddings" previewLabel="Meaning as Geometry" hint={16} />
+          <SlidesEmbed src={`${BASE}/slides.html`} title="Slides de la Clase 5: Embeddings" previewLabel="Meaning as Geometry" hint={25} />
         </Reveal>
       </section>
 

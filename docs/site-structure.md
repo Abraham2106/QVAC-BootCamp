@@ -8,7 +8,7 @@ El bootcamp es una **SPA React** servida por Vite. El contenido pedagógico (mar
 QVAC-BootCamp/
 ├── src/                    # Aplicación React (rutas, layout, componentes)
 ├── class-NN-*/             # Paquetes de clase (contenido estático)
-├── lessons/                # Lecciones HTML legacy (class-NN.html)
+├── lessons/                # Lecciones HTML (class-01.html … class-08.html)
 ├── assets/                 # CSS/JS compartido para slides y sitio
 ├── docs/                   # Documentación del proyecto (este directorio)
 ├── _internal/              # Local-only (gitignored): prompts, drafts, tooling
@@ -22,7 +22,7 @@ QVAC-BootCamp/
 |------|------------|-----------|
 | `/` | `Home` | Portada del bootcamp |
 | `/curriculum` | `Curriculum` | Las 12 clases + capstone por módulo |
-| `/class/01` … `/class/06` | `Class01` … `Class06` | Página de clase: slides embebidos, artefactos, progreso |
+| `/class/01` … `/class/08` | `Class01` … `Class07`, `PublishedClass` (08+) | Página de clase: slides embebidos, lección HTML, artefactos, progreso |
 | `/markdown/*` | `MarkdownPage` | Visor SPA de archivos `.md` estáticos |
 | `*` | `NotFound` | 404 |
 
@@ -36,10 +36,25 @@ Definidas en `vite.config.js`. En **dev** se sirven por middleware; en **build**
 - `class-04-build-offline-chat`
 - `class-05-embeddings-meaning-as-geometry`
 - `class-06-local-rag-private-knowledge`
+- `class-07-speech-systems`
+- `class-08-translation-voice-relay`
 - `lessons`
 - `assets`
 
 Ejemplo: `/class-06-local-rag-private-knowledge/lesson.md` → archivo estático; el visor SPA lo abre en `/markdown/class-06-local-rag-private-knowledge/lesson.md`.
+
+## Lecciones HTML y estilo editorial
+
+Las clases **01–08** tienen lección completa en dos formatos sincronizados:
+
+| Formato | Ruta | Uso |
+|---------|------|-----|
+| Markdown canónico | `class-NN-slug/lesson.md` | Fuente de verdad, visor SPA |
+| HTML con sidebar | `lessons/class-NN.html` | Lectura con TOC agrupado |
+
+Ambos siguen la guía [lesson-w3schools-style.md](./lesson-w3schools-style.md): definiciones por término, tablas de referencia API, ejemplos con resultado esperado, tono factual (estilo W3Schools). El layout HTML conserva `lesson-layout` (sidebar + artículo); no se altera la SPA.
+
+Regla: editar primero `lesson.md`, luego replicar en `lessons/class-NN.html`. Ver también [slides-vs-lesson.md](./slides-vs-lesson.md).
 
 ## Layout y modos de UI
 
@@ -60,7 +75,8 @@ Sin backend. El progreso se persiste en `localStorage` vía `src/hooks/useProgre
 3. Registrar la clase en `src/data/curriculum.js`.
 4. Crear `src/pages/ClassNN.jsx` y la ruta en `src/App.jsx`.
 5. Actualizar `markdownBackLink()` en `src/lib/markdown.js` si aplica.
-6. Renovar slides siguiendo [slides-vs-lesson.md](./slides-vs-lesson.md).
+6. Crear `lessons/class-NN.html` siguiendo [lesson-w3schools-style.md](./lesson-w3schools-style.md) (paridad con `lesson.md`).
+7. Renovar slides siguiendo [slides-vs-lesson.md](./slides-vs-lesson.md).
 
 ## Currículo
 

@@ -5,32 +5,582 @@
 <script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lección · Clase 6 — Local RAG and Private Knowledge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/site.css">
 </head>
 <body class="lesson-page" data-lesson-class="class-06">
 <a class="skip-link" href="#main">Saltar al contenido</a>
-<header class="site-head"><div class="bar"><a class="brand" href="/">QVAC <b>Masterclass</b></a><nav class="site-nav" aria-label="Principal"><a href="/">Inicio</a><a href="/curriculum">Currículo</a><a href="/class/06">Clase 6</a></nav></div></header>
-<main id="main"><div class="lesson-layout">
-<aside class="lesson-sidebar" aria-label="Navegación de la lección"><div class="lesson-sidebar-title"><span class="lesson-sidebar__kicker">Clase 06 · Módulo 2</span><h1 class="lesson-sidebar__name">Local RAG and Private Knowledge</h1></div><nav class="lesson-toc" aria-label="Contenido"><span class="toc-head">Contenido</span><a href="#esencial">Pregunta esencial</a><a href="#memory">Dos memorias</a><a href="#pipeline">Pipeline</a><a href="#chunk">Chunking</a><a href="#qvac">Managed RAG</a><a href="#boundary">Retrieval vs generation</a><a href="#ground">Grounding</a><a href="#unknown">Unknown knowledge</a><a href="#break">Break It</a><a href="#measure">Measure It</a><a href="#takeaway">Takeaway</a><a href="#fuentes">Fuentes</a></nav></aside>
-<article class="lesson">
-<div class="block alert" style="margin-bottom:2rem;"><div class="block-title">Contenido extendido en lesson.md</div><div class="block-body">Esta página HTML resume la lección. La <strong>versión canónica completa</strong> está en <a href="/class-06-local-rag-private-knowledge/lesson.md"><code class="inline">lesson.md</code></a> y en el <a href="/markdown/class-06-local-rag-private-knowledge/lesson.md">visor Markdown</a>. Las <a href="/class-06-local-rag-private-knowledge/slides.html">slides</a> son complementarias.</div></div>
-<p class="lesson-meta">Baseline técnico: QVAC SDK v0.18.x / v0.18.1.</p>
-<section id="esencial"><h2>Pregunta esencial</h2><div class="block"><div class="block-body" style="font-size:20px;">¿Cómo puede un modelo responder desde conocimiento que no vive en sus pesos?</div></div></section>
-<section id="memory"><h2>Parametric vs external knowledge</h2><p>Los pesos contienen conocimiento paramétrico. RAG conserva documentos/vectores fuera de los pesos y recupera evidencia en query-time.</p></section>
-<section id="pipeline"><h2>Pipeline</h2><pre><code>document → chunk → embed → store
-query → embed → Top-K
-               ↓
-         grounded context
-               ↓
-          completion</code></pre></section>
-<section id="chunk"><h2>Chunking</h2><p>Chunks muy pequeños pueden perder contexto; chunks muy grandes pueden introducir ruido. El tamaño correcto es una decisión que debe evaluarse sobre el corpus.</p></section>
-<section id="qvac"><h2>Inside QVAC</h2><p>QVAC v0.18.x documenta <code class="inline">ragChunk()</code>, <code class="inline">ragIngest()</code>, <code class="inline">ragSaveEmbeddings()</code>, <code class="inline">ragSearch()</code> y lifecycle de workspaces.</p></section>
-<section id="boundary"><h2>Retrieval vs generation</h2><p>Inspecciona Top-K antes del LLM. Evidencia ausente implica empezar por retrieval; evidencia correcta con respuesta incompatible apunta a grounding/generation.</p></section>
-<section id="ground"><h2>Grounding + provenance</h2><p>La aplicación construye un bloque EVIDENCE y una política de evidencia insuficiente. Provenance debe venir de IDs/metadata reales, no de URLs inventadas por el modelo.</p></section>
-<section id="unknown"><h2>Unknown Knowledge Test</h2><p>Pregunta algo ausente del corpus y verifica que el sistema no fabrique una fuente para parecer útil.</p></section>
-<section id="break"><h2>Break It</h2><p>Elimina el documento relevante, reduce Top-K o degrada chunking. Predice qué etapa debería verse afectada y luego inspecciona evidence.</p></section>
-<section id="measure"><h2>Measure It</h2><p>Separa ingest, retrieval, TTFT y generation total. La latencia agregada no permite diagnosticar.</p></section>
-<section id="takeaway"><h2>Takeaway</h2><div class="block example"><div class="block-body"><strong>RAG es una cadena observable. Retrieval y generation pueden fallar de forma independiente.</strong></div></div></section>
-<section id="fuentes"><h2>Fuentes</h2><ul><li><a href="https://docs.qvac.tether.io/ai-capabilities/rag/">QVAC RAG</a></li><li><a href="https://docs.qvac.tether.io/ai-capabilities/text-embeddings/">Text embeddings</a></li><li><a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">Text generation</a></li><li><a href="https://arxiv.org/abs/2005.11401">RAG paper</a></li></ul></section>
-</article></div></main>
-</body></html>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/06">Clase 6</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 06 · Módulo 2</span>
+      <h1 class="lesson-sidebar__name">Local RAG and Private Knowledge</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+      <span class="toc-head">INTRODUCCIÓN</span>
+      <a href="#intro">Introducción</a>
+      <a href="#outcomes">Qué aprenderás</a>
+      <a href="#contexto">Definición y contexto</a>
+      <span class="toc-head">TÉRMINOS</span>
+      <a href="#terminos">Índice de términos</a>
+      <a href="#parametric-external">Parametric vs external</a>
+      <a href="#chunk">Chunk</a>
+      <a href="#ingest">Ingest</a>
+      <a href="#retrieval">Retrieval</a>
+      <a href="#grounding">Grounding</a>
+      <a href="#provenance">Provenance</a>
+      <a href="#workspace">Workspace</a>
+      <a href="#ragChunk">ragChunk()</a>
+      <a href="#ragIngest">ragIngest()</a>
+      <a href="#ragSearch">ragSearch()</a>
+      <span class="toc-head">REFERENCIA QVAC</span>
+      <a href="#referencia">Referencia QVAC</a>
+      <a href="#ref-ragIngest">ragIngest()</a>
+      <a href="#ref-ragSearch">ragSearch()</a>
+      <a href="#ref-ragClose">ragCloseWorkspace()</a>
+      <span class="toc-head">EJEMPLOS</span>
+      <a href="#ejemplo">Ejemplo completo</a>
+      <span class="toc-head">PRÁCTICA</span>
+      <a href="#predict">Antes de ejecutar</a>
+      <a href="#build">Práctica guiada</a>
+      <a href="#errores">Errores comunes</a>
+      <a href="#medicion">Medición</a>
+      <a href="#resumen">Resumen</a>
+      <a href="#fuentes">Fuentes</a>
+    </nav>
+  </aside>
+
+  <article class="lesson">
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales el 2026-08-27.</p>
+
+    <section id="intro">
+      <h2>Introducción</h2>
+      <p>Un LLM local conoce lo que está representado en sus pesos y lo que recibe en su contexto actual. Tus notas privadas, manuales internos o documentos recientes no aparecen dentro de esos pesos.</p>
+      <p>RAG (Retrieval-Augmented Generation) añade una memoria externa recuperable: documentos se embeben, persisten y se recuperan en query-time para fundamentar la generación.</p>
+    </section>
+
+    <section id="outcomes">
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Distinguir</strong> conocimiento paramétrico de conocimiento externo recuperable.</li>
+        <li><strong>Construir</strong> un pipeline RAG local con <code class="inline">ragIngest()</code> y <code class="inline">ragSearch()</code>.</li>
+        <li><strong>Inspeccionar</strong> retrieval antes de invocar al LLM.</li>
+        <li><strong>Groundear</strong> respuestas con evidencia recuperada y provenance real.</li>
+        <li><strong>Diagnosticar</strong> si un fallo pertenece a búsqueda, contexto o generación.</li>
+        <li><strong>Medir</strong> ingest, retrieval y generation por separado.</li>
+      </ol>
+    </section>
+
+    <section id="contexto">
+      <h2>Definición y contexto</h2>
+      <p>Un LLM local tiene dos fuentes de información:</p>
+<pre class="codebox"><code>modelo = conocimiento paramétrico
+workspace/vector store = conocimiento externo recuperable</code></pre>
+      <p>La separación permite actualizar documentos sin volver a entrenar el modelo y mantener el corpus en una frontera local.</p>
+      <p><strong>Del embedding al RAG:</strong></p>
+      <p>Clase 05 terminó aquí:</p>
+<pre class="codebox"><code>query → embedding → similarity → Top-K</code></pre>
+      <p>Clase 06 agrega persistencia y generación:</p>
+<pre class="codebox"><code>document
+  ↓
+chunk
+  ↓
+embed
+  ↓
+store
+  ↓
+retrieve Top-K
+  ↓
+construct context
+  ↓
+generate grounded answer</code></pre>
+      <p><strong>Conexión arquitectónica:</strong></p>
+<pre class="codebox"><code>Clase 05 → representación y ranking
+Clase 06 → persistencia + retrieval + grounding
+Clase 07 → la entrada/salida puede pasar a voz
+Clase 12 → retrieval/inference podrán vivir en nodos distintos</code></pre>
+    </section>
+
+    <section id="terminos">
+      <h2>Términos</h2>
+      <h3>Índice rápido</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Definición breve</th><th>¿Lo provee QVAC?</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Parametric vs external knowledge</strong></td><td>Pesos del modelo vs documentos recuperables</td><td>Parcial (RAG API)</td></tr>
+          <tr><td><strong>Chunk</strong></td><td>Fragmento de documento embebible</td><td>Sí (<code class="inline">ragChunk()</code>)</td></tr>
+          <tr><td><strong>Ingest</strong></td><td>Embed + persistir en workspace</td><td>Sí (<code class="inline">ragIngest()</code>)</td></tr>
+          <tr><td><strong>Retrieval</strong></td><td>Recuperar Top-K chunks similares a la query</td><td>Sí (<code class="inline">ragSearch()</code>)</td></tr>
+          <tr><td><strong>Grounding</strong></td><td>Generar usando solo evidencia recuperada</td><td>No (aplicación)</td></tr>
+          <tr><td><strong>Provenance</strong></td><td>Metadata de origen de la evidencia</td><td>Parcial (app + workspace)</td></tr>
+          <tr><td><strong>Workspace</strong></td><td>Contenedor persistente de vectores RAG</td><td>Sí</td></tr>
+          <tr><td><strong>ragChunk()</strong></td><td>Dividir documentos en chunks</td><td>Sí</td></tr>
+          <tr><td><strong>ragIngest()</strong></td><td>Ingestar documentos en workspace</td><td>Sí</td></tr>
+          <tr><td><strong>ragSearch()</strong></td><td>Buscar en workspace</td><td>Sí</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="parametric-external">Parametric vs external knowledge</h3>
+      <p><strong>Definición:</strong> El conocimiento <strong>paramétrico</strong> vive en los pesos del LLM. El conocimiento <strong>externo</strong> vive fuera de los pesos — en documentos embebidos y persistidos — y se recupera en query-time.</p>
+      <p><strong>Uso:</strong> Separar lo que el modelo "sabe" de lo que tu corpus contiene. RAG no mete documentos en los pesos.</p>
+<pre class="codebox"><code>modelo = conocimiento paramétrico
+workspace = conocimiento externo recuperable</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Puedes actualizar documentos sin reentrenar el modelo.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Retrieval aporta contexto externo en query-time. No modifica los pesos.</div></div>
+
+      <h3 id="chunk">Chunk</h3>
+      <p><strong>Definición:</strong> Fragmento de un documento grande, embebible y recuperable como unidad.</p>
+      <p><strong>Uso:</strong> Un documento largo suele dividirse antes de embedding para crear unidades con suficiente contexto sin ruido excesivo.</p>
+<pre class="codebox"><code>chunks muy pequeños → precisión local, contexto perdido
+chunks muy grandes   → más contexto, más ruido y menor especificidad</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body"><code class="inline">ragChunk()</code> expone opciones como <code class="inline">chunkSize</code>, <code class="inline">chunkOverlap</code>, <code class="inline">chunkStrategy</code> y <code class="inline">splitStrategy</code>. Verifica firmas actuales antes de modificar el laboratorio.</div></div>
+
+      <h3 id="ingest">Ingest</h3>
+      <p><strong>Definición:</strong> Proceso de embeber documentos y persistirlos en un workspace.</p>
+      <p><strong>Uso:</strong> Preparar el corpus para retrieval. Combina chunking (opcional), embedding y almacenamiento.</p>
+<pre class="codebox"><code>const result = await ragIngest({
+  modelId: embeddingModelId,
+  workspace: 'notes-demo',
+  documents,
+  chunk: false,
+})
+console.log('processed:', result.processed.length)</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Vectores persistidos en el workspace. QVAC gestiona el almacenamiento.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">La aplicación decide qué documentos, metadata y políticas presentar.</div></div>
+
+      <h3 id="retrieval">Retrieval</h3>
+      <p><strong>Definición:</strong> Recuperar los chunks más similares a una query desde el workspace.</p>
+      <p><strong>Uso:</strong> Obtener evidencia antes de generar. Nunca escondas retrieval durante esta clase.</p>
+<pre class="codebox"><code>const hits = await ragSearch({
+  modelId: embeddingModelId,
+  workspace: 'notes-demo',
+  query,
+  topK: 3,
+})
+
+hits.forEach((hit, index) =&gt; {
+  console.log(`#${index + 1} score=${hit.score}`)
+  console.log(hit.content)
+})</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Lista de hits con <code class="inline">score</code> y <code class="inline">content</code> (según documentación v0.18.x).</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Inspecciona rank, score, content y metadata disponible <strong>antes</strong> de llamar al LLM.</div></div>
+
+      <h3 id="grounding">Grounding</h3>
+      <p><strong>Definición:</strong> Construir una respuesta usando solamente la evidencia recuperada como contexto.</p>
+      <p><strong>Uso:</strong> Evitar que el LLM invente hechos no presentes en el corpus. Retrieval no es la respuesta; los chunks entran como contexto de una completion.</p>
+<pre class="codebox"><code>SYSTEM/INSTRUCTION:
+Responde usando solamente la evidencia proporcionada.
+Si la evidencia es insuficiente, dilo.
+
+EVIDENCE:
+[1] ...
+[2] ...
+[3] ...
+
+QUESTION:
+...</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Si la evidencia correcta aparece Top-1 pero el LLM responde algo incompatible, sospecha de grounding/generation — no de retrieval.</div></div>
+
+      <h3 id="provenance">Provenance</h3>
+      <p><strong>Definición:</strong> Información de origen que permite al usuario ver de dónde vino la evidencia.</p>
+      <p><strong>Uso:</strong> Citas y trazabilidad. Usa metadata disponible en tus documentos/workspace o IDs/fuentes mantenidos por la app.</p>
+<pre class="codebox"><code>const notes = [
+  { source: 'qvac-http.md', text: 'The QVAC OpenAI-compatible HTTP server defaults to http://localhost:11434/v1/.' },
+]
+// En retrieval, mapea hit.content → note.source</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body"><strong>No inventes citas.</strong> Si el resultado de retrieval no expone un campo concreto, no lo fabriques como si viniera de QVAC.</div></div>
+
+      <h3 id="workspace">Workspace</h3>
+      <p><strong>Definición:</strong> Contenedor persistente donde QVAC almacena los vectores de un corpus RAG.</p>
+      <p><strong>Uso:</strong> Separar corpora distintos (p. ej. <code class="inline">notes-demo</code>, <code class="inline">manual-v2</code>). Lifecycle gestionado con <code class="inline">ragCloseWorkspace()</code>, <code class="inline">ragDeleteWorkspace()</code>, <code class="inline">ragListWorkspaces()</code>.</p>
+<pre class="codebox"><code>const workspace = 'notes-demo'
+await ragIngest({ modelId, workspace, documents })
+const hits = await ragSearch({ modelId, workspace, query, topK: 3 })
+await ragCloseWorkspace({ workspace, deleteOnClose: true })</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">QVAC persiste los vectores. La app controla metadata y políticas.</div></div>
+
+      <h3 id="ragChunk"><code class="inline">ragChunk()</code></h3>
+      <p><strong>Definición:</strong> Divide documentos en chunks antes de embedding.</p>
+      <p><strong>Uso:</strong> Preparar documentos largos para ingest. Alternativa a pasar <code class="inline">chunk: true</code> en <code class="inline">ragIngest()</code>.</p>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Verifica firmas actuales en la documentación v0.18.x antes de modificar el laboratorio.</div></div>
+
+      <h3 id="ragIngest"><code class="inline">ragIngest()</code></h3>
+      <p><strong>Definición:</strong> Embebe documentos y los persiste en un workspace.</p>
+      <p><strong>Uso:</strong> Flujo gestionado principal de ingestión RAG en QVAC.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelId</code></td><td><code class="inline">string</code></td><td>ID del modelo de embeddings cargado</td></tr>
+          <tr><td><code class="inline">workspace</code></td><td><code class="inline">string</code></td><td>Nombre del workspace</td></tr>
+          <tr><td><code class="inline">documents</code></td><td><code class="inline">string[]</code></td><td>Documentos a ingestar</td></tr>
+          <tr><td><code class="inline">chunk</code></td><td><code class="inline">boolean</code></td><td>Si dividir documentos antes de embeber</td></tr>
+        </tbody>
+      </table>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Objeto con <code class="inline">processed</code> y estadísticas de la operación.</div></div>
+
+      <h3 id="ragSearch"><code class="inline">ragSearch()</code></h3>
+      <p><strong>Definición:</strong> Recupera chunks similares a la query desde un workspace.</p>
+      <p><strong>Uso:</strong> Etapa de retrieval del pipeline RAG.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelId</code></td><td><code class="inline">string</code></td><td>ID del modelo de embeddings</td></tr>
+          <tr><td><code class="inline">workspace</code></td><td><code class="inline">string</code></td><td>Workspace donde buscar</td></tr>
+          <tr><td><code class="inline">query</code></td><td><code class="inline">string</code></td><td>Texto de consulta</td></tr>
+          <tr><td><code class="inline">topK</code></td><td><code class="inline">number</code></td><td>Número de resultados</td></tr>
+        </tbody>
+      </table>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Array de hits con <code class="inline">score</code> y <code class="inline">content</code>.</div></div>
+    </section>
+
+    <section id="referencia">
+      <h2>Referencia QVAC</h2>
+      <p>La documentación v0.18.x expone:</p>
+      <ul>
+        <li><code class="inline">ragChunk()</code> — dividir documentos;</li>
+        <li><code class="inline">ragIngest()</code> — embed + persist en workspace;</li>
+        <li><code class="inline">ragSaveEmbeddings()</code> — persistir vectores precomputados;</li>
+        <li><code class="inline">ragSearch()</code> — recuperar resultados similares;</li>
+        <li><code class="inline">ragReindex()</code>;</li>
+        <li><code class="inline">ragDeleteEmbeddings()</code>;</li>
+        <li><code class="inline">ragListWorkspaces()</code>;</li>
+        <li><code class="inline">ragCloseWorkspace()</code>;</li>
+        <li><code class="inline">ragDeleteWorkspace()</code>.</li>
+      </ul>
+<pre class="codebox"><code>load embeddings model
+      ↓
+ragIngest({ modelId, workspace, documents })
+      ↓
+ragSearch({ modelId, workspace, query, topK })
+      ↓
+ragCloseWorkspace(...)
+      ↓
+unloadModel()</code></pre>
+
+      <h3 id="ref-ragIngest"><code class="inline">ragIngest()</code></h3>
+<pre class="codebox"><code>import { GTE_LARGE_FP16, loadModel, ragIngest } from '@qvac/sdk'
+
+const modelId = await loadModel({ modelSrc: GTE_LARGE_FP16, modelType: 'embeddings' })
+
+const result = await ragIngest({
+  modelId,
+  workspace: 'notes-demo',
+  documents: [
+    'The QVAC OpenAI-compatible server uses http://localhost:11434/v1/ by default.',
+    'GGUF is the model format used by llama.cpp-compatible local inference workflows.',
+  ],
+  chunk: false,
+})</code></pre>
+
+      <h3 id="ref-ragSearch"><code class="inline">ragSearch()</code></h3>
+<pre class="codebox"><code>import { ragSearch } from '@qvac/sdk'
+
+const hits = await ragSearch({
+  modelId,
+  workspace: 'notes-demo',
+  query: 'Where should an OpenAI-compatible client connect locally?',
+  topK: 3,
+})
+
+hits.forEach((hit, i) =&gt; {
+  console.log(`#${i + 1} score=${hit.score} ${hit.content}`)
+})</code></pre>
+
+      <h3 id="ref-ragClose"><code class="inline">ragCloseWorkspace()</code></h3>
+<pre class="codebox"><code>await ragCloseWorkspace({ workspace: 'notes-demo', deleteOnClose: true })</code></pre>
+    </section>
+
+    <section id="ejemplo">
+      <h2>Ejemplo completo</h2>
+      <p>Retrieval transparente — inspeccionar hits antes de generar:</p>
+<pre class="codebox"><code>import {
+  close,
+  GTE_LARGE_FP16,
+  loadModel,
+  ragCloseWorkspace,
+  ragIngest,
+  ragSearch,
+  unloadModel,
+} from '@qvac/sdk'
+
+const workspace = 'class06-managed-demo'
+const documents = [
+  'The QVAC OpenAI-compatible server uses http://localhost:11434/v1/ by default.',
+  'GGUF is the model format used by llama.cpp-compatible local inference workflows.',
+  'A basic bread recipe can use flour, water, yeast, and salt.',
+]
+
+const query = 'Where should an OpenAI-compatible client connect locally?'
+let modelId: string | undefined
+
+try {
+  modelId = await loadModel({ modelSrc: GTE_LARGE_FP16, modelType: 'embeddings' })
+
+  const ingestStart = performance.now()
+  await ragIngest({ modelId, workspace, documents, chunk: false })
+  const ingestMs = performance.now() - ingestStart
+
+  const retrievalStart = performance.now()
+  const hits = await ragSearch({ modelId, workspace, query, topK: 3 })
+  const retrievalMs = performance.now() - retrievalStart
+
+  hits.forEach((hit, index) =&gt; {
+    console.log(`\n#${index + 1} score=${hit.score}`)
+    console.log(hit.content)
+  })
+  console.log('\ningestMs:', ingestMs.toFixed(1), 'retrievalMs:', retrievalMs.toFixed(1))
+} finally {
+  await ragCloseWorkspace({ workspace, deleteOnClose: true }).catch(() =&gt; {})
+  if (modelId) await unloadModel({ modelId })
+  await close()
+}</code></pre>
+      <p>RAG grounded — retrieval + completion:</p>
+<pre class="codebox"><code>import {
+  close, completion, GTE_LARGE_FP16, loadModel, QWEN3_600M_INST_Q4,
+  ragCloseWorkspace, ragIngest, ragSearch, unloadModel,
+} from '@qvac/sdk'
+
+const workspace = 'class06-grounded-demo'
+const notes = [
+  { source: 'qvac-http.md', text: 'The QVAC OpenAI-compatible HTTP server defaults to http://localhost:11434/v1/.' },
+  { source: 'models.md', text: 'QVAC supports llama.cpp-compatible GGUF models for local text generation.' },
+]
+
+const query = 'What local base URL should an OpenAI-compatible client use?'
+let embeddingModelId: string | undefined
+let llmModelId: string | undefined
+
+try {
+  embeddingModelId = await loadModel({ modelSrc: GTE_LARGE_FP16, modelType: 'embeddings' })
+  llmModelId = await loadModel({ modelSrc: QWEN3_600M_INST_Q4, modelConfig: { ctx_size: 4096 } })
+
+  await ragIngest({
+    modelId: embeddingModelId,
+    workspace,
+    documents: notes.map((n) =&gt; n.text),
+    chunk: false,
+  })
+
+  const hits = await ragSearch({ modelId: embeddingModelId, workspace, query, topK: 3 })
+
+  console.log('\nRETRIEVED EVIDENCE')
+  hits.forEach((hit, i) =&gt; {
+    const note = notes.find((n) =&gt; n.text === hit.content)
+    console.log(`[${i + 1}] score=${hit.score} source=${note?.source ?? 'unknown'}`)
+    console.log(hit.content)
+  })
+
+  const evidence = hits.map((hit, i) =&gt; `[${i + 1}] ${hit.content}`).join('\n')
+  const prompt = `You answer only from EVIDENCE. If insufficient, say "Insufficient evidence".\n\nEVIDENCE:\n${evidence}\n\nQUESTION:\n${query}`
+
+  const run = completion({ modelId: llmModelId, history: [{ role: 'user', content: prompt }], stream: true })
+  for await (const event of run.events) {
+    if (event.type === 'contentDelta') process.stdout.write(event.delta)
+  }
+  await run.final
+} finally {
+  await ragCloseWorkspace({ workspace, deleteOnClose: true }).catch(() =&gt; {})
+  if (llmModelId) await unloadModel({ modelId: llmModelId })
+  if (embeddingModelId) await unloadModel({ modelId: embeddingModelId })
+  await close()
+}</code></pre>
+      <p>Ejemplos ejecutables en <a href="../class-06-local-rag-private-knowledge/examples/">examples/</a>.</p>
+    </section>
+
+    <section id="predict">
+      <h2>Antes de ejecutar</h2>
+      <p>Tienes tres notas:</p>
+      <ol>
+        <li>"El servidor OpenAI-compatible de QVAC usa localhost:11434/v1."</li>
+        <li>"GGUF es el formato de modelo usado por llama.cpp."</li>
+        <li>"La receta usa 500 g de harina."</li>
+      </ol>
+      <p>Pregunta:</p>
+      <blockquote>¿En qué endpoint local conectaría un cliente OpenAI-compatible?</blockquote>
+      <p>Antes de ejecutar, predice cuál chunk debería ser Top-1.</p>
+      <p><strong>Frontera de diagnóstico:</strong></p>
+<pre class="codebox"><code>pregunta
+  ↓
+¿recuperamos evidencia correcta?
+  ├─ NO → retrieval failure
+  └─ SÍ
+       ↓
+   ¿la respuesta usa correctamente la evidencia?
+       ├─ NO → generation/grounding failure
+       └─ SÍ → pipeline correcto para este caso</code></pre>
+      <p><strong>Checkpoint:</strong></p>
+      <ol>
+        <li>Distingue memoria paramétrica y externa.</li>
+        <li>¿Por qué hay que inspeccionar retrieval antes de generation?</li>
+        <li>¿Qué tradeoff introduce chunk size?</li>
+        <li>La evidencia correcta aparece Top-1, pero el LLM responde algo incompatible. ¿Qué etapa sospechas primero?</li>
+        <li>La respuesta parece incorrecta y el documento relevante ni aparece en Top-K. ¿Dónde empiezas a depurar?</li>
+        <li>¿Por qué no existe un Top-K o score threshold universal para todos los corpora?</li>
+        <li>Diseña un Unknown Knowledge Test.</li>
+      </ol>
+    </section>
+
+    <section id="build">
+      <h2>Práctica guiada</h2>
+      <h3>Build — Transparent RAG Debugger</h3>
+      <ol>
+        <li>Carga modelo de embeddings.</li>
+        <li>Ingesta 8–15 notas en un workspace.</li>
+        <li>Haz <code class="inline">ragSearch()</code>.</li>
+        <li>Imprime Top-K <strong>antes</strong> de generation.</li>
+        <li>Construye el bloque EVIDENCE.</li>
+        <li>Carga/reutiliza un LLM local.</li>
+        <li>Ejecuta completion.</li>
+        <li>Muestra respuesta + fuentes.</li>
+        <li>Registra retrieval latency y generation latency por separado.</li>
+      </ol>
+      <p>Guía en <a href="../class-06-local-rag-private-knowledge/lab/README.md">lab/README.md</a>.</p>
+
+      <h3>Unknown Knowledge Test</h3>
+      <p>Pregunta algo que <strong>no exista</strong> en el corpus.</p>
+      <p>La conducta deseada no es "responder de todas formas". El sistema debe detectar que no posee evidencia suficiente según la política que diseñes y responder de forma explícita.</p>
+      <p>La detección puede depender de contenido, ranking, thresholds evaluados o una instrucción de grounding; no inventes un threshold universal.</p>
+
+      <h3>Break It — Poor Retrieval</h3>
+      <p>Provoca un fallo controlado. Ejemplos:</p>
+      <ul>
+        <li>chunking demasiado agresivo;</li>
+        <li>documento relevante omitido del corpus;</li>
+        <li>query extremadamente vaga;</li>
+        <li>Top-K demasiado pequeño.</li>
+      </ul>
+      <p>Predice el efecto antes de ejecutar. Después responde: <strong>¿Falló retrieval o generation?</strong></p>
+
+      <h3>Práctica integrada — RAG transparente</h3>
+      <p>Implementa un flujo que permita inspeccionar cada etapa antes de generar:</p>
+      <ol>
+        <li>ingesta tres documentos con <code class="inline">source</code>, <code class="inline">title</code>, <code class="inline">version</code> y <code class="inline">section</code>;</li>
+        <li>divide cada documento en chunks y muestra sus límites;</li>
+        <li>recupera <code class="inline">Top-K=3</code> para una pregunta contestable y otra fuera del corpus;</li>
+        <li>presenta score, texto y metadata antes de invocar al LLM;</li>
+        <li>genera una respuesta con citas provenientes únicamente de esa metadata;</li>
+        <li>conserva un registro de latencias y de la decisión <code class="inline">answerable</code>/<code class="inline">insufficient-evidence</code>.</li>
+      </ol>
+      <p>Evalúa por separado recuperación y generación. Si el chunk correcto no aparece, el problema está antes del prompt; si aparece y la respuesta lo contradice, investiga grounding y política de generación.</p>
+    </section>
+
+    <section id="errores">
+      <h2>Errores comunes</h2>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td>No aparece la fuente</td><td>Chunking, ingestión o query</td><td>Revisar índice, metadata y Top-K</td></tr>
+          <tr><td>Aparece evidencia incorrecta</td><td>Corpus o ranking</td><td>Inspeccionar score y textos vecinos</td></tr>
+          <tr><td>Cita inventada</td><td>Provenance ausente</td><td>Usar metadata original; no confiar en el LLM</td></tr>
+          <tr><td>Respuesta no sustentada</td><td>Contexto o prompt</td><td>Revisar contexto exacto enviado al LLM</td></tr>
+        </tbody>
+      </table>
+      <h3>Notas adicionales</h3>
+      <ol>
+        <li><strong>"RAG mete los documentos en los pesos."</strong> No. Retrieval aporta contexto externo en query-time.</li>
+        <li><strong>"Si el LLM alucina, RAG falló."</strong> Tal vez retrieval fue correcto y generation ignoró/malinterpretó evidencia.</li>
+        <li><strong>"Top-K alto siempre mejora."</strong> Más contexto puede añadir ruido. Debe evaluarse.</li>
+        <li><strong>"Un score define un threshold universal."</strong> Los scores dependen del modelo, corpus, distribución y métrica.</li>
+        <li><strong>"Citation = URL inventada por el LLM."</strong> Provenance debe venir de metadata real mantenida por el pipeline.</li>
+      </ol>
+      <h3>Troubleshooting guiado</h3>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Hipótesis inicial</th><th>Evidencia que debes pedir</th></tr></thead>
+        <tbody>
+          <tr><td>no aparece la fuente</td><td>chunking, ingestión o query</td><td>índice, metadata y Top-K</td></tr>
+          <tr><td>aparece evidencia incorrecta</td><td>corpus o ranking</td><td>score y textos vecinos</td></tr>
+          <tr><td>cita inventada</td><td>provenance ausente</td><td>metadata original</td></tr>
+          <tr><td>respuesta no sustentada</td><td>contexto o prompt</td><td>contexto exacto enviado al LLM</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="medicion">
+      <h2>Medición</h2>
+      <p>Separa:</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Métrica</th><th>Cómo obtenerla</th><th>Unidad</th><th>Interpretación</th></tr></thead>
+        <tbody>
+          <tr><td>Ingest/chunking time</td><td>Antes/después de <code class="inline">ragIngest()</code></td><td>ms</td><td>Costo de preparación del corpus</td></tr>
+          <tr><td>Retrieval latency</td><td>Antes/después de <code class="inline">ragSearch()</code></td><td>ms</td><td>Costo de búsqueda vectorial</td></tr>
+          <tr><td>LLM TTFT</td><td>Primer <code class="inline">contentDelta</code> − envío del prompt</td><td>ms</td><td>Latencia percibida hasta primer token</td></tr>
+          <tr><td>Generation total latency</td><td><code class="inline">final</code> resuelto − inicio</td><td>ms</td><td>Tiempo completo de generación</td></tr>
+          <tr><td>Top-K y scores</td><td>Salida de <code class="inline">ragSearch()</code></td><td>score + texto</td><td>Calidad de retrieval</td></tr>
+          <tr><td>Answer correctness</td><td>Evaluación manual o checklist</td><td>cualitativo</td><td>Faithfulness de la respuesta</td></tr>
+        </tbody>
+      </table>
+      <p>No sumes todo bajo una única etiqueta "RAG latency" si quieres diagnosticar.</p>
+<pre class="codebox"><code>workspace, ingestMs, retrievalMs, generationMs, topK, scores, answerable</code></pre>
+    </section>
+
+    <section id="resumen">
+      <h2>Resumen</h2>
+      <ul>
+        <li>RAG combina conocimiento externo recuperable con generación local. No modifica los pesos del LLM.</li>
+        <li>QVAC gestiona chunking, ingest, persistencia y search via workspace. Grounding y provenance son responsabilidad de la app.</li>
+        <li>Inspecciona retrieval antes de generation. Retrieval y generation pueden fallar de forma independiente.</li>
+        <li>Chunk size es un tradeoff entre contexto y especificidad. No existe Top-K ni threshold universal.</li>
+        <li>Mide ingest, retrieval y generation por separado.</li>
+      </ul>
+      <p><strong>Siguiente clase:</strong> entrada/salida por voz (Clase 7).</p>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes</h2>
+      <ul>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/rag/">QVAC — RAG</a></li>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/text-embeddings/">QVAC — Text embeddings</a></li>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">QVAC — Text generation</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/api/">QVAC — API v0.18.x</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/release-notes/">QVAC — Release notes</a></li>
+        <li><a href="https://arxiv.org/abs/2005.11401">RAG paper (Lewis et al., 2020)</a></li>
+      </ul>
+    </section>
+  </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Introducción</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/06">Clase</a></li>
+        <li><a href="/class-06-local-rag-private-knowledge/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-06-local-rag-private-knowledge/lab/README.md">Lab</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 6 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-06-local-rag-private-knowledge/">← Volver a la Clase 6</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

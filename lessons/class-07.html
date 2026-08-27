@@ -1,5 +1,519 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clase 7 · Speech Systems</title><link rel="stylesheet" href="../assets/site.css"></head>
-<body><main class="container section"><p class="kicker">Clase 07 · Módulo 3</p><h1>Speech Systems: ASR and TTS</h1><p class="lede">Esta lección se mantiene en Markdown para el visor integrado.</p><p><a href="../class-07-speech-systems/lesson.md">Abrir lesson.md</a> · <a href="/class/07">Volver a la clase</a></p></main></body>
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 7 — Speech Systems: ASR and TTS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-07">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/07">Clase 7</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="lesson-layout">
+
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 07 · Módulo 3</span>
+      <h1 class="lesson-sidebar__name">Speech Systems: ASR and TTS</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+      <span class="toc-head">INTRODUCCIÓN</span>
+      <a href="#intro">Introducción</a>
+      <a href="#outcomes">Qué aprenderás</a>
+      <a href="#contexto">Definición y contexto</a>
+      <span class="toc-head">TÉRMINOS</span>
+      <a href="#terminos">Índice de términos</a>
+      <a href="#audio-contract">Audio contract</a>
+      <a href="#pcm-wav">PCM / WAV</a>
+      <a href="#asr">ASR</a>
+      <a href="#tts">TTS</a>
+      <a href="#partial-final">Partial vs final</a>
+      <a href="#segment-id">segmentId</a>
+      <a href="#vad">VAD</a>
+      <a href="#voice-relay">Voice relay</a>
+      <a href="#ttft-ttfa">TTFT / TTFA</a>
+      <span class="toc-head">REFERENCIA QVAC</span>
+      <a href="#referencia">Referencia QVAC</a>
+      <a href="#provisionar">Provisionar modelos</a>
+      <a href="#cargar-modelo">loadModel()</a>
+      <a href="#ejecutar-asr">Ejecutar ASR</a>
+      <a href="#ejecutar-tts">Ejecutar TTS</a>
+      <a href="#descargar">unloadModel() / close()</a>
+      <span class="toc-head">EJEMPLOS</span>
+      <a href="#ejemplo">Ejemplo completo</a>
+      <span class="toc-head">PRÁCTICA</span>
+      <a href="#predict">Antes de ejecutar</a>
+      <a href="#build">Práctica guiada</a>
+      <a href="#errores">Errores comunes</a>
+      <a href="#medicion">Medición</a>
+      <a href="#resumen">Resumen</a>
+      <a href="#done">Definition of Done</a>
+      <a href="#checkpoint">Checkpoint</a>
+      <a href="#fuentes">Fuentes</a>
+    </nav>
+  </aside>
+
+  <article class="lesson">
+    <p class="lesson-meta">
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm el 2026-08-25.</p>
+
+    <section id="intro">
+      <h2>Introducción</h2>
+      <p>Una tubería de voz local convierte audio continuo en texto y vuelve a convertir texto en audio reproducible. Cada frontera — captura, ASR, TTS — exige un contrato explícito de formato. Sin ese contrato, los bytes se confunden con significado y la latencia se mezcla con errores de formato.</p>
+      <p>Esta clase define los términos, el flujo observable ASR → TTS y un relay mínimo con correlación, backpressure y medición. El objetivo no es una demo que reproduce un archivo, sino una tubería cancelable y verificable offline.</p>
+    </section>
+
+    <section id="outcomes">
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Distinguir</strong> PCM, contenedor (WAV) y códec; validar sample rate, canales, endianness y profundidad.</li>
+        <li><strong>Explicar</strong> el flujo ASR: frames → features → tokens → segmentos.</li>
+        <li><strong>Elegir</strong> Whisper o Parakeet según idioma, ruido, memoria, latencia y licencia — no solo WER de un benchmark externo.</li>
+        <li><strong>Manejar</strong> ventanas, solapamiento, VAD y timestamps en streaming.</li>
+        <li><strong>Producir</strong> TTS desde texto y verificar el formato de salida.</li>
+        <li><strong>Separar</strong> latencia de primer texto (TTFT) de primer audio (TTFA) y de la duración total.</li>
+        <li><strong>Diseñar</strong> un voice relay con correlación, backpressure y cancelación.</li>
+        <li><strong>Medir</strong> privacidad y rendimiento con evidencia local reproducible.</li>
+        <li><strong>Diagnosticar</strong> incompatibilidades de audio sin inventar métricas.</li>
+      </ol>
+    </section>
+
+    <section id="contexto">
+      <h2>Definición y contexto</h2>
+      <p>El audio crudo del micrófono o de un archivo no es “texto” ni “voz sintetizada”. Es una secuencia de muestras PCM con propiedades físicas: frecuencia de muestreo, canales, profundidad de bits y endianness. ASR consume esas muestras y emite texto; TTS consume texto y emite muestras. Un relay conecta ambas etapas sin perder observabilidad.</p>
+      <p>Cada frontera tiene un contrato. Un backend que espera PCM mono a 16 kHz rechazará o degradará audio a 48 kHz sin conversión documentada. Un error de formato no debe etiquetarse como “silencio” ni persistirse como transcripción vacía.</p>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart LR
+  A[Micrófono / archivo] --> B[PCM normalizado]
+  B --> C[ASR Whisper o Parakeet]
+  C --> D[Texto con segmentos]
+  D --> E[TTS local]
+  E --> F[PCM / WAV reproducible]</pre>
+</div>
+      <p>Whisper es una referencia generalista robusta; Parakeet puede ser atractivo cuando el backend y el hardware favorecen throughput. La elección depende del hardware, no de una promesa genérica.</p>
+    </section>
+
+    <section id="terminos">
+      <h2>Términos</h2>
+      <h3>Índice rápido</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Definición breve</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Audio contract</strong></td><td>Declaración explícita de sampleRate, channels, sampleFormat, endianness y durationMs</td></tr>
+          <tr><td><strong>PCM / WAV</strong></td><td>Muestras crudas vs. contenedor que puede envolver PCM</td></tr>
+          <tr><td><strong>ASR</strong></td><td>Automatic Speech Recognition: audio → texto</td></tr>
+          <tr><td><strong>TTS</strong></td><td>Text-to-Speech: texto → audio</td></tr>
+          <tr><td><strong>Partial vs final transcript</strong></td><td>Hipótesis provisional vs. segmento estable para downstream</td></tr>
+          <tr><td><strong>segmentId</strong></td><td>Identificador monótono que correlaciona eventos de un segmento</td></tr>
+          <tr><td><strong>VAD</strong></td><td>Voice Activity Detection: detecta voz vs. silencio</td></tr>
+          <tr><td><strong>Voice relay</strong></td><td>Pipeline observable que encadena captura → ASR → TTS</td></tr>
+          <tr><td><strong>TTFT / TTFA</strong></td><td>Time to first text / time to first audio</td></tr>
+        </tbody>
+      </table>
+
+      <section id="audio-contract">
+        <h3>Audio contract</h3>
+        <p><strong>Definición:</strong> Contrato que declara las propiedades físicas del audio antes de cualquier inferencia.</p>
+        <p><strong>Uso:</strong> Validar entrada y salida en cada frontera del relay. Sin contrato, un backend interpreta bytes incorrectamente.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">sampleRate</code></td><td><code class="inline">number</code></td><td>Muestras por segundo (p. ej. 16000, 22050, 48000)</td></tr>
+            <tr><td><code class="inline">channels</code></td><td><code class="inline">number</code></td><td>1 = mono, 2 = estéreo</td></tr>
+            <tr><td><code class="inline">sampleFormat</code></td><td><code class="inline">'s16le'</code></td><td>16-bit signed little-endian</td></tr>
+            <tr><td><code class="inline">durationMs</code></td><td><code class="inline">number</code></td><td>Duración calculada desde bytes y formato</td></tr>
+          </tbody>
+        </table>
+        <div class="block example"><div class="block-title">Ejemplo</div><div class="block-body">Validar contrato antes de inferir.</div></div>
+<pre class="codebox"><code>type AudioFormat = {
+  sampleRate: number
+  channels: number
+  sampleFormat: 's16le'
+}
+const format: AudioFormat = { sampleRate: 16_000, channels: 1, sampleFormat: 's16le' }
+const pcm = new Uint8Array(format.sampleRate * 2) // 1 s, 16-bit mono
+const durationMs = pcm.byteLength / (format.sampleRate * format.channels * 2) * 1000
+console.log({ format, durationMs })</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Objeto <code class="inline">{ format, durationMs: 1000 }</code> antes de llamar a ASR o TTS.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Un WAV puede contener PCM, pero MP3 y Opus requieren decodificación previa. El contrato aplica a las muestras, no al contenedor.</div></div>
+      </section>
+
+      <section id="pcm-wav">
+        <h3>PCM / WAV</h3>
+        <p><strong>Definición:</strong> PCM es una secuencia de muestras de amplitud; WAV es un contenedor de archivo que suele envolver PCM con un header RIFF.</p>
+        <p><strong>Uso:</strong> Normalizar cualquier entrada a PCM con propiedades declaradas antes de ASR. Verificar el header WAV antes de extraer muestras.</p>
+<pre class="codebox"><code>function validatePcm(pcm: Uint8Array, format: AudioFormat): void {
+  const bytesPerSample = 2 // s16le
+  if (pcm.byteLength % (format.channels * bytesPerSample) !== 0) {
+    throw new Error('PCM length incompatible with channels and sampleFormat')
+  }
+}</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Error explícito si los bytes no coinciden con el contrato, en lugar de una transcripción vacía.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Invertir endianness o enviar 16 kHz a un backend de 48 kHz produce audio acelerado/lento o WER degradado — no un fallo silencioso.</div></div>
+      </section>
+
+      <section id="asr">
+        <h3>ASR</h3>
+        <p><strong>Definición:</strong> Automatic Speech Recognition — sistema que convierte audio en texto, típicamente por ventanas acumuladas, extracción espectral y decodificación de tokens.</p>
+        <p><strong>Uso:</strong> Primera etapa del relay: transformar PCM en texto con segmentos y timestamps.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Evento</th><th>Campos clave</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">audioFrame</code></td><td><code class="inline">turnId</code>, <code class="inline">bytes</code></td></tr>
+            <tr><td><code class="inline">transcriptPartial</code></td><td><code class="inline">turnId</code>, <code class="inline">segmentId</code>, <code class="inline">text</code>, <code class="inline">final: false</code></td></tr>
+            <tr><td><code class="inline">transcriptFinal</code></td><td><code class="inline">turnId</code>, <code class="inline">segmentId</code>, <code class="inline">text</code>, <code class="inline">segments[]</code>, <code class="inline">final: true</code></td></tr>
+          </tbody>
+        </table>
+<pre class="codebox"><code>const events = [
+  { type: 'audioFrame', turnId: 'demo', bytes: 32000 },
+  {
+    type: 'transcriptFinal', turnId: 'demo', segmentId: 0,
+    text: 'Hola mundo', final: true,
+    segments: [{ segmentId: 0, startMs: 0, endMs: 1200, text: 'Hola mundo' }],
+  },
+]
+for (const event of events) console.log(JSON.stringify(event))</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Log JSON con eventos ordenados por <code class="inline">turnId</code> y <code class="inline">segmentId</code>.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Whisper es generalista; Parakeet puede ganar en throughput en hardware compatible. Compara idioma, ruido, memoria, latencia y licencia — no solo WER de un benchmark ajeno.</div></div>
+      </section>
+
+      <section id="tts">
+        <h3>TTS</h3>
+        <p><strong>Definición:</strong> Text-to-Speech — sistema que transforma texto normalizado en una secuencia de muestras PCM.</p>
+        <p><strong>Uso:</strong> Segunda etapa del relay: convertir el texto final (no parcial) en audio reproducible.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Campo de salida</th><th>Tipo</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">sampleRate</code></td><td><code class="inline">number</code></td><td>Frecuencia del audio sintetizado</td></tr>
+            <tr><td><code class="inline">channels</code></td><td><code class="inline">number</code></td><td>Canales de salida</td></tr>
+            <tr><td><code class="inline">sampleFormat</code></td><td><code class="inline">'s16le'</code></td><td>Formato de muestra</td></tr>
+            <tr><td><code class="inline">pcmBytes</code></td><td><code class="inline">number</code></td><td>Tamaño del buffer PCM</td></tr>
+          </tbody>
+        </table>
+<pre class="codebox"><code>const speech = {
+  sampleRate: 22_050, channels: 1,
+  sampleFormat: 's16le' as const, pcmBytes: 44100,
+}
+console.log('TTS output contract:', speech)</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Contrato verificable antes de reproducir. Si <code class="inline">sampleRate</code> del sintetizador ≠ del reproductor, el relay necesita resampling documentado.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Reproducir chunks inmediatamente reduce tiempo percibido, pero exige backpressure. No asumas que el sample rate del sintetizador coincide con el del micrófono.</div></div>
+      </section>
+
+      <section id="partial-final">
+        <h3>Partial vs final transcript</h3>
+        <p><strong>Definición:</strong> Un transcript <strong>partial</strong> es una hipótesis provisional que puede cambiar; un transcript <strong>final</strong> es un segmento estable listo para downstream (TTS, persistencia).</p>
+        <p><strong>Uso:</strong> Mostrar parciales en UI para feedback; enviar solo finales a TTS y almacenamiento durable.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Campo</th><th>Partial</th><th>Final</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">final</code></td><td><code class="inline">false</code></td><td><code class="inline">true</code></td></tr>
+            <tr><td>Uso en UI</td><td>Actualizar texto en vivo</td><td>Confirmar turno</td></tr>
+            <tr><td>Uso en TTS</td><td>No sintetizar</td><td>Sintetizar</td></tr>
+            <tr><td>Persistencia</td><td>No guardar como turno</td><td>Guardar</td></tr>
+          </tbody>
+        </table>
+<pre class="codebox"><code>onEvent({ type: 'transcriptPartial', segmentId: 1, text: 'Hola mun', final: false })
+onEvent({ type: 'transcriptFinal', segmentId: 1, text: 'Hola mundo', final: true })</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">La UI muestra progreso; TTS recibe solo texto estable.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Persistir un partial como turno final produce frases truncadas o duplicadas. La política segura sintetiza únicamente <code class="inline">final: true</code>.</div></div>
+      </section>
+
+      <section id="segment-id">
+        <h3>segmentId</h3>
+        <p><strong>Definición:</strong> Identificador numérico o string monótono que correlaciona todos los eventos de un segmento de habla.</p>
+        <p><strong>Uso:</strong> Ordenar, cancelar y descartar resultados obsoletos cuando eventos llegan fuera de orden.</p>
+<pre class="codebox"><code>const turnId = crypto.randomUUID()
+for (const type of ['audioFrame', 'transcriptFinal', 'speechChunk', 'turnDone']) {
+  console.log({ type, turnId, segmentId: 0 })
+}</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Todos los eventos de un turno comparten <code class="inline">turnId</code>; cada segmento tiene su <code class="inline">segmentId</code>.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Un evento tardío con <code class="inline">segmentId</code> anterior no debe sobrescribir el estado actual del relay.</div></div>
+      </section>
+
+      <section id="vad">
+        <h3>VAD</h3>
+        <p><strong>Definición:</strong> Voice Activity Detection — técnica que distingue voz de silencio en un stream de audio.</p>
+        <p><strong>Uso:</strong> Evitar inferir silencio como ruido; reducir cómputo en pausas. En streaming, controla cuándo abrir y cerrar ventanas.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Parámetro</th><th>Efecto</th></tr></thead>
+          <tbody>
+            <tr><td>Umbral bajo</td><td>Más frames enviados a ASR; más falsos positivos</td></tr>
+            <tr><td>Umbral alto</td><td>Menos cómputo; riesgo de truncar palabras</td></tr>
+            <tr><td>Solapamiento</td><td>Mejora palabras en frontera; duplica trabajo</td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Tabla comparativa con first text, final text y razón terminal por configuración de ventana.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">VAD no reemplaza el contrato de audio. Un silencio real y un error de formato deben distinguirse en logs.</div></div>
+      </section>
+
+      <section id="voice-relay">
+        <h3>Voice relay</h3>
+        <p><strong>Definición:</strong> Pipeline observable que encadena captura PCM → ASR → TTS con estado por turno, eventos correlacionados y políticas de cancelación.</p>
+        <p><strong>Uso:</strong> Construir conversaciones locales medibles sin conectar micrófono directamente a TTS.</p>
+<pre class="codebox"><code>type Turn = {
+  id: string
+  audio: { sampleRate: number; channels: number; sampleFormat: 's16le' }
+  transcript?: { text: string; segments: Segment[] }
+  speech?: { sampleRate: number; channels: number; pcmBytes: number }
+  state: 'capturing' | 'transcribing' | 'synthesizing' | 'done' | 'cancelled' | 'error'
+}</code></pre>
+        <p>Eventos mínimos: <code class="inline">audioFrame</code>, <code class="inline">transcriptFinal</code>, <code class="inline">speechChunk</code>, <code class="inline">turnDone</code>, <code class="inline">turnError</code> — todos con el mismo <code class="inline">turnId</code>.</p>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Traza ordenada por turno, lista para logs y diagnóstico.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">La cancelación debe detener ASR/TTS y liberar buffers. No conectes callbacks sin frontera de observabilidad.</div></div>
+      </section>
+
+      <section id="ttft-ttfa">
+        <h3>TTFT / TTFA</h3>
+        <p><strong>Definición:</strong> TTFT (time to first text) mide cuándo ASR emite la primera hipótesis útil; TTFA (time to first audio) mide cuándo TTS produce el primer chunk reproducible.</p>
+        <p><strong>Uso:</strong> Separar latencia percibida de duración total. Son métricas distintas de <code class="inline">asrFinalMs</code> y <code class="inline">ttsTotalMs</code>.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Métrica</th><th>Inicio</th><th>Fin</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">asrFirstTextMs</code> (TTFT)</td><td>Inicio ASR</td><td>Primer <code class="inline">transcriptPartial</code> o <code class="inline">transcriptFinal</code></td></tr>
+            <tr><td><code class="inline">asrFinalMs</code></td><td>Inicio ASR</td><td>Último <code class="inline">transcriptFinal</code></td></tr>
+            <tr><td><code class="inline">ttsFirstAudioMs</code> (TTFA)</td><td>Texto final enviado a TTS</td><td>Primer <code class="inline">speechChunk</code></td></tr>
+            <tr><td><code class="inline">ttsTotalMs</code></td><td>Inicio TTS</td><td>Último chunk o <code class="inline">turnDone</code></td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Cuatro números independientes por turno, no un solo “latency” agregado.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Depende del hardware, modelo, cuantización y tamaño de ventana. No compares máquinas distintas sin declararlo.</div></div>
+      </section>
+    </section>
+
+    <section id="referencia">
+      <h2>Referencia QVAC</h2>
+      <p>QVAC SDK v0.18.x expone capacidades de audio a través del mismo ciclo de vida que texto: provisionar, cargar, inferir, descargar. Los nombres exactos de funciones ASR/TTS dependen del runtime instalado — adapta al cliente de tu entorno y conserva los contratos de eventos de esta lección.</p>
+
+      <h3 id="provisionar">Provisionar modelos de audio</h3>
+      <p><strong>Definición:</strong> Descargar pesos ASR/TTS al caché local antes de operar offline.</p>
+      <p><strong>Uso:</strong> Misma fase que Clase 1–2: <code class="inline">downloadAsset()</code> con constantes de catálogo o rutas locales.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">assetSrc</code></td><td><code class="inline">CatalogConstant | string</code></td><td>Modelo Whisper, Parakeet, TTS u origen local</td></tr>
+          <tr><td><code class="inline">onProgress</code></td><td><code class="inline">(p) => void</code></td><td>Progreso de descarga</td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>import { downloadAsset } from '@qvac/sdk'
+await downloadAsset({ assetSrc: 'YOUR_ASR_MODEL_CONSTANT' })</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Pesos en caché local. La inferencia posterior no requiere red.</div></div>
+
+      <h3 id="cargar-modelo"><code class="inline">loadModel()</code></h3>
+      <p><strong>Definición:</strong> Coloca pesos en memoria y devuelve un <code class="inline">modelId</code>.</p>
+      <p><strong>Uso:</strong> Cargar una vez por sesión; reutilizar <code class="inline">modelId</code> en múltiples turnos.</p>
+<pre class="codebox"><code>const asrModelId = await loadModel({ modelSrc: 'YOUR_ASR_MODEL_CONSTANT' })
+const ttsModelId = await loadModel({ modelSrc: 'YOUR_TTS_MODEL_CONSTANT' })</code></pre>
+
+      <h3 id="ejecutar-asr">Ejecutar ASR</h3>
+      <p><strong>Definición:</strong> Enviar PCM normalizado al runtime y recibir eventos de transcripción.</p>
+<pre class="codebox"><code>async function transcribe(asrModelId: string, pcm: Uint8Array, format: AudioFormat) {
+  validatePcm(pcm, format)
+  // const run = asr({ modelId: asrModelId, audio: pcm, format, stream: true })
+  // for await (const ev of run.events) { … }
+}</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Si el backend rechaza el formato, el error debe identificar la propiedad incompatible.</div></div>
+
+      <h3 id="ejecutar-tts">Ejecutar TTS</h3>
+      <p><strong>Definición:</strong> Enviar texto final al sintetizador y recibir PCM de salida.</p>
+<pre class="codebox"><code>async function synthesize(ttsModelId: string, text: string) {
+  // const run = tts({ modelId: ttsModelId, text })
+  return { sampleRate: 22_050, channels: 1, sampleFormat: 's16le', pcmBytes: 0 }
+}</code></pre>
+
+      <h3 id="descargar"><code class="inline">unloadModel()</code> y <code class="inline">close()</code></h3>
+<pre class="codebox"><code>await unloadModel({ modelId: asrModelId, clearStorage: false })
+await unloadModel({ modelId: ttsModelId, clearStorage: false })
+void close()</code></pre>
+    </section>
+
+    <section id="ejemplo">
+      <h2>Ejemplo completo</h2>
+      <p>Flujo mínimo: validar contrato → ASR → TTS → traza de eventos.</p>
+<pre class="codebox"><code>import crypto from 'node:crypto'
+
+type AudioFormat = { sampleRate: number; channels: number; sampleFormat: 's16le' }
+
+function validatePcm(pcm: Uint8Array, format: AudioFormat) {
+  if (pcm.byteLength % (format.channels * 2) !== 0) throw new Error('invalid PCM length')
+}
+
+async function voiceRelayTurn(pcm: Uint8Array, format: AudioFormat) {
+  const turnId = crypto.randomUUID()
+  validatePcm(pcm, format)
+  console.log(JSON.stringify({ type: 'audioFrame', turnId, bytes: pcm.byteLength }))
+  const text = '&lt;transcripción local&gt;'
+  const segmentId = 0
+  console.log(JSON.stringify({
+    type: 'transcriptFinal', turnId, segmentId, text, final: true,
+    segments: [{ segmentId, startMs: 0, endMs: 1000, text }],
+  }))
+  const speech = { sampleRate: 22_050, channels: 1, pcmBytes: 44100 }
+  console.log(JSON.stringify({ type: 'speechChunk', turnId, segmentId, bytes: speech.pcmBytes }))
+  console.log(JSON.stringify({ type: 'turnDone', turnId, reason: 'completed' }))
+}
+
+const format: AudioFormat = { sampleRate: 16_000, channels: 1, sampleFormat: 's16le' }
+await voiceRelayTurn(new Uint8Array(32_000), format)</code></pre>
+      <p>Ejemplos ejecutables en <a href="../class-07-speech-systems/examples/">examples/</a>.</p>
+    </section>
+
+    <section id="predict">
+      <h2>Antes de ejecutar</h2>
+      <p>Escribe tus respuestas antes del lab:</p>
+      <ol>
+        <li>Envías PCM mono 16 kHz a un backend configurado para 48 kHz. ¿Qué predices: fallo explícito, WER degradado o audio acelerado?</li>
+        <li>Inviertes endianness en una muestra <code class="inline">s16le</code>. ¿El ASR devuelve silencio, basura o un error identificable?</li>
+        <li>Persistes un <code class="inline">transcriptPartial</code> como turno final. ¿Qué ocurre en TTS y en la UI?</li>
+        <li>El consumidor de TTS duerme 2 s entre chunks. ¿Crece el buffer o se aplica backpressure?</li>
+        <li>Cortas la red después de provisionar modelos. ¿Qué fase falla si falta un artefacto local?</li>
+      </ol>
+    </section>
+
+    <section id="build">
+      <h2>Práctica guiada</h2>
+      <p><strong>Lab — Voice Contract Lab</strong> (90 min). Guía completa en <a href="../class-07-speech-systems/lab/README.md">lab/README.md</a>.</p>
+      <ol>
+        <li><strong>Contrato:</strong> completa <code class="inline">AudioFormat</code> y valida PCM antes de inferir.</li>
+        <li><strong>ASR batch:</strong> registra texto, segmentos, duración y razón terminal.</li>
+        <li><strong>ASR ventanas:</strong> compara ventana completa vs. ventanas de 1 s con solapamiento de 200 ms.</li>
+        <li><strong>TTS:</strong> sintetiza la transcripción final y verifica sample rate, canales y bytes.</li>
+        <li><strong>Relay:</strong> correlaciona un turno ASR → TTS con eventos ordenados por <code class="inline">turnId</code>.</li>
+        <li><strong>Medición:</strong> llena la tabla TTFT/TTFA/total; declara hardware y modelo.</li>
+        <li><strong>Break It:</strong> cambia solo sample rate o endianness; predice y diagnostica.</li>
+        <li><strong>Offline:</strong> repite con red bloqueada; conserva comando, modelo y logs sin contenido de audio completo.</li>
+      </ol>
+      <table class="booktabs">
+        <thead><tr><th>corrida</th><th>modelo</th><th>formato entrada</th><th>first text</th><th>first audio</th><th>total</th><th>stop/error</th></tr></thead>
+        <tbody>
+          <tr><td>baseline</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>ventana</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>break-it</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <p>Entrega <code class="inline">report.json</code> y una explicación de una página.</p>
+    </section>
+
+    <section id="errores">
+      <h2>Errores comunes</h2>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td>Transcripción vacía sin error</td><td>Formato incompatible enviado como silencio</td><td>Validar contrato antes de ASR; error explícito</td></tr>
+          <tr><td>Audio acelerado o lento</td><td>Sample rate de entrada ≠ configuración del backend</td><td>Normalizar o resamplear con conversión documentada</td></tr>
+          <tr><td>Buffer TTS crece sin límite</td><td>Sin backpressure; productor más rápido que consumidor</td><td>Limitar cola, cancelar con razón explícita</td></tr>
+          <tr><td>Frases truncadas en TTS</td><td>Partial persistido o enviado a sintetizador</td><td>Sintetizar solo <code class="inline">final: true</code></td></tr>
+          <tr><td>WER peor en fronteras de palabra</td><td>Ventana sin solapamiento</td><td>Añadir solapamiento; medir tradeoff de latencia</td></tr>
+          <tr><td>“Funcionó offline” sin prueba</td><td>Sin logs ni verificación de sockets</td><td>Airplane-Mode Test con evidencia de artefactos locales</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="medicion">
+      <h2>Medición</h2>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Métrica</th><th>Cómo obtenerla</th><th>Unidad</th><th>Interpretación</th></tr></thead>
+        <tbody>
+          <tr><td>Duración capturada</td><td><code class="inline">pcm.byteLength / (sampleRate × channels × 2) × 1000</code></td><td>ms</td><td>Entrada real al ASR</td></tr>
+          <tr><td>ASR first text (TTFT)</td><td>Primer evento de texto − inicio ASR</td><td>ms</td><td>Latencia percibida de transcripción</td></tr>
+          <tr><td>ASR final</td><td>Último <code class="inline">transcriptFinal</code> − inicio ASR</td><td>ms</td><td>Tiempo total de decodificación</td></tr>
+          <tr><td>TTS first audio (TTFA)</td><td>Primer <code class="inline">speechChunk</code> − envío de texto</td><td>ms</td><td>Latencia percibida de síntesis</td></tr>
+          <tr><td>TTS total</td><td>Fin de síntesis − inicio TTS</td><td>ms</td><td>Duración completa del sintetizador</td></tr>
+          <tr><td>Bytes entrada/salida</td><td>Tamaño PCM in/out</td><td>bytes</td><td>Carga de datos, no calidad</td></tr>
+          <tr><td>Razón terminal</td><td>Campo <code class="inline">reason</code> en <code class="inline">turnDone</code> / <code class="inline">turnError</code></td><td>enum</td><td>completed, cancelled, error</td></tr>
+        </tbody>
+      </table>
+      <p>Reporta hardware, modelo, cuantización, sample rate y tamaño de ventana en cada corrida.</p>
+    </section>
+
+    <section id="resumen">
+      <h2>Resumen</h2>
+      <ul>
+        <li>El audio local empieza por un contrato: sampleRate, channels, sampleFormat, durationMs.</li>
+        <li>ASR convierte PCM en texto con segmentos; TTS convierte texto final en PCM reproducible.</li>
+        <li>Partial actualiza UI; final alimenta TTS y persistencia.</li>
+        <li>Un voice relay correlaciona eventos por <code class="inline">turnId</code> y <code class="inline">segmentId</code>, con cancelación y backpressure.</li>
+        <li>TTFT, TTFA, duración total y razón terminal son métricas distintas — no las agregues.</li>
+        <li>La privacidad se demuestra con red bloqueada y logs, no con una afirmación.</li>
+      </ul>
+      <p><strong>Siguiente clase:</strong> encadenar ASR → traducción → TTS en un intérprete local (Clase 08).</p>
+    </section>
+
+    <section id="done">
+      <h2>Definition of Done</h2>
+      <ul class="check">
+        <li>Tres archivos de entrada producen segmentos reproducibles.</li>
+        <li>La UI distingue parcial, final, error y cancelación.</li>
+        <li>ASR y TTS reportan primer resultado y duración total por separado.</li>
+        <li>Un caso de sample rate incompatible queda diagnosticado y corregido.</li>
+        <li>La prueba offline incluye evidencia de artefactos locales y ausencia de sockets remotos.</li>
+        <li>El estudiante puede defender una decisión de ventana, solapamiento y VAD.</li>
+      </ul>
+    </section>
+
+    <section id="checkpoint">
+      <h2>Checkpoint</h2>
+      <ol>
+        <li>Muestra el contrato de audio de entrada y salida.</li>
+        <li>Explica por qué un resultado parcial no debe persistirse como turno final.</li>
+        <li>Diagnostica un audio reproducido demasiado rápido o lento.</li>
+        <li>Separa TTFT/primer texto de TTFA/primer audio y de la duración total.</li>
+        <li>Describe qué evidencia prueba localidad sin exponer el contenido de la conversación.</li>
+      </ol>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes</h2>
+      <ul>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/">QVAC — AI capabilities</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/api/">QVAC — API reference v0.18.x</a></li>
+        <li><a href="https://github.com/ggerganov/whisper.cpp">Whisper (whisper.cpp)</a></li>
+        <li><a href="https://github.com/NVIDIA/NeMo">Parakeet (NVIDIA NeMo)</a></li>
+      </ul>
+    </section>
+  </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Introducción</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/07">Clase</a></li>
+        <li><a href="/class-07-speech-systems/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-07-speech-systems/lab/README.md">Lab</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+</main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 7 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-07-speech-systems/">← Volver a la Clase 7</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
+</body>
 </html>

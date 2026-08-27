@@ -18,7 +18,7 @@ export const TEACHING = [
     body: 'Te comprometes con un modelo mental por escrito, y luego el sistema te confirma o lo corrige con evidencia.',
   },
   {
-    tag: 'Break It · Measure It',
+    tag: 'Diagnóstico · evidencia',
     title: 'Rómpelo y mídelo',
     body: 'Ninguna abstracción está entendida hasta ver un fallo significativo — y ninguna afirmación de rendimiento sin números propios.',
   },
@@ -178,7 +178,7 @@ export const CLASS01 = {
     { id: 'corridaA', label: 'Corrida A (con red) documentada con salida completa' },
     { id: 'corridaB', label: 'Corrida B (modo avión) generando texto desde caché' },
     { id: 'metricas', label: 'Tabla frío/tibio con unidades: descarga, carga, TTFT, tok/s' },
-    { id: 'breakit', label: 'Los 4 escenarios Break It con predicción previa + diagnóstico' },
+    { id: 'breakit', label: 'Los 4 escenarios con predicción previa + diagnóstico' },
     { id: 'checkpoint', label: 'Checkpoint respondido (nivel ≥3 en criterios 1–5 de la rúbrica)' },
   ],
 }
@@ -197,7 +197,7 @@ export const CLASS02 = {
     { id: 'anatomia', label: 'Explicas las piezas internas de un GGUF sin mirar la lección' },
     { id: 'nombres', label: 'Decodificas 3 nombres de catálogo (familia/escala/INST/cuant)' },
     { id: 'comparacion', label: 'Comparación medida de 2 modelos (carga, TTFT, tok/s, memoria)' },
-    { id: 'breakit', label: 'Un Break It de recurso insuficiente diagnosticado por fase' },
+    { id: 'breakit', label: 'Un fallo de recurso insuficiente diagnosticado por fase' },
     { id: 'report', label: 'Model Selection Report con matriz + defensa oral de 3 minutos' },
   ],
 }
@@ -217,7 +217,7 @@ export const CLASS03 = {
     { id: 'sampling', label: 'Comparación de sampling (mismo prompt, una variable controlada)' },
     { id: 'context', label: 'Experimento de contexto (history corta vs larga)' },
     { id: 'kvcache', label: 'Comparación KV cache on vs off en follow-up' },
-    { id: 'breakit', label: 'Diagnóstico Break It con evidencia (stopReason, stats, contenido parcial)' },
+    { id: 'breakit', label: 'Diagnóstico con evidencia (stopReason, stats, contenido parcial)' },
     { id: 'report', label: 'Inference Experiment Report con conclusión basada en medición' },
   ],
 }
@@ -230,7 +230,7 @@ export const CLASS04 = {
   outcomes: [
     { tag: 'Outcome 1–5', title: 'Estado + history + streaming', body: 'Tres lifecycles, historial multi-turno explícito, events/final, y frontera provisional vs committed.' },
     { tag: 'Outcome 6–10', title: 'Cancel + persist + reuse', body: 'Cancelación por requestId, JSON local, restore tras restart, y reutilización del modelo entre turnos.' },
-    { tag: 'Outcome 11–15', title: 'Métricas + offline + defensa', body: 'TTFT/tok/s por turno, shutdown limpio, verificación modo avión, Break It de consistencia, y política de commit defendida.' },
+    { tag: 'Outcome 11–15', title: 'Métricas + offline + defensa', body: 'TTFT/tok/s por turno, shutdown limpio, verificación modo avión, diagnóstico de consistencia y política de commit defendida.' },
   ],
   dodItems: [
     { id: 'multiturn', label: 'Multi-turn: follow-up usa historial de turnos previos (acceptance A)' },
@@ -239,7 +239,7 @@ export const CLASS04 = {
     { id: 'persist', label: 'Persistencia: transcript restaurado tras exit + restart (acceptance D)' },
     { id: 'offline', label: 'Modo avión: nueva completion tras restart sin red (acceptance E)' },
     { id: 'metrics', label: 'Métricas por turno: TTFT, duración, tok/s, stopReason (acceptance F)' },
-    { id: 'breakit', label: 'Break It diagnosticado: cancel entre stream y commit (persistencia parcial)' },
+    { id: 'breakit', label: 'Diagnóstico: cancel entre stream y commit (persistencia parcial)' },
   ],
 }
 
@@ -258,7 +258,7 @@ export const CLASS05 = {
     { id: 'predict', label: 'Escribí un ranking esperado antes de ejecutar semantic search' },
     { id: 'topk', label: 'Semantic Search v1 muestra Top-K + scores + texto' },
     { id: 'metrics', label: 'Separé corpus embedding, query embedding y ranking latency' },
-    { id: 'breakit', label: 'Diagnostiqué una query ambigua sin culpar al modelo por intuición' },
+    { id: 'breakit', label: 'Diagnostiqué una query ambigua con evidencia' },
     { id: 'report', label: 'Entregué Semantic Search Report con límites de la conclusión' },
   ],
 }
@@ -279,7 +279,7 @@ export const CLASS06 = {
     { id: 'retrieval', label: 'Mostré Top-K + score + contenido antes de generation' },
     { id: 'grounding', label: 'Generé una respuesta usando un bloque de evidencia explícito' },
     { id: 'unknown', label: 'Unknown Knowledge Test no inventa provenance' },
-    { id: 'breakit', label: 'Provocé un retrieval failure y lo distinguí de generation failure' },
+    { id: 'breakit', label: 'Distinguí retrieval failure de generation failure' },
     { id: 'metrics', label: 'Separé retrieval latency de generation latency' },
   ],
 }
@@ -292,7 +292,7 @@ export const CLASS07 = {
   outcomes: [
     { tag: 'Outcome 1–3', title: 'Contratos de audio + ASR', body: 'PCM, sample rate, canales, ventanas, VAD y segmentos con timestamps.' },
     { tag: 'Outcome 4–6', title: 'TTS + experiencia', body: 'Síntesis local, formato de salida, primer audio y backpressure.' },
-    { tag: 'Outcome 7–10', title: 'Relay + medición', body: 'Correlación por turno, cancelación, privacidad y Break It reproducible.' },
+    { tag: 'Outcome 7–10', title: 'Relay + medición', body: 'Correlación por turno, cancelación, privacidad y diagnóstico reproducible.' },
   ],
   dodItems: [
     { id: 'pcm', label: 'Contrato PCM documentado y validado (sample rate, canales, formato)' },
@@ -300,6 +300,6 @@ export const CLASS07 = {
     { id: 'tts', label: 'TTS local produce audio reproducible con formato declarado' },
     { id: 'relay', label: 'Relay ASR → texto → TTS correlacionado por turnId' },
     { id: 'metrics', label: 'Métricas separan first-text, first-audio y total' },
-    { id: 'breakit', label: 'Break It de sample rate/backpressure diagnosticado con evidencia' },
+    { id: 'breakit', label: 'Sample rate/backpressure diagnosticado con evidencia' },
   ],
 }

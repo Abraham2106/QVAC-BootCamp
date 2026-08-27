@@ -81,3 +81,49 @@ Mide por clase de solicitud, no solo un promedio global: TTFT y latencia total; 
 ## Checkpoint mental
 
 Antes de implementar, responde: ¿qué dato jamás puede salir?, ¿qué permiso activa el fallback?, ¿cómo sabe el usuario dónde se ejecutó?, ¿qué ocurre si no hay ruta segura? Si no puedes responder, la arquitectura aún no está lista.
+## Build — Routing Policy Simulator
+
+Implementa una política pura, sin llamadas de red, que reciba:
+
+```ts
+type RequestClass = {
+  sensitivity: 'high' | 'medium' | 'low'
+  capability: string
+  consent: boolean
+  localAvailable: boolean
+}
+```
+
+La salida debe ser `local`, `remote-consented` o `refuse`, junto con una razón y un código de política. Después conecta esa política a un adapter real. Separar decisión y transporte permite probar la privacidad sin depender de que un servidor esté encendido.
+
+| Caso | Resultado esperado |
+|---|---|
+| PII + modelo local disponible | `local` |
+| PII + modelo local caído | `refuse` |
+| dato medio + consentimiento vigente | `remote-consented` |
+| dato medio sin consentimiento | `refuse` |
+| dato bajo + capacidad local | `local` |
+
+## Break It — Exfiltration Test
+
+Bloquea la red y fuerza cada rama de fallback. Luego inyecta un endpoint no permitido y comprueba que la política lo rechaza antes de serializar el prompt. El resultado debe registrar la decisión, no el contenido sensible.
+
+## Definition of Done
+
+- [ ] Las tres fronteras (datos, ejecución y confianza) aparecen en un diagrama.
+- [ ] La matriz de rutas y sus invariantes tienen pruebas automatizadas.
+- [ ] El fallback remoto exige consentimiento y allowlist.
+- [ ] La respuesta expone la ruta usada y el motivo de degradación.
+- [ ] El Exfiltration Test pasa con red bloqueada y endpoint malicioso.
+- [ ] El ADR incluye trade-offs de latencia, coste, disponibilidad y privacidad.
+
+## Checkpoint de defensa
+
+Presenta una solicitud de alta sensibilidad, una de baja sensibilidad y una capacidad ausente. Para cada una, defiende la ruta elegida, el comportamiento ante fallo y la evidencia que permite auditar la decisión.
+
+## Fuentes y frescura
+
+- [QVAC documentation](https://docs.qvac.tether.io/)
+- [OWASP GenAI Security Project](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+
+Las decisiones de seguridad deben revisarse cuando cambien el SDK, el servidor o los endpoints permitidos.

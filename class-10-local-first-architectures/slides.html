@@ -1,22 +1,17 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clase 10 · Local-First Architectures</title><link rel="stylesheet" href="../assets/teaching-slides.css"><link rel="stylesheet" href="../assets/slides.css"></head><body><main class="deck">
 <section class="slide dark"><div class="eyebrow">QVAC · Módulo 4 · Clase 10</div><h1>Designing<br>local-first architectures</h1><p class="lede">La privacidad se diseña como política verificable, no como eslogan.</p></section>
 <section class="slide"><div class="eyebrow">Pregunta esencial</div><h2>¿Debe todo correr local?</h2><p class="lede">No: la ruta correcta hace visible qué datos, capacidades y fallos pueden cruzar una frontera.</p></section>
-<section class="slide"><div class="eyebrow">Política</div><div class="flow">request → classify(data, capability, consent)
-→ local route (preferred)
-→ safe fallback or refuse
-→ record decision</div></section>
+<section class="slide"><div class="eyebrow">Definición operativa</div><div class="flow">request → classify(data, capability, consent)<br>→ local preferred<br>→ safe fallback or refuse<br>→ record decision</div></section>
 <section class="slide"><div class="eyebrow">Tres fronteras</div><div class="grid"><div class="card"><h3>Datos</h3><p>¿Qué bytes salen?</p></div><div class="card"><h3>Ejecución</h3><p>¿Dónde calculan tokens?</p></div><div class="card"><h3>Confianza</h3><p>¿Quién observa o cambia el resultado?</p></div></div></section>
-<section class="slide"><div class="eyebrow">Routing matrix</div><div class="flow">alta + sensible → local / rechazar
-media → local / remoto con consentimiento
-baja → local / remoto registrado
-capacidad ausente → explicar bloqueo</div></section>
-<section class="slide"><div class="eyebrow">Fallback seguro</div><h2>Un catch no es una política.</h2><p class="lede">Requiere autorización, endpoint permitido, timeout acotado y ausencia de datos prohibidos.</p></section>
-<section class="slide"><div class="eyebrow">Invariantes</div><ul class="check"><li>I1: sensibilidad alta nunca sale.</li><li>I2: remoto requiere consentimiento vigente.</li><li>I3: la respuesta declara dónde se ejecutó.</li><li>I4: ningún fallback bloquea indefinidamente.</li><li>I5: registra decisión sin contenido sensible.</li></ul></section>
-<section class="slide"><div class="eyebrow">ADR</div><div class="flow">contexto → decisión → alternativas → invariantes
-→ consecuencias → evidencia → dueño/fecha</div><p class="lede">“Usaremos IA local por privacidad” no es todavía una decisión auditable.</p></section>
-<section class="slide"><div class="eyebrow">Degradación</div><h2>Disponibilidad no es calidad.</h2><p class="lede">Distingue local-success, remote-consented, local-unavailable, remote-denied y quality-degraded.</p></section>
-<section class="slide"><div class="eyebrow">Break it</div><h2 class="warn">Bloquea red con PII y fuerza el fallback.</h2><p class="lede">Predice qué debe ocurrir: nunca exfiltrar, explicar el bloqueo y registrar el intento.</p></section>
-<section class="slide"><div class="eyebrow">Measure it</div><p class="lede">TTFT · latencia total · éxito · % rutas locales · timeouts · coste · intentos remotos bloqueados, siempre por clase de solicitud.</p></section>
-<section class="slide"><div class="eyebrow">Definition of done</div><ul class="check"><li>☐ Fronteras de datos/ejecución/confianza dibujadas</li><li>☐ Matriz y ADR reproducibles</li><li>☐ Invariantes probadas con red bloqueada</li><li>☐ Auditoría sin guardar contenido sensible</li></ul></section>
+<section class="slide"><div class="eyebrow">ADR</div><div class="flow">contexto → decisión → alternativas → invariantes → consecuencias → evidencia</div><p class="lede">“Usaremos IA local por privacidad” no explica qué se protege ni cómo se prueba.</p></section>
+<section class="slide"><div class="eyebrow">Routing matrix</div><div class="grid"><div class="card"><h3>Alta + sensible</h3><p>local; si no existe, rechazar</p></div><div class="card"><h3>Media</h3><p>local; remoto con consentimiento</p></div><div class="card"><h3>Baja</h3><p>local preferido; remoto registrado</p></div></div></section>
+<section class="slide"><div class="eyebrow">Invariantes</div><ul class="check"><li>I1: sensibilidad alta nunca sale.</li><li>I2: remoto requiere consentimiento vigente.</li><li>I3: la respuesta declara dónde se ejecutó.</li><li>I4: ningún fallback bloquea indefinidamente.</li><li>I5: el log no guarda contenido sensible.</li></ul></section>
+<section class="slide"><div class="eyebrow">Degradación</div><h2>Disponibilidad no es calidad.</h2><p class="lede"><code>local-success</code> · <code>remote-consented</code> · <code>local-unavailable</code> · <code>remote-denied</code> · <code>quality-degraded</code></p></section>
+<section class="slide"><div class="eyebrow">Build</div><h2>Separa política y transporte.</h2><p class="lede">Primero prueba una función pura que devuelva <code>local</code>, <code>remote-consented</code> o <code>refuse</code>. Después conecta el adapter real.</p></section>
+<section class="slide"><div class="eyebrow">Predict → Run</div><h2 class="warn">PII + modelo local caído.</h2><p class="lede">Predice rechazo comprensible, cero bytes remotos y un evento auditable sin el prompt.</p></section>
+<section class="slide"><div class="eyebrow">Exfiltration test</div><ol class="check"><li>Bloquea la red.</li><li>Fuerza cada rama de fallback.</li><li>Inyecta un endpoint no permitido.</li><li>Verifica que se rechaza antes de serializar.</li></ol></section>
+<section class="slide"><div class="eyebrow">Measure it</div><p class="lede">TTFT · latencia total · éxito · % rutas locales · timeouts · coste · intentos remotos bloqueados.</p><p class="lede">Corta los datos por clase de solicitud; un promedio global oculta el riesgo.</p></section>
+<section class="slide"><div class="eyebrow">Defense prompt</div><h2>¿Qué dato jamás puede salir? ¿Qué permiso activa el fallback?</h2><p class="lede">Si no puedes responder ambas, la arquitectura aún no está lista.</p></section>
+<section class="slide"><div class="eyebrow">Definition of done</div><ul class="check"><li>☐ Fronteras dibujadas</li><li>☐ Matriz e invariantes probados</li><li>☐ Fallback con consentimiento y allowlist</li><li>☐ Exfiltration Test y ADR reproducibles</li></ul></section>
 <section class="slide dark"><div class="eyebrow">Takeaway</div><h2>Local-first es una decisión observable.</h2><p class="lede">Puente: conecta la arquitectura a la malla P2P y al capstone final.</p></section>
 </main><script src="../assets/teaching-slides.js"></script><script src="../assets/theme.js"></script></body></html>

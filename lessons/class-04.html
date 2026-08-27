@@ -33,159 +33,482 @@
       <h1 class="lesson-sidebar__name">Build the Offline Chat</h1>
     </div>
     <nav class="lesson-toc" aria-label="Contenido de la lección">
-    <span class="toc-head">Contenido</span>
-    <a href="#esencial">Pregunta esencial</a>
-    <a href="#outcomes">Resultados de aprendizaje</a>
-    <a href="#porque">Por qué importa</a>
-    <a href="#ciclos">Tres ciclos de vida</a>
-    <a href="#estado">Estado app vs QVAC</a>
-    <a href="#history">Conversation history</a>
-    <a href="#commit">Frontera de commit</a>
-    <a href="#cancel">Cancelación</a>
-    <a href="#persist">Persistencia</a>
-    <a href="#restart">Restart offline</a>
-    <a href="#shutdown">Graceful shutdown</a>
-    <a href="#predict">Predict</a>
-    <a href="#breakit">Break It</a>
-    <a href="#measure">Measure It</a>
-    <a href="#misconcepciones">Misconcepciones</a>
-    <a href="#conexiones">Conexiones</a>
-    <a href="#checkpoint">Checkpoint</a>
-    <a href="#takeaway">Takeaway</a>
-    <a href="#fuentes">Fuentes</a>
-  </nav>
+      <span class="toc-head">INTRODUCCIÓN</span>
+      <a href="#intro">Introducción</a>
+      <a href="#outcomes">Qué aprenderás</a>
+      <a href="#contexto">Definición y contexto</a>
+      <span class="toc-head">TÉRMINOS</span>
+      <a href="#terminos">Índice de términos</a>
+      <a href="#application-state">Application state</a>
+      <a href="#conversation-history">Conversation history</a>
+      <a href="#commit-boundary">Commit boundary</a>
+      <a href="#streaming-ux">Streaming UX</a>
+      <a href="#cancellation">Cancellation</a>
+      <a href="#persistence">Persistence</a>
+      <a href="#three-lifecycles">Three lifecycles</a>
+      <span class="toc-head">REFERENCIA QVAC</span>
+      <a href="#loadModel">loadModel()</a>
+      <a href="#completion">completion()</a>
+      <a href="#cancel">cancel()</a>
+      <a href="#unload">unloadModel() / close()</a>
+      <span class="toc-head">EJEMPLOS</span>
+      <a href="#ejemplo">Ejemplo completo</a>
+      <span class="toc-head">PRÁCTICA</span>
+      <a href="#predict">Antes de ejecutar</a>
+      <a href="#build">Práctica guiada</a>
+      <a href="#errores">Errores comunes</a>
+      <a href="#medicion">Medición</a>
+      <a href="#resumen">Resumen</a>
+      <a href="#fuentes">Fuentes</a>
+    </nav>
   </aside>
 
   <article class="lesson">
-    <div class="block alert" style="margin-bottom:2rem;">
-      <div class="block-title">Contenido extendido en lesson.md</div>
-      <div class="block-body">
-        Esta página HTML es un índice resumido. La <strong>versión canónica completa</strong> — código, schemas JSON, acceptance tests y rúbrica — está en
-        <a href="/class-04-build-offline-chat/lesson.md"><code class="inline">class-04-build-offline-chat/lesson.md</code></a>
-        o en el <a href="/markdown/class-04-build-offline-chat/lesson.md">visor Markdown de la plataforma</a>.
-        Las diapositivas (<a href="/class-04-build-offline-chat/slides.html" target="_blank" rel="noopener">slides.html</a>) son complementarias, no duplicado.
-      </div>
-    </div>
-
     <p class="lesson-meta">
-      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado 2026-08-26.</p>
+      Baseline técnico: QVAC SDK v0.18.x / v0.18.1 · verificado contra docs oficiales y npm el 2026-08-26.</p>
 
-    <section id="esencial">
-      <h2>Pregunta esencial</h2>
-      <div class="block"><div class="block-body" style="font-size:20px;">
-        ¿Cómo convertimos la inferencia local en una aplicación de conversación confiable que preserve estado, maneje interrupciones y siga funcionando tras reinicio sin la nube?
-      </div></div>
+    <section id="intro">
+      <h2>Introducción</h2>
+      <p>Un script que llama <code class="inline">completion()</code> una vez no es un chat. Una aplicación de conversación local requiere historial multi-turno, streaming con frontera de commit, cancelación, persistencia y recuperación tras reinicio.</p>
+      <p>QVAC provee primitivas de inferencia y runtime. <strong>Tu aplicación posee el estado del producto y la política de persistencia.</strong></p>
     </section>
 
     <section id="outcomes">
-      <h2>Resultados de aprendizaje</h2>
-      <p>15 outcomes — ver lista completa en <a href="/class-04-build-offline-chat/lesson.md#resultados-de-aprendizaje">lesson.md</a>. Incluyen: distinguir estado de app vs runtime, history multi-turno, commit boundary, cancelación con <code class="inline">requestId</code>, persistencia JSON, restart offline y shutdown limpio.</p>
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Distinguir</strong> estado de aplicación de estado de inferencia/runtime.</li>
+        <li><strong>Representar</strong> conversación multi-turno como historial ordenado pasado en cada <code class="inline">completion()</code>.</li>
+        <li><strong>Construir</strong> un bucle de chat event-driven con <code class="inline">events</code> + <code class="inline">final</code>.</li>
+        <li><strong>Commitear</strong> la salida del asistente solo tras un estado terminal válido.</li>
+        <li><strong>Cancelar</strong> una completion en vuelo con <code class="inline">cancel({ requestId })</code>.</li>
+        <li><strong>Persistir</strong> y <strong>restaurar</strong> historial comprometido en almacenamiento local.</li>
+        <li><strong>Reutilizar</strong> un modelo cargado entre turnos y cerrar recursos con <code class="inline">unloadModel</code> / <code class="inline">close</code>.</li>
+        <li><strong>Verificar</strong> el chat en modo avión tras restart (modelo ya provisionado).</li>
+        <li><strong>Medir</strong> TTFT, duración, tok/s y <code class="inline">stopReason</code> por turno en tu máquina.</li>
+        <li><strong>Diagnosticar</strong> fallos de consistencia entre output provisional y estado durable.</li>
+      </ol>
     </section>
 
-    <section id="porque">
-      <h2>Por qué importa</h2>
-      <p>Un script que llama <code class="inline">completion()</code> una vez no es un chat. Falta arquitectura: model lifecycle + conversation state + request lifecycle + persistence + cancellation + metrics + shutdown.</p>
+    <section id="contexto">
+      <h2>Definición y contexto</h2>
+      <p>La Clase 3 observó el motor de inferencia: tokens, streaming, <code class="inline">stopReason</code>. Esta clase construye la <strong>aplicación alrededor del motor</strong>.</p>
+      <p>Lo que falta en un demo de completion no es "más prompts". Falta arquitectura de aplicación:</p>
+<pre class="codebox"><code>model lifecycle
++
+conversation state
++
+request lifecycle
++
+persistence
++
+errors
++
+user cancellation
++
+metrics
++
+shutdown</code></pre>
+      <table class="booktabs">
+        <thead><tr><th>Application state</th><th>Model / runtime state</th></tr></thead>
+        <tbody>
+          <tr><td>conversation history</td><td>loaded weights</td></tr>
+          <tr><td>conversation id</td><td>runtime/backend</td></tr>
+          <tr><td>UI state</td><td>KV cache</td></tr>
+          <tr><td>persistence path</td><td>in-flight inference</td></tr>
+          <tr><td>active request id</td><td></td></tr>
+          <tr><td>per-turn metrics</td><td></td></tr>
+        </tbody>
+      </table>
+      <p><strong>Regla:</strong> Si borras el transcript pero mantienes el modelo, pierdes la conversación pero puedes inferir. Si borras el modelo pero mantienes el transcript, tienes texto pero no puedes generar hasta volver a cargar o provisionar.</p>
     </section>
 
-    <section id="ciclos">
-      <h2>Tres ciclos de vida</h2>
-      <p>Model (load/reuse/unload), Request (completion/events/final/cancel), Conversation (load → user → generate → commit → persist). No mezclarlos.</p>
+    <section id="terminos">
+      <h2>Términos</h2>
+      <h3>Índice rápido</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Definición breve</th><th>¿Responsabilidad de la app?</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Application state</strong></td><td>Historial, IDs, UI y métricas del producto</td><td>Sí</td></tr>
+          <tr><td><strong>Conversation history</strong></td><td>Mensajes <code class="inline">{ role, content }[]</code> pasados en cada request</td><td>Sí</td></tr>
+          <tr><td><strong>Commit boundary</strong></td><td>Línea entre output provisional y turno durable</td><td>Sí</td></tr>
+          <tr><td><strong>Streaming UX</strong></td><td>Render incremental sin commitear hasta <code class="inline">final</code></td><td>Sí</td></tr>
+          <tr><td><strong>Cancellation</strong></td><td>Detener un request activo por <code class="inline">requestId</code></td><td>Sí (política)</td></tr>
+          <tr><td><strong>Persistence</strong></td><td>Guardar transcript comprometido en disco local</td><td>Sí</td></tr>
+          <tr><td><strong>Three lifecycles</strong></td><td>Modelo, request y conversación como ciclos independientes</td><td>Sí (orquestación)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="application-state">Application state</h3>
+      <p><strong>Definición:</strong> Datos que la aplicación posee y controla: historial comprometido, IDs de conversación, estado de UI, ruta de persistencia, request activo y métricas por turno.</p>
+      <p><strong>Uso:</strong> Separar lo que es producto de lo que es runtime. QVAC no almacena tu chat ni decide cuándo persistir.</p>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">KV cache es estado de runtime, no memoria conversacional del producto. Borrar caché del modelo no restaura ni borra el transcript.</div></div>
+
+      <h3 id="conversation-history">Conversation history</h3>
+      <p><strong>Definición:</strong> Secuencia ordenada de mensajes <code class="inline">{ role, content }</code> que la app pasa en el parámetro <code class="inline">history</code> de cada <code class="inline">completion()</code>.</p>
+      <p><strong>Uso:</strong> Multi-turn behavior. El modelo no recuerda automáticamente entre llamadas aisladas.</p>
+<pre class="codebox"><code>history: [
+  { role: "user", content: "My favorite color for this test is orange." },
+  { role: "assistant", content: "Got it — orange for this test." },
+  { role: "user", content: "What color did I tell you?" },
+]</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">El segundo turno puede responder usando contexto del primero porque la app incluyó ambos mensajes.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Esto es estado de aplicación, no memoria a largo plazo del modelo.</div></div>
+
+      <h3 id="commit-boundary">Commit boundary</h3>
+      <p><strong>Definición:</strong> Regla que separa <strong>output provisional del asistente</strong> (stream en pantalla) de <strong>turno comprometido</strong> (parte del historial durable).</p>
+      <p><strong>Uso:</strong> Evitar persistir texto incompleto o cancelado como mensaje completo del asistente.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>stopReason</th><th>¿Commitear?</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">eos</code></td><td>Sí</td></tr>
+          <tr><td><code class="inline">length</code></td><td>Sí (parcial pero terminal)</td></tr>
+          <tr><td><code class="inline">stopSequence</code></td><td>Sí</td></tr>
+          <tr><td><code class="inline">cancelled</code></td><td>No (o según política documentada)</td></tr>
+          <tr><td>error mid-stream</td><td>No</td></tr>
+        </tbody>
+      </table>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Tras cancelación, el historial comprometido no incluye el turno parcial del asistente.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Debes decidir y documentar la política antes de implementar. No hay respuesta universal.</div></div>
+
+      <h3 id="streaming-ux">Streaming UX</h3>
+      <p><strong>Definición:</strong> Patrón donde <code class="inline">contentDelta</code> actualiza un buffer provisional en pantalla mientras la generación continúa.</p>
+      <p><strong>Uso:</strong> Mostrar progreso al usuario sin tratar el stream como estado durable.</p>
+<pre class="codebox"><code>buffer provisional (pantalla)
+        ≠
+committed history (durable)</code></pre>
+<pre class="codebox"><code>let provisional = "";
+for await (const event of run.events) {
+  if (event.type === "contentDelta") {
+    provisional += event.delta;
+    process.stdout.write(event.delta);
+  }
+}
+const final = await run.final;
+// Commit solo aquí, con política según final.stopReason</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">El usuario ve texto crecer en tiempo real. El historial solo cambia tras <code class="inline">final</code> y la política de commit.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Renderizar output parcial y commitear un turno son operaciones separadas.</div></div>
+
+      <h3 id="cancellation">Cancellation</h3>
+      <p><strong>Definición:</strong> Detener una completion en vuelo usando el <code class="inline">requestId</code> del <code class="inline">CompletionRun</code> activo.</p>
+      <p><strong>Uso:</strong> Comando <code class="inline">/cancel</code> o acción equivalente del producto. Acción normal, no error inesperado.</p>
+<pre class="codebox"><code>import { cancel } from "@qvac/sdk";
+
+await cancel({ requestId: activeRun.requestId });</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">El stream termina con <code class="inline">stopReason: "cancelled"</code>. El output parcial no debe commitearse por defecto.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Distingue cancelación de usuario, error de runtime, parada por <code class="inline">length</code> y fin natural (<code class="inline">eos</code>). No etiquetes todos los errores como "cancelled".</div></div>
+
+      <h3 id="persistence">Persistence</h3>
+      <p><strong>Definición:</strong> Almacenamiento local del historial comprometido en un schema explícito de la aplicación.</p>
+      <p><strong>Uso:</strong> Restaurar conversación tras reinicio del proceso. QVAC no provee chat database ni autosave.</p>
+<pre class="codebox"><code>{
+  "version": 1,
+  "conversationId": "uuid",
+  "createdAt": "2026-08-26T...",
+  "updatedAt": "2026-08-26T...",
+  "messages": [
+    { "role": "user", "content": "..." },
+    { "role": "assistant", "content": "..." }
+  ]
+}</code></pre>
+      <p><strong>Prácticas:</strong></p>
+      <ul>
+        <li>validar schema al cargar;</li>
+        <li>escribir de forma atómica (archivo temporal + rename);</li>
+        <li>manejar corrupción con mensaje claro al usuario.</li>
+      </ul>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Tras restart, <code class="inline">load()</code> restaura mensajes comprometidos. Pesos del modelo y transcript son activos separados.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">No mezcles transcript, logs técnicos y caché del modelo. Tienen retenciones distintas.</div></div>
+
+      <h3 id="three-lifecycles">Three lifecycles</h3>
+      <p><strong>Definición:</strong> Tres ciclos de vida independientes que la app debe orquestar: modelo, request y conversación.</p>
+      <p><strong>Uso:</strong> Evitar confundir recargar modelo con restaurar chat, o persistir durante el stream.</p>
+      <p><strong>1. Model lifecycle:</strong></p>
+<pre class="codebox"><code>find → download → validate → loadModel → reuse → unloadModel → close</code></pre>
+      <p><strong>2. Request lifecycle:</strong></p>
+<pre class="codebox"><code>completion() → events stream → final → (cancel?) → terminal state</code></pre>
+      <p><strong>3. Conversation lifecycle:</strong></p>
+<pre class="codebox"><code>load history → append user turn → generate → commit assistant turn → persist → repeat</code></pre>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart TB
+  subgraph app [Application lifecycle]
+    L[Load persisted history]
+    U[Append user turn]
+    G[Generate assistant turn]
+    C[Commit assistant turn]
+    P[Persist history]
+    L --> U --> G --> C --> P --> U
+  end
+  subgraph req [Request lifecycle]
+    R[completion requestId]
+    E[events stream]
+    F[final / cancel]
+    R --> E --> F
+  end
+  subgraph model [Model lifecycle]
+    M[loadModel reuse unloadModel close]
+  end
+  G --> R
+  M -.-> G</pre>
+</div>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Cada turno del usuario dispara un request con su propio <code class="inline">requestId</code>. La conversación sobrevive requests individuales.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">KV cache puede acelerar follow-ups cuando el runtime lo soporta (Clase 3). No es requisito para v1 ni sustituto de persistencia.</div></div>
     </section>
 
-    <section id="estado">
-      <h2>Application state vs QVAC state</h2>
-      <p>Tu app posee historial, transcript, política de commit. QVAC posee pesos, KV cache, inferencia en vuelo.</p>
+    <section id="referencia">
+      <h2>Referencia QVAC</h2>
+      <p>Funciones documentadas en v0.18.x para esta clase.</p>
+
+      <h3 id="loadModel"><code class="inline">loadModel()</code></h3>
+      <p><strong>Definición:</strong> Carga un modelo desde caché o fuente remota hacia memoria.</p>
+      <p><strong>Uso:</strong> Obtener un <code class="inline">modelId</code> reutilizable entre turnos. Cargar una vez por sesión, no por mensaje.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelSrc</code></td><td><code class="inline">CatalogConstant | string</code></td><td>Origen del modelo</td></tr>
+          <tr><td><code class="inline">modelConfig</code></td><td><code class="inline">{ ctx_size?: number, ... }</code></td><td>Configuración del runtime</td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>const modelId = await loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body"><code class="inline">modelId</code> string válido para múltiples llamadas a <code class="inline">completion()</code>.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Tras restart offline, <code class="inline">loadModel()</code> usa caché local si el modelo ya fue provisionado (Clase 1).</div></div>
+
+      <h3 id="completion"><code class="inline">completion()</code></h3>
+      <p><strong>Definición:</strong> Ejecuta inferencia sobre un modelo cargado. En v0.18.x devuelve un <code class="inline">CompletionRun</code>.</p>
+      <p><strong>Uso:</strong> Un turno de chat con historial explícito y streaming.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Campo / parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelId</code></td><td><code class="inline">string</code></td><td>Modelo cargado</td></tr>
+          <tr><td><code class="inline">history</code></td><td><code class="inline">{ role, content }[]</code></td><td>Historial comprometido + turno actual del usuario</td></tr>
+          <tr><td><code class="inline">stream</code></td><td><code class="inline">boolean</code></td><td>Si <code class="inline">true</code>, emite eventos incrementales</td></tr>
+          <tr><td><code class="inline">run.requestId</code></td><td><code class="inline">string</code></td><td>ID para <code class="inline">cancel()</code></td></tr>
+          <tr><td><code class="inline">run.events</code></td><td><code class="inline">AsyncIterable</code></td><td>Stream con <code class="inline">contentDelta</code>, etc.</td></tr>
+          <tr><td><code class="inline">run.final</code></td><td><code class="inline">Promise</code></td><td>Texto agregado, stats, <code class="inline">stopReason</code></td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>const run = completion({
+  modelId,
+  history,
+  stream: true,
+  generationParams: { temp: 0.7, predict: 256 },
+});
+
+let provisional = "";
+for await (const event of run.events) {
+  if (event.type === "contentDelta") {
+    provisional += event.delta;
+    process.stdout.write(event.delta);
+  }
+}
+
+const final = await run.final;
+if (final.stopReason !== "cancelled") {
+  history.push({ role: "assistant", content: final.contentText });
+}</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Eventos incrementales durante generación; <code class="inline">final</code> entrega estado terminal para decidir commit.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Preferir <code class="inline">events</code> + <code class="inline">final</code> sobre superficies legacy.</div></div>
+
+      <h3 id="cancel"><code class="inline">cancel()</code></h3>
+      <p><strong>Definición:</strong> Cancela una operación en vuelo identificada por <code class="inline">requestId</code>.</p>
+      <p><strong>Uso:</strong> Comando <code class="inline">/cancel</code> mientras un turno se está generando.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">requestId</code></td><td><code class="inline">string</code></td><td>ID del <code class="inline">CompletionRun</code> activo</td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>import { cancel } from "@qvac/sdk";
+
+console.log("requestId:", run.requestId);
+await cancel({ requestId: run.requestId });
+const final = await run.final;
+console.log("stopReason:", final.stopReason); // "cancelled"</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">El stream termina. La app no debe commitear output parcial salvo política explícita.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body"><code class="inline">requestId</code> está disponible sincrónicamente al crear el run.</div></div>
+
+      <h3 id="unload"><code class="inline">unloadModel()</code> y <code class="inline">close()</code></h3>
+      <p><strong>Definición:</strong> <code class="inline">unloadModel()</code> libera el modelo de memoria. <code class="inline">close()</code> cierra la infraestructura del SDK.</p>
+      <p><strong>Uso:</strong> Graceful shutdown tras cancelar requests activos y persistir estado confirmado.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">modelId</code></td><td><code class="inline">string</code></td><td>Modelo a descargar</td></tr>
+          <tr><td><code class="inline">clearStorage</code></td><td><code class="inline">boolean</code></td><td>Si <code class="inline">true</code>, borra estado asociado</td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>// Secuencia controlada
+if (activeRun) await cancel({ requestId: activeRun.requestId });
+await saveHistory(committedHistory);
+await unloadModel({ modelId, clearStorage: false });
+void close();</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Memoria liberada. En Node/Electron, descargar el último modelo puede cerrar la conexión RPC automáticamente.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">En Bare el comportamiento puede diferir. Verifica en tu runtime — no asumas simetría.</div></div>
     </section>
 
-    <section id="history">
-      <h2>Conversation history</h2>
-      <p>Multi-turn = pasar <code class="inline">history[]</code> en cada call. El modelo no recuerda automáticamente entre llamadas aisladas.</p>
-    </section>
+    <section id="ejemplo">
+      <h2>Ejemplo completo</h2>
+      <p>Flujo incremental en capas (ver <code class="inline">examples/01–06</code>):</p>
+      <ol>
+        <li>Single completion (<code class="inline">01-single-turn.ts</code>)</li>
+        <li>Multi-turn con history explícita (<code class="inline">02-multi-turn.ts</code>)</li>
+        <li>Streaming render (<code class="inline">03-streaming.ts</code>)</li>
+        <li>Cancel mid-stream (<code class="inline">04-cancellation.ts</code>)</li>
+        <li>Persist JSON (<code class="inline">05-persistence.ts</code>)</li>
+        <li>Restart offline (<code class="inline">06-restart-offline.ts</code>)</li>
+      </ol>
+      <p>Esqueleto integrado de un turno con commit boundary:</p>
+<pre class="codebox"><code>import {
+  cancel, close, completion, loadModel,
+  LLAMA_3_2_1B_INST_Q4_0, unloadModel,
+  type HistoryMessage,
+} from "@qvac/sdk";
 
-    <section id="commit">
-      <h2>Frontera de commit</h2>
-      <p>Buffer provisional (stream) ≠ historial comprometido (durable). Commitear tras <code class="inline">final</code> con política explícita según <code class="inline">stopReason</code>.</p>
-    </section>
+const modelId = await loadModel({
+  modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+  modelConfig: { ctx_size: 2048 },
+});
 
-    <section id="cancel">
-      <h2>Cancelación</h2>
-      <p><code class="inline">cancel({ requestId })</code> — acción de producto, no error genérico. Distinguir de <code class="inline">length</code>, <code class="inline">eos</code> y fallos reales.</p>
-    </section>
+let history: HistoryMessage[] = [
+  { role: "user", content: "Resume en una frase qué es un commit boundary." },
+];
 
-    <section id="persist">
-      <h2>Persistencia</h2>
-      <p>JSON local con schema versionado, escritura atómica, validación al cargar. QVAC no provee chat database.</p>
-    </section>
+const run = completion({ modelId, history, stream: true });
 
-    <section id="restart">
-      <h2>Restart offline</h2>
-      <p>Close → disable network → restart → restore JSON → loadModel from cache → new completion. Precondición: modelo ya provisionado (Clase 1).</p>
-    </section>
+for await (const ev of run.events) {
+  if (ev.type === "contentDelta") process.stdout.write(ev.delta);
+}
 
-    <section id="shutdown">
-      <h2>Graceful shutdown</h2>
-      <p>cancel activo → persist → unloadModel → close().</p>
+const final = await run.final;
+if (["eos", "length", "stopSequence"].includes(final.stopReason)) {
+  history.push({ role: "assistant", content: final.contentText });
+}
+
+await unloadModel({ modelId, clearStorage: false });
+void close();</code></pre>
+      <p>Ejemplos ejecutables en <a href="../class-04-build-offline-chat/examples/">examples/</a>. Arquitectura modular de referencia en <a href="../class-04-build-offline-chat/app/src/">app/src/</a>.</p>
     </section>
 
     <section id="predict">
-      <h2>Predict</h2>
-      <p>¿Los 40 caracteres streamados antes de cancel deben persistir? Define política antes de implementar.</p>
+      <h2>Antes de ejecutar</h2>
+      <p>Escribe tus respuestas antes del lab:</p>
+      <ol>
+        <li>Si cancelas tras 40 caracteres streamados, ¿deben persistirse como turno completo del asistente?</li>
+        <li>¿El modelo "recuerda" el chat sin que la app pase <code class="inline">history</code>?</li>
+        <li>Tras restart sin red, ¿qué falla primero: modelo o transcript?</li>
+        <li>¿Streaming implica que el output ya es estado durable?</li>
+        <li>¿Cancelación y error inesperado deben tratarse igual en la UI?</li>
+      </ol>
     </section>
 
-    <section id="breakit">
-      <h2>Break It</h2>
-      <p>Starter que persiste durante el stream — cancel a mitad, restart, inspecciona corrupción semántica.</p>
+    <section id="build">
+      <h2>Práctica guiada</h2>
+      <p>Construye <strong>Offline Chat v1</strong> siguiendo el <a href="../class-04-build-offline-chat/lab/README.md">lab</a>:</p>
+      <p><strong>Parte 1 — Ejemplos incrementales</strong></p>
+      <p>Corre en orden <code class="inline">examples/01</code> a <code class="inline">06</code>.</p>
+      <p><strong>Parte 2 — CLI modular</strong></p>
+      <p>Completa los TODO en <code class="inline">app/src/</code>:</p>
+<pre class="codebox"><code>index.ts       — startup, chat loop, /exit /cancel /new
+chat.ts        — orquestación de turno (events/final + commit)
+history.ts     — tipos y helpers de historial comprometido
+persistence.ts — load/save JSON local
+metrics.ts     — TTFT, duración, stats por turno
+shutdown.ts    — señales, cancelación activa, unload/close</code></pre>
+      <p><strong>Parte 3 — Acceptance tests A–G</strong></p>
+      <ul>
+        <li>multi-turn state</li>
+        <li>streaming</li>
+        <li>cancellation</li>
+        <li>persistence</li>
+        <li>offline restart</li>
+        <li>metrics</li>
+        <li>clean shutdown</li>
+      </ul>
+      <p><strong>Parte 4 — Break It</strong></p>
+      <p>Variante defectuosa: persistir output parcial <strong>durante</strong> el stream, cancelar a mitad, restart, inspeccionar transcript. Diagnóstico esperado: confundió provisional con committed. Fix: commit boundary explícita.</p>
+      <p><strong>Parte 5 — Airplane Mode</strong></p>
+      <ol>
+        <li>Provisiona modelo con red.</li>
+        <li>Cierra app con transcript guardado.</li>
+        <li>Desactiva red.</li>
+        <li>Restart → restore → nueva completion.</li>
+      </ol>
+      <p>Entregable: CLI que pasa tests A–G con evidencia documentada.</p>
     </section>
 
-    <section id="measure">
-      <h2>Measure It</h2>
-      <p>TTFT, duración, tok/s, stopReason por turno — de tu máquina, no benchmarks universales.</p>
+    <section id="errores">
+      <h2>Errores comunes</h2>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td>Modelo no recuerda turnos previos</td><td>No se pasa <code class="inline">history</code> en cada <code class="inline">completion()</code></td><td>Mantener historial comprometido en memoria y pasarlo completo</td></tr>
+          <tr><td>Texto parcial tras restart</td><td>Persistir durante el stream</td><td>Commitear solo tras <code class="inline">final</code> y política de éxito</td></tr>
+          <tr><td>Cancelación tratada como error</td><td>Captura genérica de excepciones</td><td>Distinguir <code class="inline">stopReason: "cancelled"</code> de fallos de runtime</td></tr>
+          <tr><td>Transcript corrupto tras crash</td><td>Escritura no atómica</td><td>write temp + rename; validar schema al cargar</td></tr>
+          <tr><td>Modelo se recarga cada turno</td><td><code class="inline">loadModel()</code> por mensaje</td><td>Cargar una vez, reutilizar <code class="inline">modelId</code></td></tr>
+          <tr><td>Falla offline tras restart</td><td>Modelo no provisionado</td><td>Provisionar con red primero (Clase 1)</td></tr>
+          <tr><td>Unload y close idénticos en todo runtime</td><td>Asumir comportamiento Node en Bare</td><td>Verificar docs del runtime concreto</td></tr>
+        </tbody>
+      </table>
+      <h3>Notas adicionales</h3>
+      <ol>
+        <li><strong>"El modelo recuerda el chat automáticamente."</strong> No; la app debe pasar history.</li>
+        <li><strong>"Streaming output ya es estado durable."</strong> No; es provisional hasta commit.</li>
+        <li><strong>"Offline significa que nunca necesité provisionar."</strong> Falso; solo reutilizas lo ya local.</li>
+        <li><strong>"KV cache es memoria conversacional."</strong> No; es optimización de runtime.</li>
+      </ol>
     </section>
 
-    <section id="misconcepciones">
-      <h2>Misconcepciones</h2>
-      <p>El modelo recuerda solo · streaming = durable · cancel = error · offline sin provisionar nunca.</p>
+    <section id="medicion">
+      <h2>Medición</h2>
+      <p>Por cada turno completado, registra lo que la API expone:</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Métrica</th><th>Cómo obtenerla</th><th>Unidad</th><th>Interpretación</th></tr></thead>
+        <tbody>
+          <tr><td>TTFT</td><td>Primer <code class="inline">contentDelta</code> − envío del prompt (<code class="inline">performance.now()</code>)</td><td>ms</td><td>Latencia percibida hasta primer carácter</td></tr>
+          <tr><td>Duración total</td><td><code class="inline">final</code> resuelto − inicio del request</td><td>ms</td><td>Tiempo completo del turno</td></tr>
+          <tr><td>Tokens/segundo</td><td><code class="inline">final.stats.tokensPerSecond</code></td><td>tok/s</td><td>Throughput de decode en ese turno</td></tr>
+          <tr><td>stopReason</td><td><code class="inline">final.stopReason</code></td><td>enum</td><td>Por qué terminó (eos, length, cancelled, …)</td></tr>
+        </tbody>
+      </table>
+      <p>Compara turno normal vs turno cancelado. Estas métricas describen <strong>ese turno en tu máquina</strong>, no rendimiento universal de QVAC.</p>
+<pre class="codebox"><code>turnId, modelId, startedAt, firstDeltaAt, endedAt,
+stopReason, tokensObserved, committed, persistenceVersion</code></pre>
+      <p>Conserva evidencia sin capturar contenido sensible por defecto.</p>
     </section>
 
-    <section id="conexiones">
-      <h2>Conexiones</h2>
-      <p><strong>Backward:</strong> Clase 3 — primitivos <code class="inline">events</code>/<code class="inline">final</code>. <strong>Forward:</strong> Clase 5 embeddings · Clase 6 RAG.</p>
-    </section>
-
-    <section id="checkpoint">
-      <h2>Checkpoint</h2>
-      <p>7 preguntas en <a href="/class-04-build-offline-chat/assessment/checkpoint.md">assessment/checkpoint.md</a>.</p>
-    </section>
-
-    <section id="takeaway">
-      <h2>Takeaway</h2>
-      <div class="block"><div class="block-body" style="font-size:20px;">
-        Un chat confiable es una máquina de estados alrededor de inferencia, no un loop alrededor de una función prompt.
-      </div></div>
+    <section id="resumen">
+      <h2>Resumen</h2>
+      <ul>
+        <li>Un chat confiable es una máquina de estados alrededor de inferencia, no un loop alrededor de una función prompt.</li>
+        <li>Tres ciclos independientes: modelo, request y conversación.</li>
+        <li>El historial multi-turno es estado de aplicación; pásalo en cada <code class="inline">completion()</code>.</li>
+        <li>Streaming actualiza buffer provisional; commit ocurre tras <code class="inline">final</code> según política.</li>
+        <li>Cancelación usa <code class="inline">requestId</code>; no commitees output parcial por defecto.</li>
+        <li>Persistencia local es responsabilidad de la app; modelo y transcript son activos separados.</li>
+        <li>Métricas por turno dependen del hardware; mídelas en tu equipo.</li>
+      </ul>
+      <p><strong>Siguiente clase:</strong> embeddings como representación de significado externo (Clase 5). RAG añade conocimiento privado a esta arquitectura (Clase 6).</p>
     </section>
 
     <section id="fuentes">
       <h2>Fuentes</h2>
-      <p>QVAC Text Generation, API Summary, release notes — ver <a href="/class-04-build-offline-chat/lesson.md#fuentes-utilizadas">lesson.md</a>.</p>
+      <ul>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">QVAC — Text generation</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/api/">QVAC — API Summary v0.18.x</a></li>
+        <li><a href="https://docs.qvac.tether.io/about/how-it-works/">QVAC — How it works</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/release-notes/">QVAC — Release notes</a></li>
+        <li><a href="https://www.npmjs.com/package/@qvac/sdk">npm @qvac/sdk 0.18.1</a></li>
+      </ul>
     </section>
-
-    <div class="cta-row" style="margin-top:3rem;">
-      <a class="btn btn--primary" href="/markdown/class-04-build-offline-chat/lesson.md">Leer lección canónica completa →</a>
-      <a class="btn btn--ghost" href="/class/04">Volver a la Clase 4</a>
-    </div>
   </article>
 
   <aside class="lesson-rail" aria-label="Contexto de la lección">
     <div class="rail-card">
       <span class="rail-label">Estás en</span>
-      <p class="rail-current" data-toc-current>Pregunta esencial</p>
-    </div>
-    <div class="rail-card">
-      <span class="rail-label">Progreso</span>
-      <div class="rail-progress-row">
-        <div class="ring" data-ring-rail="class-04" style="--pct:0;"><i>0%</i></div>
-        <p class="rail-progress-text"><a href="/class/04#dod">Definition of Done</a></p>
-      </div>
+      <p class="rail-current" data-toc-current>Introducción</p>
     </div>
     <div class="rail-card">
       <span class="rail-label">Artefactos</span>
@@ -193,7 +516,6 @@
         <li><a href="/class/04">Clase</a></li>
         <li><a href="/class-04-build-offline-chat/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
         <li><a href="/class-04-build-offline-chat/lab/README.md">Lab</a></li>
-        <li><a href="/class-04-build-offline-chat/challenge/challenge.md">Challenge</a></li>
       </ul>
     </div>
   </aside>
@@ -202,8 +524,8 @@
 
 <footer class="site-foot">
   <div class="inner">
-    <span>Clase 4 · Build the Offline Chat · The Local-First AI Systems Masterclass</span>
-    <span><a href="/class/04">← Volver a la página de la Clase 4</a></span>
+    <span>Clase 4 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-04-build-offline-chat/">← Volver a la Clase 4</a></span>
   </div>
 </footer>
 

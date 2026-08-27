@@ -477,7 +477,7 @@ historial + request
 <!-- SLIDE 20 · BREAK IT -->
 <section class="slide">
   <div class="frame">
-    <div class="activity-word reveal d1" style="font-size:100px;"># Break It</div>
+    <div class="activity-word reveal d1" style="font-size:100px;"># Diagnóstico</div>
     <p class="activity-sub reveal d2">Starter defectuoso: persiste output <b>durante</b> el stream.</p>
     <table class="booktabs reveal d3">
       <thead><tr><th>Paso</th><th>Qué observar</th></tr></thead>
@@ -537,6 +537,18 @@ historial + request
 <script>
 class SlidePresentation {
     constructor() {
+        const extras = [
+            ['Observabilidad', 'Un chat confiable deja rastro por turno: requestId, TTFT, tok/s y stopReason.'],
+            ['Prueba de reinicio', 'Cerrar, reiniciar y completar sin red prueba que el estado durable vive en la aplicación.'],
+            ['Defensa', 'La frontera de commit decide qué texto entra al historial y qué salida provisional desaparece.'],
+        ];
+        const deck = document.getElementById('deckStage');
+        extras.forEach(([label, text]) => {
+            const slide = document.createElement('section');
+            slide.className = 'slide';
+            slide.innerHTML = '<div class="frame"><h2 class="frametitle">' + label + '</h2><div class="body"><div class="block example"><div class="block-title">Cierre de la clase</div><div class="block-body">' + text + '</div></div></div></div>';
+            deck.appendChild(slide);
+        });
         this.slides = Array.from(document.querySelectorAll('.slide'));
         this.currentSlide = 0;
         this.stage = document.getElementById('deckStage');
