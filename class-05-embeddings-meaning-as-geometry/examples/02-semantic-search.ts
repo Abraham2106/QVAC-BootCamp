@@ -1,4 +1,4 @@
-import { embed, GTE_LARGE_FP16, loadModel, unloadModel } from '@qvac/sdk'
+import { close, embed, GTE_LARGE_FP16, loadModel, unloadModel } from '@qvac/sdk'
 
 const corpus = [
   'Electric cars store energy in batteries.',
@@ -45,4 +45,5 @@ try {
   console.log(JSON.stringify({ query, corpusMs, queryMs, rankMs, topK: ranked.slice(0, 3) }, null, 2))
 } finally {
   if (modelId) await unloadModel({ modelId })
+  await close()
 }
