@@ -1,4 +1,5 @@
 import {
+  close,
   GTE_LARGE_FP16,
   loadModel,
   ragCloseWorkspace,
@@ -39,4 +40,5 @@ try {
 } finally {
   await ragCloseWorkspace({ workspace, deleteOnClose: true }).catch(() => {})
   if (modelId) await unloadModel({ modelId })
+  await close()
 }
