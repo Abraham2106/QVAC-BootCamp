@@ -231,11 +231,12 @@
     const links = Array.from(toc.querySelectorAll('a[href^="#"]'));
     const currentEl = document.querySelector('[data-toc-current]');
     const targets = links
-      .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+      .map(a => {
+        const id = a.getAttribute('href').slice(1);
+        return document.getElementById(id);
+      })
       .filter(Boolean);
-    if (!targets.length || !('IntersectionObserver' in window)) return;
-
-    const visible = new Set();
+    if (!targets.length) return;
 
     function activate(id) {
       links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
@@ -243,16 +244,42 @@
       if (activeLink && currentEl) currentEl.textContent = activeLink.textContent;
     }
 
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => e.isIntersecting ? visible.add(e.target.id) : visible.delete(e.target.id));
-      const first = targets.find(t => visible.has(t.id));
-      if (first) activate(first.id);
-    }, { rootMargin: '-12% 0px -65% 0px' });
-    targets.forEach(t => io.observe(t));
+    function scrollOffset() {
+      const head = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--head-h'), 10);
+      return (Number.isFinite(head) ? head : 72) + 20;
+    }
+
+    /** Pick the deepest heading/section whose top has passed the offset (standard scrollspy). */
+    function pickActive() {
+      const offset = scrollOffset();
+      let active = null;
+      for (const t of targets) {
+        if (t.getBoundingClientRect().top <= offset) active = t;
+      }
+      if (!active) active = targets[0];
+      const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8;
+      if (nearBottom) active = targets[targets.length - 1];
+      activate(active.id);
+    }
+
+    let ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        pickActive();
+        ticking = false;
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
 
     if (location.hash) {
       const id = location.hash.slice(1);
       if (document.getElementById(id)) activate(id);
+    } else {
+      pickActive();
     }
   }
 
