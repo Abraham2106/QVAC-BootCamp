@@ -1,4 +1,4 @@
-import { embed, GTE_LARGE_FP16, loadModel, unloadModel } from '@qvac/sdk'
+import { close, embed, GTE_LARGE_FP16, loadModel, unloadModel } from '@qvac/sdk'
 
 let modelId: string | undefined
 
@@ -25,4 +25,5 @@ try {
   console.log('stats:', result.stats ?? 'not reported')
 } finally {
   if (modelId) await unloadModel({ modelId })
+  await close()
 }
