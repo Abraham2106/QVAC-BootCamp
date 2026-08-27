@@ -26,7 +26,7 @@ export const MODULES = [
   {
     id: 'm2', no: 'MÓDULO 2', name: 'Private Knowledge — Own the knowledge', classes: [
       { no: '05', slug: 'class-05', title: 'Embeddings: Meaning as Geometry', desc: 'Cómo encontrar significado relacionado sin coincidencia literal de palabras.', href: '/class/05', available: true, badges: FULL_BADGES },
-      { no: '06', slug: 'class-06', title: 'Local RAG and Private Knowledge', desc: 'Responder desde conocimiento fuera de los pesos: chunk → embed → store → retrieve → cite.', available: false },
+      { no: '06', slug: 'class-06', title: 'Local RAG and Private Knowledge', desc: 'Responder desde conocimiento fuera de los pesos: chunk → embed → store → retrieve → cite.', href: '/class/06', available: true, badges: FULL_BADGES },
     ],
   },
   {
@@ -104,21 +104,34 @@ export const CLASS04 = {
 }
 
 export const CLASS05 = {
-  id: 'class-05',
-  kicker: 'Clase 05 · Módulo 2 — Private Knowledge',
-  title: 'Embeddings: Meaning as Geometry',
-  eq: '¿Cómo puede una máquina encontrar significado relacionado sin buscar las mismas palabras?',
+  id: 'class-05', kicker: 'Clase 05 · Módulo 2 — Private Knowledge', title: 'Embeddings: Meaning as Geometry', eq: '¿Cómo puede una máquina encontrar significado relacionado sin buscar las mismas palabras?',
   outcomes: [
     { tag: 'Outcome 1–2', title: 'Representación + límites', body: 'Texto → vector, embeddings ≠ generación y dimensiones observadas en runtime, no inventadas.' },
     { tag: 'Outcome 3–5', title: 'Similarity + ranking', body: 'Query/document embeddings, cosine similarity en aplicación y Top-K visible con scores.' },
     { tag: 'Outcome 6–8', title: 'Measure + diagnose', body: 'Latencia por etapa, query ambigua, corpus insuficiente y explicación basada en evidencia.' },
   ],
   dodItems: [
-    { id: 'single', label: 'Generé single + batch embeddings y observé dimensions en runtime' },
-    { id: 'predict', label: 'Escribí un ranking esperado antes de ejecutar semantic search' },
-    { id: 'topk', label: 'Semantic Search v1 muestra Top-K + scores + texto' },
-    { id: 'metrics', label: 'Separé corpus embedding, query embedding y ranking latency' },
-    { id: 'breakit', label: 'Diagnostiqué una query ambigua sin culpar al modelo por intuición' },
-    { id: 'report', label: 'Entregué Semantic Search Report con límites de la conclusión' },
+    { id: 'single', label: 'Generé single + batch embeddings y observé dimensions en runtime' }, { id: 'predict', label: 'Escribí un ranking esperado antes de ejecutar semantic search' }, { id: 'topk', label: 'Semantic Search v1 muestra Top-K + scores + texto' }, { id: 'metrics', label: 'Separé corpus embedding, query embedding y ranking latency' }, { id: 'breakit', label: 'Diagnostiqué una query ambigua sin culpar al modelo por intuición' }, { id: 'report', label: 'Entregué Semantic Search Report con límites de la conclusión' },
+  ],
+}
+
+export const CLASS06 = {
+  id: 'class-06',
+  kicker: 'Clase 06 · Módulo 2 — Private Knowledge',
+  title: 'Local RAG and Private Knowledge',
+  eq: '¿Cómo puede un modelo responder desde conocimiento que no vive en sus pesos?',
+  outcomes: [
+    { tag: 'Outcome 1–3', title: 'External memory + pipeline', body: 'Parametric vs external knowledge; document → chunk → embed → workspace → retrieval.' },
+    { tag: 'Outcome 4–6', title: 'Grounding + provenance', body: 'Top-K visible antes del LLM, evidence context y fuentes reales mantenidas por el pipeline.' },
+    { tag: 'Outcome 7–9', title: 'Unknown + diagnose + measure', body: 'Evidencia insuficiente, retrieval vs generation failure y latencias por etapa.' },
+  ],
+  dodItems: [
+    { id: 'ingest', label: 'Ingesté un corpus local en workspace y documenté lifecycle' },
+    { id: 'predict', label: 'Predije Top-1 antes de ejecutar una query answerable' },
+    { id: 'retrieval', label: 'Mostré Top-K + score + contenido antes de generation' },
+    { id: 'grounding', label: 'Generé una respuesta usando un bloque de evidencia explícito' },
+    { id: 'unknown', label: 'Unknown Knowledge Test no inventa provenance' },
+    { id: 'breakit', label: 'Provocé un retrieval failure y lo distinguí de generation failure' },
+    { id: 'metrics', label: 'Separé retrieval latency de generation latency' },
   ],
 }
