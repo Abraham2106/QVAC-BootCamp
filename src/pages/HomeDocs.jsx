@@ -100,7 +100,7 @@ export default function HomeDocs() {
       <section className="section container" aria-labelledby="now-title">
         <Reveal>
           <h2 className="stitle" id="now-title">
-            Disponible ahora
+            10 clases disponibles ahora
           </h2>
         </Reveal>
         <div className="grid grid--3">
@@ -142,19 +142,66 @@ export default function HomeDocs() {
           />
           <ClassPreviewCard
             delay={240}
+            to="/class/05"
+            tag="Clase 05 · Disponible"
+            title="Embeddings: Meaning as Geometry"
+            body="Construye búsqueda semántica local: vectores, similitud, ranking Top-K y diagnóstico con evidencia."
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/05'}
+          />
+          <ClassPreviewCard
+            delay={300}
+            to="/class/06"
+            tag="Clase 06 · Disponible"
+            title="Local RAG and Private Knowledge"
+            body="Ingesta conocimiento privado, inspecciona retrieval y genera respuestas con evidencia y fuentes."
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/06'}
+          />
+          <ClassPreviewCard
+            delay={360}
+            to="/class/07"
+            tag="Clase 07 · Disponible"
+            title="Speech Systems: ASR and TTS"
+            body="Pasa del texto a voz local: PCM, ASR, TTS, relay y métricas de primer texto y primer audio."
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/07'}
+          />
+          <ClassPreviewCard
+            delay={420}
+            to="/class/08"
+            tag="Clase 08 · Disponible"
+            title="Translation and the Voice Relay"
+            body="Combina ASR, traducción y TTS en un intérprete local con contratos de datos claros."
+            artifactTags={['lesson', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/08'}
+          />
+          <ClassPreviewCard
+            delay={480}
+            to="/class/09"
+            tag="Clase 09 · Disponible"
+            title="The OpenAI-Compatible Escape Hatch"
+            body="Redirige una aplicación existente a inferencia local mediante una API compatible con OpenAI."
+            artifactTags={['lesson', 'slides', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/09'}
+          />
+          <ClassPreviewCard
+            delay={540}
+            to="/class/10"
+            tag="Clase 10 · Disponible"
+            title="Designing Local-First Architectures"
+            body="Diseña fronteras de datos, confianza y fallbacks que puedas defender con un ADR."
+            artifactTags={['lesson', 'lab', 'examples', 'challenge', 'checkpoint']}
+            isContinueTarget={continueHref === '/class/10'}
+          />
+          <ClassPreviewCard
+            delay={600}
             to="/curriculum"
-            tag="Ruta completa"
-            title="Las 12 clases + capstone"
-            body="Explora la progresión completa: chat offline, RAG privado, voz, servidor compatible con OpenAI, inferencia delegada P2P y el intelligence mesh final."
+            tag="Próximamente"
+            title="Clases 11–12 + capstone"
+            body="Continúa hacia inferencia delegada P2P, la intelligence mesh y el proyecto final defendible."
             className="is-soon"
-            badges={[
-              <Badge key="soon1" soon>
-                clases 05–12 en producción
-              </Badge>,
-              <Badge key="soon2" soon>
-                capstone
-              </Badge>,
-            ]}
+            badges={[<Badge key="soon" soon>en producción</Badge>]}
           />
         </div>
       </section>
