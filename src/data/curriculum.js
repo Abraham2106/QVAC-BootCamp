@@ -87,7 +87,9 @@ export const MODULES = [
         slug: 'class-06',
         title: 'Local RAG and Private Knowledge',
         desc: 'Responder desde conocimiento fuera de los pesos: chunk → embed → store → retrieve → cite.',
-        available: false,
+        href: '/class/06',
+        available: true,
+        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
     ],
   },
@@ -258,5 +260,26 @@ export const CLASS05 = {
     { id: 'metrics', label: 'Separé corpus embedding, query embedding y ranking latency' },
     { id: 'breakit', label: 'Diagnostiqué una query ambigua sin culpar al modelo por intuición' },
     { id: 'report', label: 'Entregué Semantic Search Report con límites de la conclusión' },
+  ],
+}
+
+export const CLASS06 = {
+  id: 'class-06',
+  kicker: 'Clase 06 · Módulo 2 — Private Knowledge',
+  title: 'Local RAG and Private Knowledge',
+  eq: '¿Cómo puede un modelo responder desde conocimiento que no vive en sus pesos?',
+  outcomes: [
+    { tag: 'Outcome 1–3', title: 'External memory + pipeline', body: 'Parametric vs external knowledge; document → chunk → embed → workspace → retrieval.' },
+    { tag: 'Outcome 4–6', title: 'Grounding + provenance', body: 'Top-K visible antes del LLM, evidence context y fuentes reales mantenidas por el pipeline.' },
+    { tag: 'Outcome 7–9', title: 'Unknown + diagnose + measure', body: 'Evidencia insuficiente, retrieval vs generation failure y latencias por etapa.' },
+  ],
+  dodItems: [
+    { id: 'ingest', label: 'Ingesté un corpus local en workspace y documenté lifecycle' },
+    { id: 'predict', label: 'Predije Top-1 antes de ejecutar una query answerable' },
+    { id: 'retrieval', label: 'Mostré Top-K + score + contenido antes de generation' },
+    { id: 'grounding', label: 'Generé una respuesta usando un bloque de evidencia explícito' },
+    { id: 'unknown', label: 'Unknown Knowledge Test no inventa provenance' },
+    { id: 'breakit', label: 'Provocé un retrieval failure y lo distinguí de generation failure' },
+    { id: 'metrics', label: 'Separé retrieval latency de generation latency' },
   ],
 }

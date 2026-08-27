@@ -22,7 +22,7 @@ QVAC-BootCamp/
 |------|------------|-----------|
 | `/` | `Home` | Portada del bootcamp |
 | `/curriculum` | `Curriculum` | Las 12 clases + capstone por módulo |
-| `/class/01` … `/class/05` | `Class01` … `Class05` | Página de clase: slides embebidos, artefactos, progreso |
+| `/class/01` … `/class/06` | `Class01` … `Class06` | Página de clase: slides embebidos, artefactos, progreso |
 | `/markdown/*` | `MarkdownPage` | Visor SPA de archivos `.md` estáticos |
 | `*` | `NotFound` | 404 |
 
@@ -35,10 +35,11 @@ Definidas en `vite.config.js`. En **dev** se sirven por middleware; en **build**
 - `class-03-local-inference-fundamentals`
 - `class-04-build-offline-chat`
 - `class-05-embeddings-meaning-as-geometry`
+- `class-06-local-rag-private-knowledge`
 - `lessons`
 - `assets`
 
-Ejemplo: `/class-05-embeddings-meaning-as-geometry/lesson.md` → archivo estático; el visor SPA lo abre en `/markdown/class-05-embeddings-meaning-as-geometry/lesson.md`.
+Ejemplo: `/class-06-local-rag-private-knowledge/lesson.md` → archivo estático; el visor SPA lo abre en `/markdown/class-06-local-rag-private-knowledge/lesson.md`.
 
 ## Layout y modos de UI
 
@@ -63,4 +64,4 @@ Sin backend. El progreso se persiste en `localStorage` vía `src/hooks/useProgre
 
 ## Currículo
 
-La fuente de verdad del índice de clases en el sitio es `src/data/curriculum.js`. Los módulos 1–5 y el capstone están definidos ahí; las clases 06–12 aparecen como *coming soon* hasta que exista su paquete.
+La fuente de verdad del índice de clases en el sitio es `src/data/curriculum.js`. Los módulos 1–5 y el capstone están definidos ahí; las clases 07–12 aparecen como *coming soon* hasta que exista su paquete.

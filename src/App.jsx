@@ -7,6 +7,7 @@ import Class02 from './pages/Class02'
 import Class03 from './pages/Class03'
 import Class04 from './pages/Class04'
 import Class05 from './pages/Class05'
+import Class06 from './pages/Class06'
 import MarkdownPage from './pages/MarkdownPage'
 import NotFound from './pages/NotFound'
 
@@ -21,6 +22,7 @@ function AppRoutes() {
         <Route path="class/03" element={<Class03 />} />
         <Route path="class/04" element={<Class04 />} />
         <Route path="class/05" element={<Class05 />} />
+        <Route path="class/06" element={<Class06 />} />
         <Route path="markdown/*" element={<MarkdownPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

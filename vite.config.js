@@ -14,6 +14,7 @@ const STATIC_DIRS = [
   'class-03-local-inference-fundamentals',
   'class-04-build-offline-chat',
   'class-05-embeddings-meaning-as-geometry',
+  'class-06-local-rag-private-knowledge',
   'lessons',
   'assets',
 ]
