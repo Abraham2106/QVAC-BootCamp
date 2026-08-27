@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección · Clase 6 — Local RAG and Private Knowledge</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-06">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<header class="site-head"><div class="bar"><a class="brand" href="/">QVAC <b>Masterclass</b></a><nav class="site-nav" aria-label="Principal"><a href="/">Inicio</a><a href="/curriculum">Currículo</a><a href="/class/06">Clase 6</a></nav></div></header>
+<main id="main"><div class="lesson-layout">
+<aside class="lesson-sidebar" aria-label="Navegación de la lección"><div class="lesson-sidebar-title"><span class="lesson-sidebar__kicker">Clase 06 · Módulo 2</span><h1 class="lesson-sidebar__name">Local RAG and Private Knowledge</h1></div><nav class="lesson-toc" aria-label="Contenido"><span class="toc-head">Contenido</span><a href="#esencial">Pregunta esencial</a><a href="#memory">Dos memorias</a><a href="#pipeline">Pipeline</a><a href="#chunk">Chunking</a><a href="#qvac">Managed RAG</a><a href="#boundary">Retrieval vs generation</a><a href="#ground">Grounding</a><a href="#unknown">Unknown knowledge</a><a href="#break">Break It</a><a href="#measure">Measure It</a><a href="#takeaway">Takeaway</a><a href="#fuentes">Fuentes</a></nav></aside>
+<article class="lesson">
+<div class="block alert" style="margin-bottom:2rem;"><div class="block-title">Contenido extendido en lesson.md</div><div class="block-body">Esta página HTML resume la lección. La <strong>versión canónica completa</strong> está en <a href="/class-06-local-rag-private-knowledge/lesson.md"><code class="inline">lesson.md</code></a> y en el <a href="/markdown/class-06-local-rag-private-knowledge/lesson.md">visor Markdown</a>. Las <a href="/class-06-local-rag-private-knowledge/slides.html">slides</a> son complementarias.</div></div>
+<p class="lesson-meta">Baseline técnico: QVAC SDK v0.18.x / v0.18.1.</p>
+<section id="esencial"><h2>Pregunta esencial</h2><div class="block"><div class="block-body" style="font-size:20px;">¿Cómo puede un modelo responder desde conocimiento que no vive en sus pesos?</div></div></section>
+<section id="memory"><h2>Parametric vs external knowledge</h2><p>Los pesos contienen conocimiento paramétrico. RAG conserva documentos/vectores fuera de los pesos y recupera evidencia en query-time.</p></section>
+<section id="pipeline"><h2>Pipeline</h2><pre><code>document → chunk → embed → store
+query → embed → Top-K
+               ↓
+         grounded context
+               ↓
+          completion</code></pre></section>
+<section id="chunk"><h2>Chunking</h2><p>Chunks muy pequeños pueden perder contexto; chunks muy grandes pueden introducir ruido. El tamaño correcto es una decisión que debe evaluarse sobre el corpus.</p></section>
+<section id="qvac"><h2>Inside QVAC</h2><p>QVAC v0.18.x documenta <code class="inline">ragChunk()</code>, <code class="inline">ragIngest()</code>, <code class="inline">ragSaveEmbeddings()</code>, <code class="inline">ragSearch()</code> y lifecycle de workspaces.</p></section>
+<section id="boundary"><h2>Retrieval vs generation</h2><p>Inspecciona Top-K antes del LLM. Evidencia ausente implica empezar por retrieval; evidencia correcta con respuesta incompatible apunta a grounding/generation.</p></section>
+<section id="ground"><h2>Grounding + provenance</h2><p>La aplicación construye un bloque EVIDENCE y una política de evidencia insuficiente. Provenance debe venir de IDs/metadata reales, no de URLs inventadas por el modelo.</p></section>
+<section id="unknown"><h2>Unknown Knowledge Test</h2><p>Pregunta algo ausente del corpus y verifica que el sistema no fabrique una fuente para parecer útil.</p></section>
+<section id="break"><h2>Break It</h2><p>Elimina el documento relevante, reduce Top-K o degrada chunking. Predice qué etapa debería verse afectada y luego inspecciona evidence.</p></section>
+<section id="measure"><h2>Measure It</h2><p>Separa ingest, retrieval, TTFT y generation total. La latencia agregada no permite diagnosticar.</p></section>
+<section id="takeaway"><h2>Takeaway</h2><div class="block example"><div class="block-body"><strong>RAG es una cadena observable. Retrieval y generation pueden fallar de forma independiente.</strong></div></div></section>
+<section id="fuentes"><h2>Fuentes</h2><ul><li><a href="https://docs.qvac.tether.io/ai-capabilities/rag/">QVAC RAG</a></li><li><a href="https://docs.qvac.tether.io/ai-capabilities/text-embeddings/">Text embeddings</a></li><li><a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">Text generation</a></li><li><a href="https://arxiv.org/abs/2005.11401">RAG paper</a></li></ul></section>
+</article></div></main>
+</body></html>
