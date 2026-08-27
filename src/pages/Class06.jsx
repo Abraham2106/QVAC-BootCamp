@@ -73,6 +73,7 @@ export default function Class06() {
                 <li><MarkdownLink staticPath={`${BASE}/lab/README.md`}>lab/README.md</MarkdownLink> — debugger por etapas</li>
                 <li><a href={`${BASE}/examples/01-managed-retrieval.ts`}>01-managed-retrieval.ts</a> — workspace + Top-K</li>
                 <li><a href={`${BASE}/examples/02-grounded-rag.ts`}>02-grounded-rag.ts</a> — evidence → completion</li>
+                <li><a href={`${BASE}/examples/03-chunking.ts`}>03-chunking.ts</a> — compara unidades recuperables</li>
               </ul>
             </div>
           </div>
