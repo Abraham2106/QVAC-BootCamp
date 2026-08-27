@@ -5,7 +5,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const __dirname = path.dirname(fileURLToPath(new URL('./vite.config.js', import.meta.url)))
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const srcDir = fileURLToPath(new URL('./src', import.meta.url))
 
 const STATIC_DIRS = [
@@ -49,6 +49,7 @@ const MIME = {
   '.ico': 'image/x-icon',
 }
 
+/** Serve bootcamp static folders at dev time and copy them into dist on build. */
 function bootcampStaticAssets() {
   return {
     name: 'bootcamp-static-assets',
@@ -88,6 +89,7 @@ function bootcampStaticAssets() {
   }
 }
 
+/** Prevent index.html FOUC: inline boot script must not apply ninja in prod builds. */
 function disableNinjaInProdHtml() {
   return {
     name: 'disable-ninja-in-prod-html',
