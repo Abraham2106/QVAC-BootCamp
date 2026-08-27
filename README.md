@@ -29,7 +29,7 @@ Ver **[docs/README.md](./docs/README.md)** — índice completo:
 |---|---|
 | `/` | Portada del bootcamp |
 | `/curriculum` | Las 12 clases + capstone por módulo |
-| `/class/01` … `/class/06` | Página de clase (slides embebidos, artefactos, progreso) |
+| `/class/01` … `/class/10` | Página de clase publicada |
 | `/markdown/class-NN-…/lesson.md` | Visor SPA de markdown estático |
 
 El progreso del estudiante se guarda en `localStorage` (sin backend).
@@ -44,5 +44,9 @@ El progreso del estudiante se guarda en `localStorage` (sin backend).
 | 04 | `class-04-build-offline-chat/` |
 | 05 | `class-05-embeddings-meaning-as-geometry/` |
 | 06 | `class-06-local-rag-private-knowledge/` |
+| 07 | `class-07-speech-systems/` |
+| 08 | `class-08-translation-voice-relay/` |
+| 09 | `class-09-openai-compatible-escape-hatch/` |
+| 10 | `class-10-local-first-architectures/` |
 
 Cada paquete incluye `README`, `lesson.md`, `slides.html`, `lab/`, `examples/`, `challenge/`, `solution/`, `assessment/`, `instructor/` y `notebooklm/`.

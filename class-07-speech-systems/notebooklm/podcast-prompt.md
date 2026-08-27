@@ -1,0 +1,1 @@
+Usa lesson.md como fuente principal. Explica en español, para una persona técnica, por qué PCM, ventanas ASR, TTS y backpressure son contratos distintos. Incluye una predicción y un fallo diagnosticable.

@@ -15,6 +15,10 @@ const STATIC_DIRS = [
   'class-04-build-offline-chat',
   'class-05-embeddings-meaning-as-geometry',
   'class-06-local-rag-private-knowledge',
+  'class-07-speech-systems',
+  'class-08-translation-voice-relay',
+  'class-09-openai-compatible-escape-hatch',
+  'class-10-local-first-architectures',
   'lessons',
   'assets',
 ]

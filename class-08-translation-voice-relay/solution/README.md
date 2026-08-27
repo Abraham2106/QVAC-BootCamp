@@ -1,0 +1,3 @@
+# Guía de solución
+
+Separa captura, ASR, traducción y síntesis mediante interfaces pequeñas. El gate permite que parciales actualicen UI, pero solo finales entren a la cola durable. Usa FIFO acotada; cada trabajo contiene segmentId y texto. Antes de reproducir verifica relay abierto y segmento no cancelado. Emite stage-error y degrada a texto. Compara Bergamot y qvac-fabric-llm.cpp con cobertura, tamaño, latencia, calidad y comportamiento offline.
