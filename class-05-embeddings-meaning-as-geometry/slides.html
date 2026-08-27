@@ -1,18 +1,34 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clase 05 · Embeddings</title><style>body{margin:0;font-family:Inter,system-ui;background:#0d0e0d;color:#f4f3ea}.deck{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory}.slide{min-height:100vh;box-sizing:border-box;padding:8vw;display:flex;flex-direction:column;justify-content:center;scroll-snap-align:start;border-bottom:1px solid #292b27;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px}h1{font-size:clamp(48px,8vw,104px);line-height:.95;letter-spacing:-.06em;margin:.2em 0}h2{font-size:clamp(36px,5vw,70px);letter-spacing:-.05em;margin:.2em 0}.k{font:700 12px ui-monospace;color:#a9aa9f;letter-spacing:.14em;text-transform:uppercase}.lede{font-size:clamp(20px,2.4vw,32px);max-width:950px;color:#c9c8c0}.flow{font:700 clamp(20px,3vw,42px) ui-monospace;line-height:1.7;white-space:pre-wrap}.accent{color:#9ee5b5}.warn{color:#f3bc72}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}.card{border:1px solid #363832;border-radius:16px;padding:24px;background:#141512}code{background:#1d1f1b;padding:.15em .35em;border-radius:6px}@media(max-width:700px){.grid{grid-template-columns:1fr}.slide{padding:32px 22px}}</style></head><body><main class="deck"><section class="slide"><div class="k">Clase 05 · Módulo 2</div><h1>Embeddings:<br>Meaning as Geometry</h1><p class="lede">¿Cómo encuentra una máquina significado relacionado sin buscar las mismas palabras?</p></section><section class="slide"><div class="k">Hook</div><h2>“vehículo eléctrico” ≠ “auto a batería”</h2><p class="lede">Keyword search ve palabras. Semantic search intenta comparar representaciones aprendidas del significado.</p></section><section class="slide"><div class="k">Mental model</div><div class="flow">texto
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clase 05 · Embeddings</title><link rel="stylesheet" href="../assets/teaching-slides.css"><link rel="stylesheet" href="../assets/slides.css"></head><body><main class="deck">
+<section class="slide dark"><div class="eyebrow">QVAC · Módulo 2 · Clase 05</div><h1>Embeddings:<br>meaning as geometry</h1><p class="lede">Convertir significado en una representación que podamos comparar.</p></section>
+<section class="slide"><div class="eyebrow">Pregunta esencial</div><h2>¿Cómo encuentras “auto a batería” cuando alguien busca “vehículo eléctrico”?</h2><p class="lede">La coincidencia literal mira palabras; la búsqueda semántica compara representaciones.</p></section>
+<section class="slide"><div class="eyebrow">Modelo mental</div><div class="flow">texto
   ↓
-<span class="accent">embedding model</span>
+modelo de embeddings
   ↓
-[x₁, x₂, …, xₙ]</div></section><section class="slide"><div class="k">No confundas capacidades</div><div class="grid"><div class="card"><h2>Embedding</h2><p class="lede">texto → vector</p></div><div class="card"><h2>LLM</h2><p class="lede">history → texto generado</p></div></div></section><section class="slide"><div class="k">Geometry</div><h2>Nos importa la relación entre vectores.</h2><p class="lede">No intentes asignar una palabra humana a cada dimensión.</p></section><section class="slide"><div class="k">Inside QVAC</div><div class="flow">loadModel(<span class="accent">embeddings</span>)
-   ↓
+[x₁, x₂, …, xₙ]</div><p class="lede">La posición relativa importa; una dimensión aislada no es una etiqueta humana.</p></section>
+<section class="slide"><div class="eyebrow">No confundas capacidades</div><div class="grid"><div class="card"><h3>Embedding</h3><p>texto → vector. Representa una entrada.</p></div><div class="card"><h3>LLM</h3><p>historial → texto generado. Produce una respuesta.</p></div></div></section>
+<section class="slide"><div class="eyebrow">Inside QVAC</div><div class="flow">loadModel({ modelType: "embeddings" })
+        ↓
 embed(text | text[])
-   ↓
-number[] | number[][]
-   ↓
-unloadModel()</div></section><section class="slide"><div class="k">Application logic</div><h2>Cosine similarity</h2><p class="lede"><code>dot(a,b) / (||a||·||b||)</code></p><p class="lede">En el lab la calculamos nosotros: queremos ver la comparación, no esconderla.</p></section><section class="slide"><div class="k">Predict</div><h2>Ordena antes de ejecutar.</h2><p class="lede">Query: “un coche que funciona con electricidad”</p></section><section class="slide"><div class="k">Semantic search</div><div class="flow">documents ─embed→ vectors
-query     ─embed→ vector
-                 ↓
-             similarity
-                 ↓
-               rank
-                 ↓
-               Top-K</div></section><section class="slide"><div class="k">Measure It</div><h2>¿Dónde está la latencia?</h2><p class="lede">load · corpus embedding · query embedding · application ranking</p></section><section class="slide"><div class="k">Break It</div><h2 class="warn">“apple performance”</h2><p class="lede">¿Fruta o computadores? Una query ambigua puede producir un ranking coherente… para la intención equivocada.</p></section><section class="slide"><div class="k">Diagnosis</div><h2>No culpes al vector primero.</h2><p class="lede">Query · corpus · idioma/dominio · modelo · métrica · Top-K.</p></section><section class="slide"><div class="k">Boundary</div><h2>Esto todavía no es RAG.</h2><p class="lede">No hay workspace, chunking gestionado, contexto grounded ni generación. Eso viene en Clase 06.</p></section><section class="slide"><div class="k">Your turn</div><h2>Construye Semantic Search v1.</h2><p class="lede">15–30 textos · query · Top-K visible · scores · latencia · un caso ambiguo.</p></section><section class="slide"><div class="k">Takeaway</div><h2>Meaning → representation → comparison.</h2><p class="lede">Un score es evidencia de cercanía según un modelo, no una garantía de verdad.</p></section><section class="slide"><div class="k">Sources</div><p class="lede">docs.qvac.tether.io/ai-capabilities/text-embeddings/ · docs.qvac.tether.io/reference/api/ · llama.cpp</p></section></main></body></html>
+        ↓
+vector / vectors
+        ↓
+unloadModel()</div><p class="lede">Documentos y query deben usar el mismo modelo y configuración.</p></section>
+<section class="slide"><div class="eyebrow">Predict → Run → Explain</div><h2>Query: “un coche que funciona con electricidad”</h2><ol class="check"><li>“Los vehículos eléctricos almacenan energía en baterías.”</li><li>“Un automóvil a batería se recarga conectándolo a la red.”</li><li>“Los motores de combustión queman gasolina.”</li><li>“Una receta de pan necesita harina y levadura.”</li></ol><p class="lede">Escribe tu ranking antes de medir.</p></section>
+<section class="slide"><div class="eyebrow">Búsqueda semántica</div><div class="flow">documentos ──embed──→ vectores
+query     ──embed──→ vector
+                         ↓
+                    similitud
+                         ↓
+                      ordenar
+                         ↓
+                        Top-K</div></section>
+<section class="slide"><div class="eyebrow">Matemática visible</div><h2>Similitud coseno</h2><p class="lede"><code>dot(a,b) / (||a|| · ||b||)</code></p><p class="lede">QVAC genera vectores; el laboratorio implementa el ranking para que puedas inspeccionarlo.</p></section>
+<section class="slide"><div class="eyebrow">Demo beats</div><ol class="check"><li>Carga el modelo y registra dimensiones.</li><li>Embebe el corpus en batch.</li><li>Embebe una query y muestra Top-K con score.</li><li>Explica por qué el resultado coincide o sorprende.</li></ol></section>
+<section class="slide"><div class="eyebrow">Measure it</div><h2>Separa el tiempo que realmente importa.</h2><div class="grid"><div class="card"><h3>Preparación</h3><p>carga del modelo · embedding del corpus</p></div><div class="card"><h3>Consulta</h3><p>embedding de query · ranking en aplicación</p></div></div></section>
+<section class="slide"><div class="eyebrow">Break it</div><h2 class="warn">“apple performance”</h2><p class="lede">Fruta o computadores: un ranking puede ser coherente y aun así responder a la intención equivocada.</p></section>
+<section class="slide"><div class="eyebrow">Diagnosis</div><h2>No culpes al vector primero.</h2><p class="lede">Revisa query, corpus, idioma/dominio, modelo, métrica y valor de Top-K.</p></section>
+<section class="slide"><div class="eyebrow">Frontera</div><h2>Esto todavía no es RAG.</h2><p class="lede">La persistencia, retrieval gestionado y generación grounded llegan en la Clase 06.</p></section>
+<section class="slide"><div class="eyebrow">Definition of done</div><ul class="check"><li>☐ 15–30 textos y una query reproducible</li><li>☐ Top-K visible con scores y texto</li><li>☐ Latencias separadas por etapa</li><li>☐ Un caso ambiguo diagnosticado</li></ul></section>
+<section class="slide dark"><div class="eyebrow">Takeaway</div><h2>Meaning → representation → comparison.</h2><p class="lede">Un score mide cercanía según un modelo; no es una garantía de verdad.</p><footer>Puente: vectores + persistencia + contexto grounded → Clase 06</footer></section>
+</main><script src="../assets/teaching-slides.js"></script><script src="../assets/theme.js"></script></body></html>
