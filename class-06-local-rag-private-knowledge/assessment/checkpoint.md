@@ -8,6 +8,7 @@
 6. ¿Por qué no existe un score threshold o Top-K universal para todos los corpora/modelos?
 7. Diseña un Unknown Knowledge Test que detecte provenance inventada.
 8. Si la latencia total sube, ¿qué etapas medirías por separado?
+9. Un documento cambia y su versión anterior sigue apareciendo. ¿Qué información de índice revisarías y cómo comprobarías la corrección?
 
 ## Respuestas del instructor
 
@@ -19,3 +20,4 @@
 6. La distribución de scores depende del modelo, corpus, query y configuración.
 7. Pregunta explícitamente por un dato ausente; verifica Top-K y que la respuesta no cree una fuente inexistente.
 8. Retrieval/query embedding/vector search, TTFT y generation total; ingest si está indebidamente en query-time.
+9. Revisaría snapshot, IDs de documento/chunk, versión de fuente, modelo y política de chunks. Actualizaría o eliminaría los chunks afectados y repetiría la misma query para verificar que ya no recupera evidencia obsoleta.

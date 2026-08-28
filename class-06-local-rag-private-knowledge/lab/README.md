@@ -73,7 +73,16 @@ Escribe Prediction antes de ejecutar. Después clasifica el fallo:
 - context construction;
 - generation/grounding.
 
-## Parte 9 — Measure It
+## Parte 9 — Versiona y revoca evidencia
+
+1. Registra un `snapshotId`, modelo de embeddings, chunk policy y los IDs de los documentos.
+2. Cambia un hecho en un documento, crea una nueva versión y vuelve a indexar solo la evidencia
+   afectada según tu estrategia.
+3. Pregunta por el hecho modificado y comprueba que no se muestra la versión anterior.
+4. Elimina un documento de prueba mediante el mecanismo correspondiente a tu store y vuelve a
+   ejecutar la query. Registra el resultado y no aceptes únicamente “no hubo error”.
+
+## Parte 10 — Measure It
 
 | Stage | Time / evidence |
 |---|---:|

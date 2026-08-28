@@ -516,6 +516,38 @@ model, dimensions, corpusSize, loadMs, corpusMs, queryMs, rankMs, topK
 
 ---
 
+## Profundización V2 — de similitud a retrieval defendible
+
+### La norma del vector no es un detalle invisible
+
+Cosine similarity divide el producto punto entre las normas de ambos vectores. Por eso no es
+correcto llamar “cosine” a un producto punto si no se ha establecido que los vectores tienen
+norma uno. En este curso se calcula la métrica explícitamente y se registra qué normalización
+usa el pipeline. Una dimensión mayor tampoco prueba que un modelo sea mejor: la calidad depende
+de la tarea, el dominio, el idioma, el corpus y la evaluación.
+
+### Similaridad no equivale a soporte
+
+Un hit puede ser semánticamente cercano y aun así no responder la pregunta. Es especialmente
+frecuente con negación, fechas, cantidades, excepciones y entidades parecidas. Antes de construir
+RAG, etiqueta qué chunk respalda cada consulta y evalúa si aparece en Top-K. El ranking debe ser
+visible; una respuesta generada no puede compensar evidencia ausente.
+
+### Mini protocolo de evaluación
+
+Construye un set con una paráfrasis, una consulta exacta y cinco hard negatives. Para cada query
+guarda el documento relevante, la versión del corpus, la posición del primer hit relevante y el
+Top-K completo. Reporta Precision@K, Recall@K y MRR como métricas distintas: una no sustituye a
+las otras. Si aparece un fallo real, conviértelo en regresión antes de cambiar modelo, métrica o
+chunking en la siguiente clase.
+
+### Puente a la Clase 06
+
+El resultado de esta clase no es una “base de conocimiento” todavía: es una función de ranking
+en memoria. En Clase 06, el modelo de embeddings, el corpus, la política de chunks y el índice
+deben formar una identidad verificable. Nunca se mezclan vectores de modelos distintos solo
+porque tienen la misma dimensión.
+
 ## Fuentes
 
 - [QVAC — Text embeddings](https://docs.qvac.tether.io/ai-capabilities/text-embeddings/)

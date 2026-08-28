@@ -613,6 +613,43 @@ workspace, ingestMs, retrievalMs, generationMs, topK, scores, answerable
 
 ---
 
+## Profundización V2 — RAG como sistema de evidencia
+
+### Contrato de evidencia
+
+La salida de retrieval debe conservar más que texto: `documentId`, `chunkId`, versión de fuente,
+modelo de embeddings, Top-K, score y snapshot del corpus. Una fuente recuperada no se convierte
+automáticamente en una cita que soporte la respuesta. La aplicación debe mostrar el pasaje y
+asociar cada afirmación material con evidencia que el usuario pueda inspeccionar.
+
+### Lifecycle y actualizaciones
+
+Un índice es la combinación de texto fuente, preprocessing, chunk policy, modelo y store. Cuando
+cambia un documento, identifica sus chunks previos, actualiza o elimina los IDs afectados y
+comprueba con una query que la evidencia obsoleta ya no se recupera. `ragCloseWorkspace()` y
+borrado son operaciones diferentes: cerrar libera recursos; la retención y eliminación deben
+seguir una política explícita. Consulta siempre la firma actual antes de automatizar lifecycle.
+
+### Tres gates antes de confiar en una respuesta
+
+1. **Ingestion gate:** el documento y sus chunks existen, tienen IDs estables y pertenecen al
+   snapshot esperado.
+2. **Retrieval gate:** la evidencia etiquetada aparece en Top-K y no hay conflicto de versión o
+   autorización.
+3. **Generation gate:** la respuesta se mantiene dentro de la evidencia; si falta soporte, se
+   abstiene o solicita una fuente.
+
+Esto separa fallo de datos, fallo de recuperación y fallo de generación. Un buen prompt ayuda,
+pero no prueba por sí mismo factualidad ni impide toda instrucción maliciosa dentro de documentos
+recuperados. Trátalos como datos no confiables y prueba explícitamente el comportamiento.
+
+### Evaluación de entrega
+
+Además de un caso exitoso, el proyecto debe mostrar: una pregunta fuera de corpus, un documento
+actualizado, un hard negative y un caso donde la respuesta generada no sigue evidencia aunque el
+chunk correcto sí fue recuperado. La corrección elegida debe atacar la etapa responsable, no
+añadir más contexto de forma ciega.
+
 ## Fuentes
 
 - [QVAC — RAG](https://docs.qvac.tether.io/ai-capabilities/rag/)

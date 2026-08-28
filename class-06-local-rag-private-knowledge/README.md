@@ -14,6 +14,8 @@
 - mostrar provenance visible al usuario;
 - distinguir retrieval failure de generation failure;
 - medir retrieval y generation por separado.
+- versionar corpus, chunk policy y modelo de embeddings como identidad del índice;
+- probar abstención, evidencia obsoleta y borrado verificable antes de publicar una respuesta.
 
 ## Prerrequisito
 
@@ -33,7 +35,7 @@ query → embed → Top-K retrieval
 
 ## Entregable
 
-**Private Notebook Assistant v1** + diagnóstico de un caso sin evidencia + un retrieval failure controlado.
+**Private Notebook Assistant v1** + manifiesto de índice + diagnóstico de un caso sin evidencia, uno obsoleto y un retrieval failure controlado.
 
 ## Fuentes
 

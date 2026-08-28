@@ -13,6 +13,8 @@
 - ordenar un pequeño corpus por similitud semántica;
 - medir latencia de embedding y retrieval;
 - diagnosticar una consulta ambigua o un ranking débil.
+- distinguir similitud alta de evidencia que realmente soporta una afirmación;
+- construir un conjunto de evaluación con hard negatives, fechas, negación y colisiones de entidad.
 
 ## Antes de clase
 
@@ -28,7 +30,7 @@ Luego:
 
 ## Entregable
 
-**Semantic Search Report** con corpus, query, Top-K, scores, latencia y una explicación de un caso ambiguo.
+**Semantic Search Report** con corpus versionado, query, Top-K, scores, latencia, una explicación de un caso ambiguo y cinco consultas de estrés.
 
 ## Definition of Done
 

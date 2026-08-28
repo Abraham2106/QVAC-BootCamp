@@ -55,7 +55,15 @@ Separa:
 
 Para un corpus pequeño, el ranking puede ser trivial; eso también es evidencia.
 
-## Parte 7 — Challenge independiente
+## Parte 7 — Stress set y evaluación
+
+Agrega cinco queries que no sean reformulaciones triviales: una negación, una fecha, una cantidad,
+una colisión de entidad y una pregunta fuera del corpus. Etiqueta el documento/chunk relevante
+antes de ver el ranking. Para K=1, 3 y 5 registra Precision@K, Recall@K y la posición del primer
+hit relevante. Si no existe evidencia, el resultado correcto es que el buscador no la inventa;
+no marques una coincidencia temática como relevante.
+
+## Parte 8 — Challenge independiente
 
 Construye una CLI que reciba query y `--top-k`, imprima score + texto y guarde un JSON de resultados para tu reporte.
 

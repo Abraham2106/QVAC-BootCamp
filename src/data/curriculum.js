@@ -251,7 +251,7 @@ export const CLASS05 = {
   outcomes: [
     { tag: 'Outcome 1–2', title: 'Representación + límites', body: 'Texto → vector, embeddings ≠ generación y dimensiones observadas en runtime, no inventadas.' },
     { tag: 'Outcome 3–5', title: 'Similarity + ranking', body: 'Query/document embeddings, cosine similarity en aplicación y Top-K visible con scores.' },
-    { tag: 'Outcome 6–8', title: 'Measure + diagnose', body: 'Latencia por etapa, query ambigua, corpus insuficiente y explicación basada en evidencia.' },
+    { tag: 'Outcome 6–8', title: 'Measure + diagnose', body: 'Latencia por etapa, hard negatives, query ambigua, corpus insuficiente y explicación basada en evidencia.' },
   ],
   dodItems: [
     { id: 'single', label: 'Generé single + batch embeddings y observé dimensions en runtime' },
@@ -259,6 +259,7 @@ export const CLASS05 = {
     { id: 'topk', label: 'Semantic Search v1 muestra Top-K + scores + texto' },
     { id: 'metrics', label: 'Separé corpus embedding, query embedding y ranking latency' },
     { id: 'breakit', label: 'Diagnostiqué una query ambigua con evidencia' },
+    { id: 'stress', label: 'Evalué negación, fecha, cantidad, entidad y pregunta fuera del corpus' },
     { id: 'report', label: 'Entregué Semantic Search Report con límites de la conclusión' },
   ],
 }
@@ -271,7 +272,7 @@ export const CLASS06 = {
   outcomes: [
     { tag: 'Outcome 1–3', title: 'External memory + pipeline', body: 'Parametric vs external knowledge; document → chunk → embed → workspace → retrieval.' },
     { tag: 'Outcome 4–6', title: 'Grounding + provenance', body: 'Top-K visible antes del LLM, evidence context y fuentes reales mantenidas por el pipeline.' },
-    { tag: 'Outcome 7–9', title: 'Unknown + diagnose + measure', body: 'Evidencia insuficiente, retrieval vs generation failure y latencias por etapa.' },
+    { tag: 'Outcome 7–9', title: 'Unknown + diagnose + measure', body: 'Abstención, evidencia obsoleta, retrieval vs generation failure y latencias por etapa.' },
   ],
   dodItems: [
     { id: 'ingest', label: 'Ingesté un corpus local en workspace y documenté lifecycle' },
@@ -281,6 +282,7 @@ export const CLASS06 = {
     { id: 'unknown', label: 'Unknown Knowledge Test no inventa provenance' },
     { id: 'breakit', label: 'Distinguí retrieval failure de generation failure' },
     { id: 'metrics', label: 'Separé retrieval latency de generation latency' },
+    { id: 'lifecycle', label: 'Versioné evidencia y comprobé actualización o borrado con una query' },
   ],
 }
 

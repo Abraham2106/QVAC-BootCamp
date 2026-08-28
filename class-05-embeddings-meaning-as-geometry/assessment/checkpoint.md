@@ -7,6 +7,7 @@
 5. ¿Qué parte del semantic search de esta clase es lógica de aplicación y no API de QVAC?
 6. Si el usuario dice “la búsqueda está lenta”, ¿qué tiempos separarías antes de optimizar?
 7. Diseña una prueba que permita distinguir una query ambigua de un corpus insuficiente.
+8. ¿Por qué un score alto no demuestra que un documento soporte una afirmación? Da dos casos de estrés.
 
 ## Respuestas del instructor
 
@@ -17,3 +18,4 @@
 5. En el lab: cosine similarity, ordenamiento, Top-K y UX de resultados.
 6. Load, corpus embedding si ocurre en query-time, query embedding y ranking.
 7. Mantener corpus fijo y reformular la query con intención explícita; después mantener query y mejorar corpus, comparando rankings.
+8. El score expresa cercanía en el espacio del modelo, no entailment ni vigencia. Negación, fecha, cantidad y entidad son casos de estrés válidos.
