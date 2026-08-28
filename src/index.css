@@ -14,16 +14,21 @@
 
 :root {
   color-scheme: light;
-  --bg: #ffffff;
-  --bg-muted: #f6f6f6;
-  --bg-subtle: #fafafa;
+  --bg: #fbfaf7;
+  --bg-muted: #f2f0eb;
+  --bg-subtle: #f7f5f0;
   --paper: var(--bg);
   --paper-dim: var(--bg-muted);
-  --ink: #171717;
-  --ink-soft: #525252;
-  --blue: #1a56db;
-  --blue-dark: #1447ae;
-  --blue-tint: #eff6ff;
+  --ink: #182432;
+  --ink-soft: #52606d;
+  /* Brand: deep harbor blue + terracotta signal. */
+  --brand: #245a78;
+  --brand-strong: #18324b;
+  --brand-tint: #e8f0f3;
+  --brand-signal: #c7653c;
+  --blue: var(--brand);
+  --blue-dark: var(--brand-strong);
+  --blue-tint: var(--brand-tint);
   --red: #dc2626;
   --red-tint: #fef2f2;
   --green: #16a34a;
@@ -80,16 +85,20 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #0a0a0a;
-    --bg-muted: #141414;
-    --bg-subtle: #111111;
+    --bg: #101d2a;
+    --bg-muted: #172735;
+    --bg-subtle: #13222f;
     --paper: var(--bg);
     --paper-dim: var(--bg-muted);
-    --ink: #fafafa;
-    --ink-soft: #a3a3a3;
-    --blue: #60a5fa;
-    --blue-dark: #93c5fd;
-    --blue-tint: #172554;
+    --ink: #f4f1ea;
+    --ink-soft: #b6c0c8;
+    --brand: #7fb4c9;
+    --brand-strong: #a8d0dc;
+    --brand-tint: #203b4b;
+    --brand-signal: #e28a61;
+    --blue: var(--brand);
+    --blue-dark: var(--brand-strong);
+    --blue-tint: var(--brand-tint);
     --red: #f87171;
     --red-tint: rgba(248, 113, 113, 0.12);
     --green: #4ade80;
@@ -108,16 +117,20 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0a0a0a;
-  --bg-muted: #141414;
-  --bg-subtle: #111111;
+  --bg: #101d2a;
+  --bg-muted: #172735;
+  --bg-subtle: #13222f;
   --paper: var(--bg);
   --paper-dim: var(--bg-muted);
-  --ink: #fafafa;
-  --ink-soft: #a3a3a3;
-  --blue: #60a5fa;
-  --blue-dark: #93c5fd;
-  --blue-tint: #172554;
+  --ink: #f4f1ea;
+  --ink-soft: #b6c0c8;
+  --brand: #7fb4c9;
+  --brand-strong: #a8d0dc;
+  --brand-tint: #203b4b;
+  --brand-signal: #e28a61;
+  --blue: var(--brand);
+  --blue-dark: var(--brand-strong);
+  --blue-tint: var(--brand-tint);
   --red: #f87171;
   --red-tint: rgba(248, 113, 113, 0.12);
   --green: #4ade80;
@@ -161,16 +174,20 @@
 :root[data-theme='light'] {
   color-scheme: light;
   /* Explicit light reset — ensures docs mode recovers after dark/ninja */
-  --bg: #ffffff;
-  --bg-muted: #f6f6f6;
-  --bg-subtle: #fafafa;
-  --paper: #ffffff;
-  --paper-dim: #f6f6f6;
-  --ink: #171717;
-  --ink-soft: #525252;
-  --blue: #1a56db;
-  --blue-dark: #1447ae;
-  --blue-tint: #eff6ff;
+  --bg: #fbfaf7;
+  --bg-muted: #f2f0eb;
+  --bg-subtle: #f7f5f0;
+  --paper: var(--bg);
+  --paper-dim: var(--bg-muted);
+  --ink: #182432;
+  --ink-soft: #52606d;
+  --brand: #245a78;
+  --brand-strong: #18324b;
+  --brand-tint: #e8f0f3;
+  --brand-signal: #c7653c;
+  --blue: var(--brand);
+  --blue-dark: var(--brand-strong);
+  --blue-tint: var(--brand-tint);
   --red: #dc2626;
   --red-tint: #fef2f2;
   --green: #16a34a;
@@ -516,10 +533,6 @@ h2.stitle::after {
 /* === HERO =============================================================== */
 .hero {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 380px);
-  align-items: center;
-  gap: 32px 48px;
   padding-block: 64px 48px;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
@@ -529,49 +542,79 @@ h2.stitle::after {
   position: relative;
   z-index: 1;
 }
-.hero-copy {
-  min-width: 0;
-}
+.hero-copy { min-width: 0; }
 .hero-logo {
-  justify-self: end;
-  width: min(100%, 380px);
+  position: absolute !important;
+  right: clamp(28px, 8vw, 140px);
+  top: 50%;
+  width: clamp(120px, 17vw, 218px);
   margin: 0;
+  transform: translateY(-50%);
 }
 .hero-logo img {
   display: block;
   width: 100%;
   height: auto;
-  mix-blend-mode: screen;
-}
-:root[data-theme='light'] .hero-logo img {
-  filter: drop-shadow(0 10px 28px rgba(37, 99, 235, 0.18));
-}
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) .hero-logo img {
-    filter: drop-shadow(0 10px 28px rgba(37, 99, 235, 0.18));
-  }
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .hero-logo img {
-    filter: none;
-  }
+  filter: drop-shadow(0 16px 28px color-mix(in oklch, var(--brand-signal) 25%, transparent));
 }
 .hero .rule {
   display: none;
 }
 .hero-mesh {
   position: absolute;
-  inset: 0;
+  inset: 0 -8%;
   pointer-events: none;
-  color: var(--border-strong);
-  opacity: 0.35;
+  color: color-mix(in srgb, var(--blue) 42%, var(--border-strong));
+  opacity: 0.32;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
 }
 .hero-mesh svg {
   width: 100%;
   height: 100%;
 }
-.mesh-node {
-  display: none;
+.hero-mesh__routes {
+  stroke-width: 1.2;
+  stroke-dasharray: 2 12;
+  animation: hero-route-drift 18s linear infinite;
+}
+.hero-mesh__signals {
+  opacity: 0.72;
+}
+.hero-mesh__signals circle {
+  animation: hero-signal-pulse 4.5s ease-in-out infinite;
+}
+.hero-mesh__signals circle:nth-child(2) { animation-delay: -1.5s; }
+.hero-mesh__signals circle:nth-child(3) { animation-delay: -3s; }
+.hero-mesh__signals circle:nth-child(4) { animation-delay: -4s; }
+.hero-mesh__core {
+  color: var(--blue);
+  opacity: 0.68;
+}
+.hero-mesh__core circle:first-child {
+  stroke-width: 1.2;
+}
+.hero-mesh__core path {
+  opacity: 0.5;
+}
+.hero-mesh__satellites {
+  stroke-width: 1.2;
+  opacity: 0.58;
+}
+
+@keyframes hero-route-drift {
+  to { stroke-dashoffset: -112; }
+}
+
+@keyframes hero-signal-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.85); transform-origin: center; }
+  50% { opacity: 1; transform: scale(1.35); transform-origin: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mesh__routes,
+  .hero-mesh__signals circle {
+    animation: none;
+  }
 }
 
 .cta-row {
@@ -689,6 +732,68 @@ h2.stitle::after {
 .course-card--interactive:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-hover);
+}
+
+/* The catalogue is editorially paced: the opening class anchors the route,
+   while the remaining lessons read as a sequence instead of a wall of tiles. */
+.class-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.class-grid > .reveal {
+  grid-column: span 4;
+  min-width: 0;
+}
+
+.class-grid > .reveal:first-child {
+  grid-column: span 8;
+}
+
+.class-grid-intro {
+  max-width: 660px;
+  margin-top: 10px;
+}
+
+.class-grid .course-card {
+  min-height: 236px;
+}
+
+.class-grid > .reveal:first-child .course-card {
+  min-height: 278px;
+  background:
+    linear-gradient(118deg, color-mix(in oklch, var(--blue) 5%, var(--card-bg)), var(--card-bg) 58%);
+}
+
+.class-grid > .reveal:first-child .card-kicker {
+  color: var(--blue);
+}
+
+.class-grid > .reveal:first-child [data-slot='card-title'] {
+  max-width: 18ch;
+  font-size: clamp(1.1rem, 1.5vw, 1.35rem);
+  line-height: 1.18;
+}
+
+.course-card--priority {
+  border-color: color-mix(in oklch, var(--blue) 62%, var(--border));
+  box-shadow:
+    inset 4px 0 0 var(--blue),
+    0 8px 24px color-mix(in oklch, var(--blue) 10%, transparent);
+}
+
+.course-card--priority .class-card__continue-pill {
+  padding-inline: 11px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--primary-foreground, #fff);
+}
+
+.course-card--priority [data-slot='card-title'] {
+  color: color-mix(in oklch, var(--blue) 80%, var(--ink));
 }
 
 .badge-row {
@@ -875,6 +980,21 @@ h2.stitle::after {
 }
 .grid--3 {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+@media (max-width: 900px) {
+  .class-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .class-grid > .reveal,
+  .class-grid > .reveal:first-child {
+    grid-column: span 1;
+  }
+
+  .class-grid > .reveal:first-child .course-card {
+    min-height: 250px;
+  }
 }
 
 .card {
@@ -1590,6 +1710,7 @@ pre.mermaid svg {
   :root {
     --page-gutter: 24px;
   }
+  .hero-logo { position: relative !important; right: auto; top: auto; width: 112px; margin: 26px 0 0; transform: none; }
 
   .site-head .bar {
     flex-wrap: nowrap;
@@ -1673,14 +1794,7 @@ pre.mermaid svg {
   }
 
   .hero {
-    grid-template-columns: 1fr;
     padding-block: 40px 32px;
-  }
-
-  .hero-logo {
-    justify-self: center;
-    width: min(72%, 280px);
-    order: -1;
   }
 
   .section {

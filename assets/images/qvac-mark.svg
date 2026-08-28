@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>QVAC mark</title>
+  <rect width="64" height="64" rx="12" fill="#18324B"/>
+  <path d="M16 17h17l15 15-15 15H16l15-15z" fill="#F4F1EA"/>
+  <path d="M16 17l15 15-15 15" fill="none" stroke="#D97745" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M33 17v30" stroke="#18324B" stroke-width="4"/>
+</svg>

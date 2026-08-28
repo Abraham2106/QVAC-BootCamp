@@ -20,6 +20,7 @@ export default function CourseCard({
         'course-card h-full',
         interactive && 'course-card--interactive',
         isContinueTarget && 'course-card--continue',
+        isContinueTarget && 'course-card--priority',
         className,
       )}
     >
