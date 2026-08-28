@@ -420,6 +420,10 @@ html.ninja {
   color: rgba(168, 85, 247, 0.35);
 }
 
+[data-ui='ninja'] .hero-logo img {
+  mix-blend-mode: screen;
+}
+
 [data-ui='ninja'] .class-hero {
   background: linear-gradient(180deg, #101013 0%, var(--nj-bg) 100%);
   border-bottom-color: var(--nj-border);

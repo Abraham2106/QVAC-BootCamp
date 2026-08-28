@@ -516,6 +516,10 @@ h2.stitle::after {
 /* === HERO =============================================================== */
 .hero {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 380px);
+  align-items: center;
+  gap: 32px 48px;
   padding-block: 64px 48px;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
@@ -524,6 +528,39 @@ h2.stitle::after {
 .hero > .reveal {
   position: relative;
   z-index: 1;
+}
+.hero-copy {
+  min-width: 0;
+}
+.hero-logo {
+  justify-self: end;
+  width: min(100%, 380px);
+  margin: 0;
+}
+.hero-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+:root[data-theme='dark'] .hero-logo img {
+  mix-blend-mode: screen;
+}
+:root[data-theme='light'] .hero-logo {
+  background: #0b0b0b;
+  border-radius: 16px;
+  padding: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .hero-logo img {
+    mix-blend-mode: screen;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .hero-logo {
+    background: #0b0b0b;
+    border-radius: 16px;
+    padding: 8px;
+  }
 }
 .hero .rule {
   display: none;
@@ -1642,7 +1679,14 @@ pre.mermaid svg {
   }
 
   .hero {
+    grid-template-columns: 1fr;
     padding-block: 40px 32px;
+  }
+
+  .hero-logo {
+    justify-self: center;
+    width: min(72%, 280px);
+    order: -1;
   }
 
   .section {

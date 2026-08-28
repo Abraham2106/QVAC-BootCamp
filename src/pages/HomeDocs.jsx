@@ -10,6 +10,7 @@ import useUiMode from '../hooks/useUiMode'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LEVELS, MODULES, TEACHING } from '../data/curriculum'
 import { getRecommendedClassHref, useContinueLink } from '../hooks/useProgress'
+import albatrossLogo from '../../assets/images/Albatross-Logo.png'
 
 export default function HomeDocs() {
   const { href, label } = useContinueLink('/curriculum', 'Ver currículo completo')
@@ -30,7 +31,7 @@ export default function HomeDocs() {
     <>
       <section className="hero container">
         <HeroMesh />
-        <Reveal>
+        <Reveal className="hero-copy">
           <span className="kicker">Bootcamp · Proyecto Albatross · Hackathon QVAC</span>
           <h1 className="display">
             The <span className="grad-word">Local-First</span>
@@ -55,6 +56,14 @@ export default function HomeDocs() {
               {label}
             </LinkButton>
           </div>
+        </Reveal>
+        <Reveal className="hero-logo" delay={120}>
+          <img
+            src={albatrossLogo}
+            alt="Albatross AI Team"
+            width="720"
+            height="480"
+          />
         </Reveal>
       </section>
 
