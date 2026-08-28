@@ -551,6 +551,57 @@ Conserva evidencia sin capturar contenido sensible por defecto.
 
 ---
 
+## Estudio profundo — un chat es una máquina de estados alrededor de inferencia
+
+### Tres estados que no deben confundirse
+
+El **modelo** tiene lifecycle propio: provisionado, cargado, reutilizado, descargado y runtime
+cerrado. Una **request** tiene otro: creada, streaming, terminada, cancelada o fallida. La
+**conversación** es estado de aplicación: mensajes comprometidos, metadata, versión de schema y
+retención. Tratar los tres como una única variable genera errores: recargar el modelo por turno,
+persistir deltas como mensajes o suponer que KV cache sustituye history durable.
+
+Una transición segura puede describirse así:
+
+```text
+user input -> validate -> persist user intent -> start request(requestId)
+          -> provisional deltas -> final/stopReason
+          -> commit policy -> atomically persist transcript -> durable UI
+```
+
+La política de commit pertenece a la aplicación. Puede no guardar output cancelado o conservar un
+estado explícito de cancelación; lo peligroso es que quede implícita en callbacks de streaming.
+
+### Streaming, cancelación y carreras
+
+Un `contentDelta` es provisional. Si la app cae tras mostrarlo y antes de persistir final, no
+debe reconstruirse como mensaje confirmado sin política explícita. `requestId` relaciona
+cancelación, eventos, métricas y commit con el turno correcto. Sin identidad estable, doble submit
+o una respuesta tardía puede escribir sobre otro turno.
+
+Cancelar no siempre significa “falló todo”. El controller distingue cancelación esperada, error de
+runtime y terminación normal; limpia listeners y evita que una respuesta tardía reaparezca cuando
+el usuario ya inició otro turno.
+
+### Persistencia: el crash es parte del diseño
+
+Un transcript es primary data si la aplicación promete restaurar conversaciones. Un write directo
+puede dejar JSON truncado. El patrón write-temporal -> flush según plataforma -> rename reduce la
+exposición, pero requiere validación de schema al iniciar y manejo de temporales huérfanos.
+Persistir no obliga a guardar todo: prompts y respuestas pueden ser sensibles; logs, backups y
+retención necesitan política separada.
+
+El acceptance test fuerte provisiona activos, termina la app, corta red, reinicia, restaura
+transcript y formula una pregunta nueva. Luego prueba cancelación, crash simulado entre streaming
+y commit, y shutdown con request activa.
+
+### Para estudiar y defender
+
+1. Dibuja la máquina de estados de request y marca qué transiciones pueden persistir datos.
+2. Explica qué debe ocurrir si el proceso cae tras `completionDone` pero antes del commit.
+3. Diseña una prueba para doble submit y respuesta tardía tras cancelación.
+4. Diferencia cerrar modelo, cerrar runtime y borrar transcript tras un restart.
+
 ## Fuentes
 
 - QVAC — Text generation: https://docs.qvac.tether.io/ai-capabilities/text-generation/

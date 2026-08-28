@@ -581,6 +581,53 @@ Corre cada medición al menos dos veces. Etiqueta resultados como de tu equipo, 
 
 ---
 
+## Estudio profundo — una completion es una secuencia de decisiones y estado
+
+### Del texto al siguiente token
+
+El runtime no recibe palabras directamente: el tokenizer transforma texto en IDs. Durante el
+**prefill**, el modelo procesa los tokens del prompt y construye estado de attention. En cada paso
+de **decode**, produce logits para el siguiente token, aplica una política de sampling, emite uno y
+repite. La interfaz que parece devolver “un string” está observando un proceso incremental con
+perfiles de costo distintos.
+
+TTFT incluye el trabajo previo al primer token observable: preparación, tokenización, prefill,
+cola y overhead del runtime. `tokensPerSecond` describe principalmente el ritmo de decode. Una
+respuesta puede tener TTFT excelente y decode lento, o TTFT alto y después fluir rápidamente. No
+mezcles ambas métricas en un solo número de “velocidad”.
+
+### Sampling: puntuaciones no son probabilidades
+
+El modelo produce logits `z_i`, no decisiones terminadas. Softmax crea una distribución:
+
+```text
+p_i = exp(z_i / T) / sum_j exp(z_j / T)
+```
+
+Con `T` baja se amplifican diferencias entre logits; con `T` alta la distribución se aplana.
+Esto modifica la selección entre opciones puntuadas, no hace que el modelo “sepa más”. Greedy
+elige la mayor probabilidad; top-k limita candidatos; top-p selecciona una masa acumulada. Cada
+política debe evaluarse en la tarea y con controles adecuados.
+
+### KV cache, contexto y streaming
+
+La KV cache guarda representaciones de tokens anteriores para evitar recalcular prefijos
+compatibles. Puede mejorar follow-ups, pero consume memoria según capas, dimensiones, dtype y
+contexto. No sustituye el historial de aplicación ni garantiza cache hit si cambian history, clave
+o configuración.
+
+La context window es un presupuesto para instrucciones, historial y salida. “Cabe” no significa
+gratis: prompts mayores suelen aumentar prefill y cache. Streaming no acelera mágicamente decode;
+expone progreso antes del texto final. Por eso los eventos son provisionales y `final`,
+`stopReason` y stats son el contrato de observabilidad.
+
+### Para estudiar y defender
+
+1. Predice qué ocurre con TTFT y tok/s si duplicas solo la longitud del prompt.
+2. Explica cómo cambia softmax al reducir temperatura para tres logits diferentes.
+3. Explica por qué un cache reduce cálculo sin convertir el chat en persistente.
+4. Diseña un experimento que pruebe UX de streaming sin afirmar más throughput.
+
 ## Fuentes
 
 - QVAC — Text generation: https://docs.qvac.tether.io/ai-capabilities/text-generation/

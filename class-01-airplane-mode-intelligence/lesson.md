@@ -332,6 +332,48 @@ Corre cada medición al menos dos veces (carga fría vs. tibia). Los valores son
 
 ---
 
+## Estudio profundo — poseer la ruta, no solo una interfaz
+
+### Ficha técnica: cuatro preguntas para la palabra “local”
+
+Antes de llamar local a una aplicación, separa cuatro afirmaciones: dónde residen los activos
+(pesos, tokenizer y archivos); dónde se ejecuta el cómputo; qué bytes cruzan una red; y si una
+petición nueva puede completarse cuando Internet desaparece. Una UI local no prueba inferencia
+local. Un archivo `.gguf` local no prueba que el request actual lo use. Un servidor LAN puede ser
+offline respecto de Internet sin ser on-device. La arquitectura debe declarar cuál propiedad
+ofrece, no usar “local” como sustituto de una explicación.
+
+### La ruta crítica cambia cuando retiramos Internet
+
+Una solicitud cloud incluye serialización, DNS, conexión, autenticación, cola remota, inferencia
+en un acelerador ajeno y retorno de tokens. Al retirar la red de la ruta crítica aparecen otros
+costos: espacio en disco, RAM/VRAM, ancho de banda interno, energía, provisioning y compatibilidad
+de runtime. `download`, `load` e `inference` son verbos distintos:
+
+```text
+provisioning con red: download -> validate -> cache
+uso local:            load -> completion -> stream -> unload/retain
+```
+
+Una descarga parcial puede existir en disco y no ser utilizable. Una caché válida puede permitir
+carga offline. Un modelo residente puede atender varias requests sin volver a cargar pesos.
+Confundir fases convierte un fallo de provisioning en un falso “fallo de inferencia”.
+
+### El Airplane-Mode Test como experimento
+
+La prueba no es desconectar Wi-Fi mientras aparece una respuesta cacheada. Provisiona con red,
+cierra la app, corta conectividad, reinicia, formula una pregunta nueva y observa una completion
+nueva. Registra modelo, ruta de caché, timestamps, TTFT, `stopReason` y evidencia de que no se
+invocó una API remota. Si falla, clasifica la dependencia: asset ausente, registro remoto, ruta de
+caché distinta, telemetría que bloquea startup o inferencia realmente remota.
+
+### Para estudiar y defender
+
+1. Dibuja la ruta de bytes de una petición cloud y una on-device; marca ownership y fallos.
+2. Explica por qué `unloadModel()` no borra necesariamente un asset cacheado.
+3. Diseña un falso positivo del Airplane-Mode Test y una observación que lo refute.
+4. Sigue prompt, transcript, logs y backups: ¿qué frontera de privacidad queda aun siendo local?
+
 ## Fuentes
 
 - QVAC — Introduction & How it works: https://docs.qvac.tether.io/introduction/ · https://docs.qvac.tether.io/about/how-it-works/

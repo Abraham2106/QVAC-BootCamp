@@ -467,6 +467,51 @@ Comparación justa: mismo prompt, `temp: 0`, misma semilla, mismo backend, `unlo
 
 ---
 
+## Estudio profundo — el modelo como artefacto físico y contrato de ejecución
+
+### Desmontar la palabra “modelo”
+
+La arquitectura describe la forma del cómputo: capas, dimensiones y conexiones. Los parámetros o
+pesos son los números concretos que llenan esa estructura. Los tensores son los arreglos que los
+almacenan; el dtype describe cómo se representa cada número en memoria. Tokenizer, vocabulario,
+metadata y chat template son artefactos distintos de los pesos, pero también necesarios para usar
+el modelo correctamente. Pesos correctos con tokenizer o plantilla incompatibles pueden producir
+resultados inútiles.
+
+Un checkpoint de entrenamiento suele estar optimizado para entrenar o reanudar entrenamiento:
+puede distribuir pesos, configuración, tokenizer y estado del optimizador en varios archivos. Un
+artefacto de inferencia persigue otro objetivo: transportar lo necesario para ejecutar con un
+runtime de despliegue y restricciones de hardware reales.
+
+### GGUF no es una extensión: es una estructura con intención
+
+Un archivo GGUF combina conceptualmente una cabecera, metadata clave-valor, descriptores de
+tensores y datos alineados. No se memoriza el formato binario para llamar a `loadModel()`, pero
+la estructura explica por qué “el archivo existe” no basta: el runtime debe entender versión,
+layout, nombres, shapes, tipos y metadata compatibles.
+
+El tamaño de archivo no es la memoria total de ejecución. Distingue disco, pesos residentes,
+buffers temporales, memoria del runtime, contexto y KV cache. Un modelo puede caber en disco y
+fallar al cargar o durante la primera completion si el working set supera la memoria disponible.
+
+### Quantization como aproximación con restricciones
+
+Cuantizar representa valores continuos con menos bits. En una versión escalar mínima se elige un
+scale `s`, se aproxima `x` con un entero `q` y se reconstruye `x_hat = s * q`. El error
+`x - x_hat` no afecta todas las capas ni tareas por igual. Las quantizations por bloques usan
+escalas locales porque un único scale global desperdicia resolución o satura valores atípicos.
+
+Menos bits puede disminuir I/O y presión de memoria, pero no garantiza calidad ni velocidad
+universalmente superiores. Compara candidatos con prompt, tarea, backend, contexto y condición
+fría/tibia controlados; después mide calidad y recursos de tu equipo.
+
+### Para estudiar y defender
+
+1. Separa arquitectura, pesos, tokenizer, metadata y runtime en un diagrama de responsabilidades.
+2. Explica por qué dos archivos del mismo tamaño pueden requerir RAM y ofrecer calidad distinta.
+3. Diseña una comparación entre un modelo pequeño preciso y uno mayor cuantizado bajo poca RAM.
+4. Razona por qué carga fría, carga tibia y modelo residente no miden la misma fase.
+
 ## Fuentes
 
 - QVAC — Download lifecycle: https://docs.qvac.tether.io/models/download-lifecycle/
