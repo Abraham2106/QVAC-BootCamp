@@ -14,21 +14,16 @@
 
 :root {
   color-scheme: light;
-  --bg: #fbfaf7;
-  --bg-muted: #f2f0eb;
-  --bg-subtle: #f7f5f0;
+  --bg: #ffffff;
+  --bg-muted: #f6f6f6;
+  --bg-subtle: #fafafa;
   --paper: var(--bg);
   --paper-dim: var(--bg-muted);
-  --ink: #182432;
-  --ink-soft: #52606d;
-  /* Brand: deep harbor blue + terracotta signal. */
-  --brand: #245a78;
-  --brand-strong: #18324b;
-  --brand-tint: #e8f0f3;
-  --brand-signal: #c7653c;
-  --blue: var(--brand);
-  --blue-dark: var(--brand-strong);
-  --blue-tint: var(--brand-tint);
+  --ink: #171717;
+  --ink-soft: #525252;
+  --blue: #1a56db;
+  --blue-dark: #1447ae;
+  --blue-tint: #eff6ff;
   --red: #dc2626;
   --red-tint: #fef2f2;
   --green: #16a34a;
@@ -85,20 +80,16 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #101d2a;
-    --bg-muted: #172735;
-    --bg-subtle: #13222f;
+    --bg: #0a0a0a;
+    --bg-muted: #141414;
+    --bg-subtle: #111111;
     --paper: var(--bg);
     --paper-dim: var(--bg-muted);
-    --ink: #f4f1ea;
-    --ink-soft: #b6c0c8;
-    --brand: #7fb4c9;
-    --brand-strong: #a8d0dc;
-    --brand-tint: #203b4b;
-    --brand-signal: #e28a61;
-    --blue: var(--brand);
-    --blue-dark: var(--brand-strong);
-    --blue-tint: var(--brand-tint);
+    --ink: #fafafa;
+    --ink-soft: #a3a3a3;
+    --blue: #60a5fa;
+    --blue-dark: #93c5fd;
+    --blue-tint: #172554;
     --red: #f87171;
     --red-tint: rgba(248, 113, 113, 0.12);
     --green: #4ade80;
@@ -117,20 +108,16 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #101d2a;
-  --bg-muted: #172735;
-  --bg-subtle: #13222f;
+  --bg: #0a0a0a;
+  --bg-muted: #141414;
+  --bg-subtle: #111111;
   --paper: var(--bg);
   --paper-dim: var(--bg-muted);
-  --ink: #f4f1ea;
-  --ink-soft: #b6c0c8;
-  --brand: #7fb4c9;
-  --brand-strong: #a8d0dc;
-  --brand-tint: #203b4b;
-  --brand-signal: #e28a61;
-  --blue: var(--brand);
-  --blue-dark: var(--brand-strong);
-  --blue-tint: var(--brand-tint);
+  --ink: #fafafa;
+  --ink-soft: #a3a3a3;
+  --blue: #60a5fa;
+  --blue-dark: #93c5fd;
+  --blue-tint: #172554;
   --red: #f87171;
   --red-tint: rgba(248, 113, 113, 0.12);
   --green: #4ade80;
@@ -174,20 +161,16 @@
 :root[data-theme='light'] {
   color-scheme: light;
   /* Explicit light reset — ensures docs mode recovers after dark/ninja */
-  --bg: #fbfaf7;
-  --bg-muted: #f2f0eb;
-  --bg-subtle: #f7f5f0;
-  --paper: var(--bg);
-  --paper-dim: var(--bg-muted);
-  --ink: #182432;
-  --ink-soft: #52606d;
-  --brand: #245a78;
-  --brand-strong: #18324b;
-  --brand-tint: #e8f0f3;
-  --brand-signal: #c7653c;
-  --blue: var(--brand);
-  --blue-dark: var(--brand-strong);
-  --blue-tint: var(--brand-tint);
+  --bg: #ffffff;
+  --bg-muted: #f6f6f6;
+  --bg-subtle: #fafafa;
+  --paper: #ffffff;
+  --paper-dim: #f6f6f6;
+  --ink: #171717;
+  --ink-soft: #525252;
+  --blue: #1a56db;
+  --blue-dark: #1447ae;
+  --blue-tint: #eff6ff;
   --red: #dc2626;
   --red-tint: #fef2f2;
   --green: #16a34a;
@@ -533,6 +516,10 @@ h2.stitle::after {
 /* === HERO =============================================================== */
 .hero {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 380px);
+  align-items: center;
+  gap: 32px 48px;
   padding-block: 64px 48px;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
@@ -542,79 +529,46 @@ h2.stitle::after {
   position: relative;
   z-index: 1;
 }
-.hero-copy { min-width: 0; }
+.hero-copy {
+  min-width: 0;
+}
 .hero-logo {
-  position: absolute !important;
-  right: clamp(28px, 8vw, 140px);
-  top: 50%;
-  width: clamp(120px, 17vw, 218px);
+  justify-self: end;
+  width: min(100%, 380px);
   margin: 0;
-  transform: translateY(-50%);
 }
 .hero-logo img {
   display: block;
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 16px 28px color-mix(in oklch, var(--brand-signal) 25%, transparent));
+  mix-blend-mode: screen;
+}
+:root[data-theme='light'] .hero-logo img {
+  filter: drop-shadow(0 10px 28px rgba(37, 99, 235, 0.18));
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .hero-logo img {
+    filter: drop-shadow(0 10px 28px rgba(37, 99, 235, 0.18));
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .hero-logo img {
+    filter: none;
+  }
 }
 .hero .rule {
   display: none;
 }
 .hero-mesh {
   position: absolute;
-  inset: 0 -8%;
+  inset: 0;
   pointer-events: none;
-  color: color-mix(in srgb, var(--blue) 42%, var(--border-strong));
-  opacity: 0.32;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  color: var(--border-strong);
+  opacity: 0.35;
 }
 .hero-mesh svg {
   width: 100%;
   height: 100%;
-}
-.hero-mesh__routes {
-  stroke-width: 1.2;
-  stroke-dasharray: 2 12;
-  animation: hero-route-drift 18s linear infinite;
-}
-.hero-mesh__signals {
-  opacity: 0.72;
-}
-.hero-mesh__signals circle {
-  animation: hero-signal-pulse 4.5s ease-in-out infinite;
-}
-.hero-mesh__signals circle:nth-child(2) { animation-delay: -1.5s; }
-.hero-mesh__signals circle:nth-child(3) { animation-delay: -3s; }
-.hero-mesh__signals circle:nth-child(4) { animation-delay: -4s; }
-.hero-mesh__core {
-  color: var(--blue);
-  opacity: 0.68;
-}
-.hero-mesh__core circle:first-child {
-  stroke-width: 1.2;
-}
-.hero-mesh__core path {
-  opacity: 0.5;
-}
-.hero-mesh__satellites {
-  stroke-width: 1.2;
-  opacity: 0.58;
-}
-
-@keyframes hero-route-drift {
-  to { stroke-dashoffset: -112; }
-}
-
-@keyframes hero-signal-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(0.85); transform-origin: center; }
-  50% { opacity: 1; transform: scale(1.35); transform-origin: center; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-mesh__routes,
-  .hero-mesh__signals circle {
-    animation: none;
-  }
 }
 
 .cta-row {
@@ -1710,7 +1664,16 @@ pre.mermaid svg {
   :root {
     --page-gutter: 24px;
   }
-  .hero-logo { position: relative !important; right: auto; top: auto; width: 112px; margin: 26px 0 0; transform: none; }
+  .hero {
+    grid-template-columns: 1fr;
+    padding-block: 40px 32px;
+  }
+
+  .hero-logo {
+    justify-self: center;
+    width: min(72%, 280px);
+    order: -1;
+  }
 
   .site-head .bar {
     flex-wrap: nowrap;
@@ -1791,10 +1754,6 @@ pre.mermaid svg {
   .site-nav__tools .theme-toggle {
     width: 100%;
     justify-content: center;
-  }
-
-  .hero {
-    padding-block: 40px 32px;
   }
 
   .section {

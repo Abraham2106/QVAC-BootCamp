@@ -10,7 +10,7 @@ import useUiMode from '../hooks/useUiMode'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LEVELS, MODULES, TEACHING } from '../data/curriculum'
 import { getRecommendedClassHref, useContinueLink } from '../hooks/useProgress'
-import qvacMark from '../../assets/images/qvac-mark.svg'
+import albatrossLogo from '../../assets/images/Albatross-Logo.png'
 
 export default function HomeDocs() {
   const { href, label } = useContinueLink('/curriculum', 'Ver currículo completo')
@@ -58,7 +58,12 @@ export default function HomeDocs() {
           </div>
         </Reveal>
         <Reveal className="hero-logo" delay={120}>
-          <img src={qvacMark} alt="Marca QVAC: ejecución local conectada" width="256" height="256" />
+          <img
+            src={albatrossLogo}
+            alt="Albatross AI Team"
+            width="720"
+            height="480"
+          />
         </Reveal>
       </section>
 
@@ -106,12 +111,8 @@ export default function HomeDocs() {
           <h2 className="stitle" id="now-title">
             10 clases disponibles ahora
           </h2>
-          <p className="lede section-intro class-grid-intro">
-            Una ruta práctica de lo local a lo distribuido. Empieza por la clase recomendada o elige el
-            siguiente bloque que encaje con tu proyecto.
-          </p>
         </Reveal>
-        <div className="grid grid--3 class-grid">
+        <div className="grid grid--3">
           <ClassPreviewCard
             delay={60}
             to="/class/01"
