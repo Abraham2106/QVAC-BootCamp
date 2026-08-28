@@ -541,25 +541,19 @@ h2.stitle::after {
   display: block;
   width: 100%;
   height: auto;
-}
-:root[data-theme='dark'] .hero-logo img {
   mix-blend-mode: screen;
 }
-:root[data-theme='light'] .hero-logo {
-  background: #0b0b0b;
-  border-radius: 16px;
-  padding: 8px;
+:root[data-theme='light'] .hero-logo img {
+  filter: drop-shadow(0 10px 28px rgba(37, 99, 235, 0.18));
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .hero-logo img {
+    filter: drop-shadow(0 10px 28px rgba(37, 99, 235, 0.18));
+  }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .hero-logo img {
-    mix-blend-mode: screen;
-  }
-}
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) .hero-logo {
-    background: #0b0b0b;
-    border-radius: 16px;
-    padding: 8px;
+    filter: none;
   }
 }
 .hero .rule {
