@@ -37,7 +37,7 @@ export const MODULES = [
         desc: '¿Qué significa realmente que una app de IA sea local? Provisiona, ejecuta offline y demuéstralo.',
         href: '/class/01',
         available: true,
-        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
       {
         no: '02',
@@ -46,7 +46,7 @@ export const MODULES = [
         desc: '¿Qué cargamos realmente al "cargar un modelo"? Pesos, tokenizer, cuantización y nombres.',
         href: '/class/02',
         available: true,
-        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
       {
         no: '03',
@@ -55,7 +55,7 @@ export const MODULES = [
         desc: '¿Qué ocurre entre un prompt y el siguiente token? Tokens, sampling, KV cache, TTFT vs tok/s.',
         href: '/class/03',
         available: true,
-        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
       {
         no: '04',
@@ -64,7 +64,7 @@ export const MODULES = [
         desc: 'De inferencia aislada a aplicación confiable: historial, streaming, cancelación y persistencia local.',
         href: '/class/04',
         available: true,
-        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
     ],
   },
@@ -80,7 +80,7 @@ export const MODULES = [
         desc: 'Cómo encontrar significado relacionado sin coincidencia literal de palabras.',
         href: '/class/05',
         available: true,
-        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
       {
         no: '06',
@@ -89,7 +89,7 @@ export const MODULES = [
         desc: 'Responder desde conocimiento fuera de los pesos: chunk → embed → store → retrieve → cite.',
         href: '/class/06',
         available: true,
-        badges: ['lesson', 'slides', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
     ],
   },

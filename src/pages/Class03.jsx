@@ -6,7 +6,6 @@ import ClassLessonLinks from '../components/ClassLessonLinks'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
-import SlidesEmbed from '../components/SlidesEmbed'
 import { CLASS03 } from '../data/curriculum'
 import { useRememberVisit } from '../hooks/useProgress'
 import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
@@ -14,7 +13,6 @@ import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 const BASE = '/class-03-local-inference-fundamentals'
 
 const ANCHORS = [
-  { id: 'slides', label: 'Slides' },
   { id: 'leccion', label: 'Lección' },
   { id: 'lab', label: 'Lab' },
   { id: 'artefactos', label: 'Artefactos' },
@@ -50,24 +48,6 @@ export default function Class03() {
               </a>
             ))}
           </nav>
-        </Reveal>
-      </section>
-
-      <section className="section container" id="slides" aria-labelledby="slides-title">
-        <Reveal>
-          <h2 className="stitle" id="slides-title">
-            Presentación de la clase
-          </h2>
-          <p className="lede section-intro">
-            24 diapositivas · tokens → bucle autoregresivo → streaming events/final → sampling → contexto → KV
-            cache → profiler → Break It/Measure It. Expande la card para navegar con ← → o ábrela a pantalla completa.
-          </p>
-          <SlidesEmbed
-            src={`${BASE}/slides.html`}
-            title="Slides de la Clase 3: Local Inference Fundamentals"
-            previewLabel="Local Inference Fundamentals"
-            hint={24}
-          />
         </Reveal>
       </section>
 

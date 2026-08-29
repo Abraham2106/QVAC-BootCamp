@@ -6,7 +6,6 @@ import FeatureCard from '../components/FeatureCard'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
-import SlidesEmbed from '../components/SlidesEmbed'
 import { CLASS05 } from '../data/curriculum'
 import { useRememberVisit } from '../hooks/useProgress'
 import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
@@ -14,7 +13,6 @@ import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 const BASE = '/class-05-embeddings-meaning-as-geometry'
 
 const ANCHORS = [
-  { id: 'slides', label: 'Slides' },
   { id: 'leccion', label: 'Lección' },
   { id: 'lab', label: 'Lab' },
   { id: 'artefactos', label: 'Artefactos' },
@@ -39,14 +37,6 @@ export default function Class05() {
           <nav className="anchor-tabs" aria-label="Secciones de la clase">
             {ANCHORS.map((a) => <a key={a.id} href={'#' + a.id}>{a.label}</a>)}
           </nav>
-        </Reveal>
-      </section>
-
-      <section className="section container" id="slides" aria-labelledby="slides-title">
-        <Reveal>
-          <h2 className="stitle" id="slides-title">Presentación de la clase</h2>
-          <p className="lede section-intro">Meaning → vector → similarity → ranking. Predice antes de ejecutar y rompe la búsqueda con una query ambigua.</p>
-          <SlidesEmbed src={`${BASE}/slides.html`} title="Slides de la Clase 5: Embeddings" previewLabel="Meaning as Geometry" hint={25} />
         </Reveal>
       </section>
 

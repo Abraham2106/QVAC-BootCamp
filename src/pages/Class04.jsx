@@ -6,7 +6,6 @@ import FeatureCard from '../components/FeatureCard'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
-import SlidesEmbed from '../components/SlidesEmbed'
 import { CLASS04 } from '../data/curriculum'
 import { useRememberVisit } from '../hooks/useProgress'
 import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
@@ -14,7 +13,6 @@ import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 const BASE = '/class-04-build-offline-chat'
 
 const ANCHORS = [
-  { id: 'slides', label: 'Slides' },
   { id: 'leccion', label: 'Lección' },
   { id: 'lab', label: 'Lab' },
   { id: 'artefactos', label: 'Artefactos' },
@@ -50,24 +48,6 @@ export default function Class04() {
               </a>
             ))}
           </nav>
-        </Reveal>
-      </section>
-
-      <section className="section container" id="slides" aria-labelledby="slides-title">
-        <Reveal>
-          <h2 className="stitle" id="slides-title">
-            Presentación de la clase
-          </h2>
-          <p className="lede section-intro">
-            25 diapositivas · tres ciclos de vida · commit boundary · cancel · persist · restart offline.
-            Complementarias a la lección — expande para navegar con ← → o pantalla completa.
-          </p>
-          <SlidesEmbed
-            src={`${BASE}/slides.html`}
-            title="Slides de la Clase 4: Build the Offline Chat"
-            previewLabel="De script a conversación"
-            hint={25}
-          />
         </Reveal>
       </section>
 

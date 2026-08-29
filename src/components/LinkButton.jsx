@@ -29,6 +29,7 @@ export default function LinkButton({
         variant={mapped}
         size={size}
         className={cn(className)}
+        nativeButton={false}
         render={<Link to={to} />}
         {...props}
       >
@@ -43,6 +44,7 @@ export default function LinkButton({
         variant={mapped}
         size={size}
         className={cn(className)}
+        nativeButton={false}
         render={<a href={href} target={target} rel={rel} />}
         {...props}
       >

@@ -6,7 +6,6 @@ import FeatureCard from '../components/FeatureCard'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
-import SlidesEmbed from '../components/SlidesEmbed'
 import { CLASS01 } from '../data/curriculum'
 import { useRememberVisit } from '../hooks/useProgress'
 import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
@@ -14,7 +13,6 @@ import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 const BASE = '/class-01-airplane-mode-intelligence'
 
 const ANCHORS = [
-  { id: 'slides', label: 'Slides' },
   { id: 'leccion', label: 'Lección' },
   { id: 'lab', label: 'Lab' },
   { id: 'artefactos', label: 'Artefactos' },
@@ -50,24 +48,6 @@ export default function Class01() {
               </a>
             ))}
           </nav>
-        </Reveal>
-      </section>
-
-      <section className="section container" id="slides" aria-labelledby="slides-title">
-        <Reveal>
-          <h2 className="stitle" id="slides-title">
-            Presentación de la clase
-          </h2>
-          <p className="lede section-intro">
-            25 diapositivas · narrativa Predict → Demo → Break It → Measure It. Expande la card para navegar con ← →
-            o ábrela a pantalla completa.
-          </p>
-          <SlidesEmbed
-            src={`${BASE}/slides.html`}
-            title="Slides de la Clase 1: Airplane-Mode Intelligence"
-            previewLabel="Airplane-Mode Intelligence"
-            hint={25}
-          />
         </Reveal>
       </section>
 

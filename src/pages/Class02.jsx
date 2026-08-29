@@ -6,7 +6,6 @@ import ClassLessonLinks from '../components/ClassLessonLinks'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
-import SlidesEmbed from '../components/SlidesEmbed'
 import { CLASS02 } from '../data/curriculum'
 import { useRememberVisit } from '../hooks/useProgress'
 import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
@@ -14,7 +13,6 @@ import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 const BASE = '/class-02-models-gguf-lifecycle'
 
 const ANCHORS = [
-  { id: 'slides', label: 'Slides' },
   { id: 'leccion', label: 'Lección' },
   { id: 'lab', label: 'Lab' },
   { id: 'artefactos', label: 'Artefactos' },
@@ -50,24 +48,6 @@ export default function Class02() {
               </a>
             ))}
           </nav>
-        </Reveal>
-      </section>
-
-      <section className="section container" id="slides" aria-labelledby="slides-title">
-        <Reveal>
-          <h2 className="stitle" id="slides-title">
-            Presentación de la clase
-          </h2>
-          <p className="lede section-intro">
-            26 diapositivas · anatomía → GGUF → cuantización → nombres → catálogo y ciclo de vida → Predict/Demo
-            → Break It/Measure It. Expande la card para navegar con ← → o ábrela a pantalla completa.
-          </p>
-          <SlidesEmbed
-            src="/class-02-models-gguf-lifecycle/slides.html"
-            title="Slides de la Clase 2: Models, GGUF and the QVAC Lifecycle"
-            previewLabel="Models, GGUF and the QVAC Lifecycle"
-            hint={26}
-          />
         </Reveal>
       </section>
 

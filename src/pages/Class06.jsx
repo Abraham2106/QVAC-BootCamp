@@ -6,7 +6,6 @@ import FeatureCard from '../components/FeatureCard'
 import MarkdownLink from '../components/MarkdownLink'
 import ProgressDisplay from '../components/ProgressDisplay'
 import Reveal from '../components/Reveal'
-import SlidesEmbed from '../components/SlidesEmbed'
 import { CLASS06 } from '../data/curriculum'
 import { useRememberVisit } from '../hooks/useProgress'
 import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
@@ -14,7 +13,6 @@ import { useProgressWithFeedback } from '../hooks/useProgressWithFeedback'
 const BASE = '/class-06-local-rag-private-knowledge'
 
 const ANCHORS = [
-  { id: 'slides', label: 'Slides' },
   { id: 'leccion', label: 'Lección' },
   { id: 'lab', label: 'Lab' },
   { id: 'artefactos', label: 'Artefactos' },
@@ -39,14 +37,6 @@ export default function Class06() {
           <nav className="anchor-tabs" aria-label="Secciones de la clase">
             {ANCHORS.map((a) => <a key={a.id} href={'#' + a.id}>{a.label}</a>)}
           </nav>
-        </Reveal>
-      </section>
-
-      <section className="section container" id="slides" aria-labelledby="slides-title">
-        <Reveal>
-          <h2 className="stitle" id="slides-title">Presentación de la clase</h2>
-          <p className="lede section-intro">Document → chunk → embed → store → retrieve → evidence → grounded completion. Retrieval y generation quedan separados para poder depurar.</p>
-          <SlidesEmbed src={`${BASE}/slides.html`} title="Slides de la Clase 6: Local RAG" previewLabel="Private Knowledge" hint={25} />
         </Reveal>
       </section>
 
