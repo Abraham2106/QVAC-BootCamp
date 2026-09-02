@@ -3,9 +3,9 @@ import { applyTheme, getResolvedTheme } from './theme'
 export const UI_MODE_KEY = 'bootcamp.uiMode'
 export const THEME_BEFORE_NINJA_KEY = 'bootcamp.themeBeforeNinja'
 
-/** Ninja mode is dev-only; production builds always use docs. */
+/** Ninja is a supported visual mode in both development and production. */
 export function isNinjaEnabled() {
-  return !import.meta.env.PROD
+  return true
 }
 
 /** @deprecated Prefer isNinjaEnabled() */

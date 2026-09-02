@@ -23,7 +23,9 @@ npm install
 | `npm run build:mermaid` | Solo el bundle estático de Mermaid |
 | `npm run preview` | Sirve `dist/` localmente para validar el build |
 
-## Modo Ninja (solo desarrollo)
+## Modo Ninja
+
+El modo Ninja está habilitado tanto en desarrollo como en el build de producción. La preferencia Docs/Ninja se guarda en `localStorage` bajo `bootcamp.uiMode`.
 
 El **modo Ninja** es una variante visual experimental (UI oscura, acentos neón). Está pensado para pruebas de diseño, **no** para estudiantes en producción.
 

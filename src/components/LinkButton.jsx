@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
@@ -22,40 +22,27 @@ export default function LinkButton({
   ...props
 }) {
   const mapped = VARIANT_MAP[variant] ?? variant
+  const classes = cn(buttonVariants({ variant: mapped, size }), className)
 
   if (to) {
     return (
-      <Button
-        variant={mapped}
-        size={size}
-        className={cn(className)}
-        nativeButton={false}
-        render={<Link to={to} />}
-        {...props}
-      >
+      <Link to={to} className={classes} {...props}>
         {children}
-      </Button>
+      </Link>
     )
   }
 
   if (href) {
     return (
-      <Button
-        variant={mapped}
-        size={size}
-        className={cn(className)}
-        nativeButton={false}
-        render={<a href={href} target={target} rel={rel} />}
-        {...props}
-      >
+      <a href={href} target={target} rel={rel} className={classes} {...props}>
         {children}
-      </Button>
+      </a>
     )
   }
 
   return (
-    <Button variant={mapped} size={size} className={cn(className)} {...props}>
+    <button type="button" className={classes} {...props}>
       {children}
-    </Button>
+    </button>
   )
 }

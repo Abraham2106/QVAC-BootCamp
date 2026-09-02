@@ -94,26 +94,15 @@ function bootcampStaticAssets() {
   }
 }
 
-/** Prevent index.html FOUC: inline boot script must not apply ninja in prod builds. */
-function disableNinjaInProdHtml() {
-  return {
-    name: 'disable-ninja-in-prod-html',
-    transformIndexHtml(html) {
-      return html.replace("if (m === 'ninja')", "if (false && m === 'ninja')")
-    },
-  }
-}
-
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     bootcampStaticAssets(),
-    command === 'build' && disableNinjaInProdHtml(),
-  ].filter(Boolean),
+  ],
   resolve: {
     alias: {
       '@': srcDir,
     },
   },
-}))
+})

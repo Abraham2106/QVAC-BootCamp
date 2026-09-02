@@ -29,6 +29,15 @@ test.describe('Home page UI', () => {
     await expect(page.getByRole('link', { name: /Empezar Clase 1/i })).toBeVisible()
   })
 
+  test('Ninja mode is available in a production preview', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('bootcamp.uiMode', 'ninja'))
+    await page.goto('/')
+
+    await expect(page.getByRole('group', { name: 'Modo de interfaz' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Ninja/i })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('html')).toHaveAttribute('data-ui', 'ninja')
+  })
+
   test('desktop light: hero copy and logo do not overlap', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await page.goto('/')

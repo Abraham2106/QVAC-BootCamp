@@ -2,6 +2,8 @@
 
 El sitio es una **SPA estática**. No hay servidor Node en runtime: se despliega el contenido de `dist/`.
 
+> Estado actual: Ninja está habilitado en producción. Antes de desplegar, valida que el toggle Docs/Ninja se muestra y que la preferencia `bootcamp.uiMode` se conserva al recargar.
+
 ## Build
 
 Desde `QVAC-BootCamp/`:
