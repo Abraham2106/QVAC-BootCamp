@@ -18,6 +18,8 @@ export function markdownBackLink(staticPath) {
   if (staticPath.includes('class-06-local-rag-private-knowledge')) return '/class/06'
   if (staticPath.includes('class-07-speech-systems')) return '/class/07'
   if (staticPath.includes('class-08-translation-voice-relay')) return '/class/08'
+  if (staticPath.includes('class-09-openai-compatible-escape-hatch')) return '/class/09'
+  if (staticPath.includes('class-10-local-first-architectures')) return '/class/10'
   return '/curriculum'
 }
 

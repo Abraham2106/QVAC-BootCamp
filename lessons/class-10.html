@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección — Clase 10 · Designing Local-First Architectures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-10">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/10">Clase 10</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+<div class="lesson-layout">
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 10 · Módulo 4</span>
+      <h1 class="lesson-sidebar__name">Designing Local-First Architectures</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+      <span class="toc-head">INTRODUCCIÓN</span>
+      <a href="#intro">Pregunta esencial</a>
+      <a href="#outcomes">Qué aprenderás</a>
+      <a href="#politica">De todo-local a política</a>
+      <span class="toc-head">MÉTODO</span>
+      <a href="#adr">Método ADR</a>
+      <a href="#matriz">Matriz de enrutamiento</a>
+      <a href="#invariantes">Invariantes y degradación</a>
+      <span class="toc-head">PRÁCTICA</span>
+      <a href="#medir">Qué medir</a>
+      <a href="#build">Build: routing policy</a>
+      <a href="#breakit">Break It: exfiltración</a>
+      <a href="#done">Definition of Done</a>
+      <a href="#checkpoint">Checkpoint</a>
+    </nav>
+  </aside>
+  <article class="lesson">
+    <p class="lesson-meta">Módulo 4 — Drop-in Sovereignty · Baseline QVAC SDK v0.18.x / v0.18.1</p>
+    <section id="intro">
+      <h2>Pregunta esencial</h2>
+      <p><em>¿Debe todo correr local? No: la arquitectura correcta hace visible qué datos, capacidades y fallos pueden cruzar una frontera.</em></p>
+      <p>Local-first significa que la ruta local es la primera opción compatible con los requisitos, no que todo deba ser local. Un modelo remoto puede ser necesario, pero solo tras evaluar datos, consentimiento y riesgo.</p>
+<pre class="codebox"><code>request → classify(data, capability, consent)
+        → local route (preferred)
+        → if unavailable: safe fallback or refuse
+        → record decision + outcome (without sensitive content)</code></pre>
+    </section>
+    <section id="outcomes">
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Definir</strong> local-first como política verificable, no eslogan.</li>
+        <li><strong>Dibujar</strong> fronteras de datos, ejecución y confianza.</li>
+        <li><strong>Clasificar</strong> solicitudes por sensibilidad y capacidad.</li>
+        <li><strong>Escribir</strong> un ADR defendible.</li>
+        <li><strong>Diseñar</strong> fallback con consentimiento, timeout y auditoría.</li>
+        <li><strong>Separar</strong> degradación de disponibilidad vs calidad.</li>
+        <li><strong>Medir</strong> latencia, coste, disponibilidad y exposición.</li>
+        <li><strong>Probar</strong> que la política bloquea exfiltración accidental.</li>
+      </ol>
+    </section>
+    <section id="politica">
+      <h2>Tres fronteras</h2>
+      <table class="booktabs"><thead><tr><th>Frontera</th><th>Pregunta</th><th>Control</th></tr></thead>
+      <tbody>
+        <tr><td>Datos</td><td>¿Qué bytes salen?</td><td>Red bloqueada para PII</td></tr>
+        <tr><td>Ejecución</td><td>¿Dónde se calculan tokens?</td><td>QVAC local / endpoint compatible</td></tr>
+        <tr><td>Confianza</td><td>¿Quién observa el resultado?</td><td>Allowlist, TLS, logs minimizados</td></tr>
+      </tbody></table>
+    </section>
+    <section id="adr">
+      <h2>Método ADR</h2>
+<pre class="codebox"><code>Contexto → decisión → alternativas descartadas → invariantes
+        → consecuencias → evidencia/experimento → fecha y dueño</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">“Usaremos IA local por privacidad” no es un ADR: falta qué es privado, qué pasa sin modelo cargado y qué prueba lo demuestra.</div></div>
+    </section>
+    <section id="matriz">
+      <h2>Matriz de enrutamiento</h2>
+      <table class="booktabs"><thead><tr><th>Sensibilidad</th><th>Capacidad</th><th>Por defecto</th><th>Fallback</th></tr></thead>
+      <tbody>
+        <tr><td>alta</td><td>resumen</td><td>local</td><td>rechazar</td></tr>
+        <tr><td>media</td><td>redacción</td><td>local</td><td>remoto solo con consentimiento</td></tr>
+        <tr><td>baja</td><td>modelo grande</td><td>local</td><td>remoto permitido, registrado</td></tr>
+        <tr><td>cualquiera</td><td>no instalada</td><td>instalación/local</td><td>explicar bloqueo</td></tr>
+      </tbody></table>
+      <p>El fallback comprueba: autorización explícita, endpoint permitido, timeout acotado y ausencia de datos prohibidos.</p>
+    </section>
+    <section id="invariantes">
+      <h2>Invariantes y degradación</h2>
+      <ul>
+        <li><strong>I1 — No exfiltración:</strong> alta sensibilidad nunca sale.</li>
+        <li><strong>I2 — Consentimiento:</strong> ruta remota requiere consentimiento vigente.</li>
+        <li><strong>I3 — Transparencia:</strong> la respuesta indica dónde se ejecutó.</li>
+        <li><strong>I4 — Control temporal:</strong> ningún fallback bloquea indefinidamente.</li>
+        <li><strong>I5 — Reproducibilidad:</strong> decisión registrada sin contenido sensible.</li>
+      </ul>
+      <p>Estados: <code class="inline">local-success</code>, <code class="inline">remote-consented</code>, <code class="inline">local-unavailable</code>, <code class="inline">remote-denied</code>, <code class="inline">quality-degraded</code>.</p>
+    </section>
+    <section id="medir">
+      <h2>Qué medir</h2>
+      <p>Por clase de solicitud: TTFT y latencia total, tasa de éxito, % rutas locales, timeouts, coste y remotos bloqueados. Un número sin hardware, modelo, prompt y ventana no es reproducible.</p>
+    </section>
+    <section id="build">
+      <h2>Build — Routing Policy Simulator</h2>
+<pre class="codebox"><code>type RequestClass = {
+  sensitivity: 'high' | 'medium' | 'low'
+  capability: string
+  consent: boolean
+  localAvailable: boolean
+}
+// → 'local' | 'remote-consented' | 'refuse' + razón + código</code></pre>
+      <table class="booktabs"><thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
+      <tbody>
+        <tr><td>PII + local disponible</td><td>local</td></tr>
+        <tr><td>PII + local caído</td><td>refuse</td></tr>
+        <tr><td>medio + consentimiento</td><td>remote-consented</td></tr>
+        <tr><td>medio sin consentimiento</td><td>refuse</td></tr>
+        <tr><td>bajo + capacidad local</td><td>local</td></tr>
+      </tbody></table>
+    </section>
+    <section id="breakit">
+      <h2>Break It — Exfiltration Test</h2>
+      <p>Bloquea la red y fuerza cada rama. Inyecta un endpoint no permitido: la política debe rechazar antes de serializar el prompt, registrando la decisión sin contenido sensible.</p>
+    </section>
+    <section id="done">
+      <h2>Definition of Done</h2>
+      <ul>
+        <li>Diagrama de tres fronteras.</li>
+        <li>Matriz + invariantes con pruebas automatizadas.</li>
+        <li>Fallback con consentimiento y allowlist.</li>
+        <li>Respuesta expone ruta y motivo de degradación.</li>
+        <li>Exfiltration Test con red bloqueada y endpoint malicioso.</li>
+        <li>ADR con trade-offs de latencia, coste, disponibilidad y privacidad.</li>
+      </ul>
+    </section>
+    <section id="checkpoint">
+      <h2>Checkpoint de defensa</h2>
+      <p>¿Qué dato jamás sale? ¿Qué permiso activa el fallback? ¿Cómo sabe el usuario dónde se ejecutó? ¿Qué ocurre sin ruta segura? Ver <a href="/class-10-local-first-architectures/assessment/checkpoint.md">assessment/checkpoint.md</a>.</p>
+      <p><a href="/class/10">← Volver a la página de la clase</a> · <a href="/curriculum">Currículo</a></p>
+    </section>
+  </article>
+</div>
+</main>
+</body>
+</html>

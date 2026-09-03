@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('bootcamp.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lección — Clase 9 · The OpenAI-Compatible Escape Hatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="lesson-page" data-lesson-class="class-09">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<header class="site-head">
+  <div class="bar">
+    <a class="brand" href="/">QVAC <b>Masterclass</b></a>
+    <nav class="site-nav" aria-label="Principal">
+      <a href="/">Inicio</a>
+      <a href="/curriculum">Currículo</a>
+      <a href="/class/09">Clase 9</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+<div class="lesson-layout">
+  <aside class="lesson-sidebar" aria-label="Navegación de la lección">
+    <div class="lesson-sidebar-title">
+      <span class="lesson-sidebar__kicker">Clase 09 · Módulo 4</span>
+      <h1 class="lesson-sidebar__name">The OpenAI-Compatible Escape Hatch</h1>
+    </div>
+    <nav class="lesson-toc" aria-label="Contenido de la lección">
+      <span class="toc-head">INTRODUCCIÓN</span>
+      <a href="#intro">Pregunta esencial</a>
+      <a href="#outcomes">Qué aprenderás</a>
+      <a href="#idea">La idea: frontera estable</a>
+      <span class="toc-head">CONTRATO</span>
+      <a href="#contrato">Contrato mínimo</a>
+      <a href="#config">Configuración y secretos</a>
+      <a href="#conserva">Qué se conserva</a>
+      <a href="#dependencias">Tres dependencias</a>
+      <span class="toc-head">PRÁCTICA</span>
+      <a href="#errores">Errores que importan</a>
+      <a href="#medicion">Diagnóstico y medición</a>
+      <a href="#adr">ADR mínimo</a>
+      <a href="#build">Build: probe</a>
+      <a href="#done">Definition of Done</a>
+      <a href="#checkpoint">Checkpoint</a>
+    </nav>
+  </aside>
+  <article class="lesson">
+    <p class="lesson-meta">Módulo 4 — Drop-in Sovereignty · QVAC SDK v0.18.x / v0.18.1 · Servidor por defecto en http://localhost:11434/v1/</p>
+    <section id="intro">
+      <h2>Pregunta esencial</h2>
+      <p><em>¿Cómo cambiamos una aplicación de un proveedor remoto a inferencia local sin reescribir su cliente, y cómo demostramos qué dependencias permanecen?</em></p>
+      <p>Un cliente moderno no debería saber si la inteligencia corre en la nube o en un proceso local. Debe conocer un contrato. QVAC expone un servidor HTTP compatible con OpenAI; la app apunta al mismo recurso lógico, pero la inferencia cambia de lugar.</p>
+    </section>
+    <section id="outcomes">
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Explicar</strong> qué resuelve y qué no resuelve una API OpenAI-compatible.</li>
+        <li><strong>Configurar</strong> <code class="inline">baseURL</code> como frontera de colocación, sin secretos en código.</li>
+        <li><strong>Usar</strong> <code class="inline">/v1/models</code> y <code class="inline">/v1/chat/completions</code> para comprobar el contrato.</li>
+        <li><strong>Consumir</strong> respuesta normal y stream SSE (<code class="inline">data:</code> … <code class="inline">[DONE]</code>).</li>
+        <li><strong>Migrar</strong> un cliente conservando mensajes, parámetros y errores.</li>
+        <li><strong>Detectar</strong> incompatibilidades de modelo, tools, visión y JSON estructurado.</li>
+        <li><strong>Separar</strong> dependencia de red, de servidor y de modelo.</li>
+        <li><strong>Medir</strong> TTFT, duración, tok/s y tamaño en ambas rutas.</li>
+        <li><strong>Diseñar</strong> fallback explícito y fail-closed para datos privados.</li>
+        <li><strong>Documentar</strong> la decisión en un ADR reproducible.</li>
+      </ol>
+    </section>
+    <section id="idea">
+      <h2>La idea: una frontera estable</h2>
+      <p>Por defecto: <code class="inline">http://localhost:11434/v1/</code>. Compatibilidad significa forma reconocible de petición y respuesta, no idénticas salidas ni paridad de capacidades.</p>
+<div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+  A[Cliente OpenAI SDK] -->|HTTP /v1| B[QVAC server]
+  B --> C[Modelo local]
+  B -. opcional .-> D[Servicio remoto]</pre></div>
+    </section>
+    <section id="contrato">
+      <h2>Contrato mínimo</h2>
+      <h3>Descubrir modelos</h3>
+<pre class="codebox"><code>curl -s http://localhost:11434/v1/models</code></pre>
+      <p>Comprueba que el servidor está vivo y qué <code class="inline">id</code> acepta. No asumas que el nombre cloud existe localmente.</p>
+      <h3>Completion normal</h3>
+<pre class="codebox"><code>curl -s http://localhost:11434/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model":"local-model","messages":[{"role":"user","content":"Di hola en una frase."}],"temperature":0,"stream":false}'</code></pre>
+      <p>Lee <code class="inline">choices[0].message.content</code>, comprueba <code class="inline">error</code> y registra <code class="inline">usage</code> solo si existe.</p>
+      <h3>Streaming SSE</h3>
+<pre class="codebox"><code>data: {"choices":[{"delta":{"content":"Hola"}}]}
+data: {"choices":[{"delta":{"content":"."}}]}
+data: [DONE]</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Texto incremental en <code class="inline">choices[0].delta.content</code>; <code class="inline">[DONE]</code> es sentinel, no JSON. SSE es transporte: commitea el turno solo con terminación válida.</div></div>
+    </section>
+    <section id="config">
+      <h2>Configuración y secretos</h2>
+<pre class="codebox"><code>const baseURL = process.env.QVAC_BASE_URL ?? "http://localhost:11434/v1";
+const apiKey = process.env.QVAC_API_KEY ?? "local-development-key";</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">En local el token puede ignorarse, pero conserva la cabecera. Nunca uses una clave cloud como fallback automático: podría exfiltrar contenido privado.</div></div>
+    </section>
+    <section id="conserva">
+      <h2>Qué se conserva y qué cambia</h2>
+      <table class="booktabs"><thead><tr><th>Conservas</th><th>Debes volver a verificar</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline">messages</code>, ruta y forma de respuesta</td><td><code class="inline">model</code>, chat template</td></tr>
+        <tr><td>Streaming SSE</td><td><code class="inline">tools</code>, JSON mode, visión, embeddings</td></tr>
+        <tr><td>Timeout y cancelación</td><td>Contexto y <code class="inline">max_tokens</code></td></tr>
+        <tr><td>Observabilidad HTTP</td><td>Calidad, seguridad, latencia</td></tr>
+      </tbody></table>
+      <p>Un adapter pequeño es preferible a llenar la app de <code class="inline">if (local)</code>.</p>
+    </section>
+    <section id="dependencias">
+      <h2>Dependencias: tres preguntas distintas</h2>
+      <ol>
+        <li><strong>¿Necesito red?</strong> <code class="inline">localhost</code> no requiere Internet, aunque sí un proceso local.</li>
+        <li><strong>¿Necesito un servidor?</strong> Sí: el cliente HTTP no ejecuta el modelo.</li>
+        <li><strong>¿Necesito un asset local?</strong> El servidor necesita modelo, tokenizer y runtime.</li>
+      </ol>
+      <p>“OpenAI-compatible” no equivale a “offline”. Apaga la red y repite; luego detén el servidor y compara errores.</p>
+    </section>
+    <section id="errores">
+      <h2>Errores que importan</h2>
+      <table class="booktabs api-ref"><thead><tr><th>Código</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td>ECONNREFUSED</td><td>Sin listener; fallo de infraestructura local</td></tr>
+        <tr><td>404</td><td>Ruta o versión incorrecta</td></tr>
+        <tr><td>400</td><td>Cuerpo o capability no soportada</td></tr>
+        <tr><td>401/403</td><td>Autenticación/autorización</td></tr>
+        <tr><td>408/504</td><td>Timeout; carga o generación lenta</td></tr>
+        <tr><td>500</td><td>Error servidor/modelo; conserva request_id</td></tr>
+      </tbody></table>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">No conviertas todo en fallback cloud. Con datos privados, ante servidor caído: explica el bloqueo y pide decisión explícita.</div></div>
+    </section>
+    <section id="medicion">
+      <h2>Diagnóstico y medición</h2>
+      <table class="booktabs"><thead><tr><th>Experimento</th><th>Predicción</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline">/v1</code> duplicado</td><td>404 o ruta inválida</td></tr>
+        <tr><td>Modelo cloud al servidor local</td><td>400/404 modelo desconocido</td></tr>
+        <tr><td><code class="inline">stream:true</code> leído como JSON</td><td>Parser bloqueado</td></tr>
+        <tr><td>Servidor detenido</td><td>ECONNREFUSED, sin fuga</td></tr>
+        <tr><td>Red cortada, servidor+asset activos</td><td>Completion aún funciona</td></tr>
+      </tbody></table>
+      <p>Mide TTFT, duración, caracteres/tokens, HTTP y bytes fuera de localhost.</p>
+    </section>
+    <section id="adr">
+      <h2>ADR mínimo</h2>
+<pre class="codebox"><code># ADR-009: servidor OpenAI-compatible local
+## Contexto
+## Decisión — QVAC en localhost como ruta por defecto para datos privados
+## Capacidades verificadas
+## Riesgos y fallback explícito
+## Evidencia — comandos, fecha, modelo, TTFT, duración, logs sanitizados</code></pre>
+    </section>
+    <section id="build">
+      <h2>Build — Compatibility Probe</h2>
+      <p>Probe contra dos <code class="inline">baseURL</code> sin cambiar el cliente: <code class="inline">/v1/models</code>, completion con <code class="inline">temperature: 0</code>, SSE hasta <code class="inline">[DONE]</code>, errores normalizados y registro sin prompts sensibles.</p>
+    </section>
+    <section id="done">
+      <h2>Definition of Done</h2>
+      <ul>
+        <li>Mismo cliente con dos endpoints configurables.</li>
+        <li><code class="inline">/v1/models</code>, normal y SSE con pruebas separadas.</li>
+        <li>ECONNREFUSED, 404, 400 y timeout distinguibles.</li>
+        <li>Matriz de capacidades verificada, no inferida.</li>
+        <li>Caso privado fail-closed sin ruta local.</li>
+        <li>ADR-009 con evidencia fechada y métricas.</li>
+      </ul>
+    </section>
+    <section id="checkpoint">
+      <h2>Checkpoint</h2>
+      <p>Defiende la migración si explicas el contrato, ejecutas normal + SSE, identificas tres incompatibilidades, demuestras offline y justificas el fallback con ADR. Ver <a href="/class-09-openai-compatible-escape-hatch/assessment/checkpoint.md">assessment/checkpoint.md</a>.</p>
+      <p><a href="/class/09">← Volver a la página de la clase</a> · <a href="/curriculum">Currículo</a></p>
+    </section>
+  </article>
+</div>
+</main>
+</body>
+</html>

@@ -22,7 +22,7 @@ QVAC-BootCamp/
 |------|------------|-----------|
 | `/` | `Home` | Portada del bootcamp |
 | `/curriculum` | `Curriculum` | Las 12 clases + capstone por módulo |
-| `/class/01` … `/class/08` | `Class01` … `Class07`, `PublishedClass` (08+) | Página de clase: slides embebidos, lección HTML, artefactos, progreso |
+| `/class/01` … `/class/10` | `Class01` … `Class10` (páginas dedicadas con DoD y progreso) | Página de clase: lección HTML, artefactos, progreso |
 | `/markdown/*` | `MarkdownPage` | Visor SPA de archivos `.md` estáticos |
 | `*` | `NotFound` | 404 |
 
@@ -38,6 +38,8 @@ Definidas en `vite.config.js`. En **dev** se sirven por middleware; en **build**
 - `class-06-local-rag-private-knowledge`
 - `class-07-speech-systems`
 - `class-08-translation-voice-relay`
+- `class-09-openai-compatible-escape-hatch`
+- `class-10-local-first-architectures`
 - `lessons`
 - `assets`
 
@@ -45,7 +47,7 @@ Ejemplo: `/class-06-local-rag-private-knowledge/lesson.md` → archivo estático
 
 ## Lecciones HTML y estilo editorial
 
-Las clases **01–08** tienen lección completa en dos formatos sincronizados:
+Las clases **01–10** tienen lección completa en dos formatos sincronizados:
 
 | Formato | Ruta | Uso |
 |---------|------|-----|

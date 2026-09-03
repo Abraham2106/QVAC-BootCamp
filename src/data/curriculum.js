@@ -104,6 +104,7 @@ export const MODULES = [
         title: 'Speech Systems: ASR and TTS',
         desc: 'Audio continuo como entrada y salida: PCM, streaming, Whisper/Parakeet y síntesis local.',
         href: '/class/07', available: true,
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
       {
         no: '08',
@@ -111,6 +112,7 @@ export const MODULES = [
         title: 'Translation and the Voice Relay',
         desc: 'Múltiples modelos especializados convertidos en una experiencia de intérprete en tiempo real.',
         href: '/class/08', available: true,
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
     ],
   },
@@ -125,6 +127,7 @@ export const MODULES = [
         title: 'The OpenAI-Compatible Escape Hatch',
         desc: 'Cambiar dónde corre la inteligencia sin rediseñar el cliente: localhost:11434/v1.',
         href: '/class/09', available: true,
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
       {
         no: '10',
@@ -132,6 +135,7 @@ export const MODULES = [
         title: 'Designing Local-First Architectures',
         desc: '¿Debe todo correr local? Fronteras de privacidad, fallbacks y Architecture Decision Records.',
         href: '/class/10', available: true,
+        badges: ['lesson', 'lab', 'examples', 'challenge', 'assessment', 'instructor', 'notebooklm'],
       },
     ],
   },
@@ -303,5 +307,66 @@ export const CLASS07 = {
     { id: 'relay', label: 'Relay ASR → texto → TTS correlacionado por turnId' },
     { id: 'metrics', label: 'Métricas separan first-text, first-audio y total' },
     { id: 'breakit', label: 'Sample rate/backpressure diagnosticado con evidencia' },
+  ],
+}
+
+export const CLASS08 = {
+  id: 'class-08',
+  kicker: 'Clase 08 · Módulo 3 — Beyond Text',
+  title: 'Translation and the Voice Relay',
+  eq: '¿Cómo convertimos ASR y TTS en un intérprete local que no repite, no se atrasa y no filtra datos?',
+  outcomes: [
+    { tag: 'Outcome 1–2', title: 'Contratos + partial vs final', body: 'PCM, transcriptPartial/transcriptFinal, traducción y audio con segmentId monótono.' },
+    { tag: 'Outcome 3–5', title: 'Ruta de traducción + relay', body: 'qvac-fabric-llm.cpp vs Bergamot, encadenamiento sin bloquear captura, backpressure y descarte de obsoletos.' },
+    { tag: 'Outcome 6–7', title: 'Medición + privacidad', body: 'Primer audio, latencias por etapa, RTF y prueba offline sin red con política de fallo explícita.' },
+  ],
+  dodItems: [
+    { id: 'contratos', label: 'Contratos PCM/transcript/traducción/audio documentados con segmentId' },
+    { id: 'ruta', label: 'Ruta de traducción elegida y justificada (LLM generativo vs Bergamot)' },
+    { id: 'relay', label: 'Relay ASR → traducción → TTS ordenado con 5 segmentos medidos' },
+    { id: 'backpressure', label: 'Backpressure y descarte fuera de orden verificados (cola TTS acotada)' },
+    { id: 'metricas', label: 'Tabla por etapa + RTF y primer audio por segmento' },
+    { id: 'breakit', label: 'Break It offline: TTS lento, fallo de traducción y cierre durante TTS' },
+  ],
+}
+
+export const CLASS09 = {
+  id: 'class-09',
+  kicker: 'Clase 09 · Módulo 4 — Drop-in Sovereignty',
+  title: 'The OpenAI-Compatible Escape Hatch',
+  eq: '¿Cómo cambiamos una aplicación de un proveedor remoto a inferencia local sin reescribir su cliente?',
+  outcomes: [
+    { tag: 'Outcome 1–4', title: 'Contrato + streaming', body: 'baseURL como frontera, /v1/models, /v1/chat/completions y SSE con deltas hasta [DONE].' },
+    { tag: 'Outcome 5–7', title: 'Migración + límites', body: 'Adapter sin if(local) disperso, tools/JSON/visión reverificados y tres dependencias separadas.' },
+    { tag: 'Outcome 8–10', title: 'Medición + fallback + ADR', body: 'TTFT/duración/tok/s comparables, fallback fail-closed y decisión documentada.' },
+  ],
+  dodItems: [
+    { id: 'contrato', label: 'Contrato verificado: /v1/models + completion normal + stream SSE hasta [DONE]' },
+    { id: 'migracion', label: 'Cliente migrado solo con QVAC_BASE_URL / QVAC_MODEL, sin clave real en código' },
+    { id: 'errores', label: 'Cuatro fallos clasificados: URL, contrato, modelo y recurso (ECONNREFUSED, 404, 400…)' },
+    { id: 'offline', label: 'Prueba offline: red cortada con servidor activo, luego servidor detenido' },
+    { id: 'metricas', label: 'Métricas local vs remoto con contexto de hardware/modelo' },
+    { id: 'fallback', label: 'Fallback seguro fail-closed para datos privados, sin cloud silencioso' },
+    { id: 'adr', label: 'ADR-009 con capacidades verificadas y límites no verificados' },
+  ],
+}
+
+export const CLASS10 = {
+  id: 'class-10',
+  kicker: 'Clase 10 · Módulo 4 — Drop-in Sovereignty',
+  title: 'Designing Local-First Architectures',
+  eq: '¿Debe todo correr local? No: ¿qué datos, capacidades y fallos pueden cruzar una frontera?',
+  outcomes: [
+    { tag: 'Outcome 1–3', title: 'Fronteras + clasificación', body: 'Datos, ejecución y confianza; matriz de sensibilidad vs capacidad antes de enrutar.' },
+    { tag: 'Outcome 4–6', title: 'ADR + fallback seguro', body: 'Decisión auditable, consentimiento, allowlist, timeout y degradación explícita.' },
+    { tag: 'Outcome 7–8', title: 'Medición + exfiltración', body: 'Latencia, éxito local, bloqueos y Exfiltration Test con red bloqueada.' },
+  ],
+  dodItems: [
+    { id: 'fronteras', label: 'Diagrama con las tres fronteras: datos, ejecución y confianza' },
+    { id: 'matriz', label: 'Matriz de rutas con invariantes y pruebas automatizadas' },
+    { id: 'adr', label: 'ADR con decisión, alternativas, invariantes y consecuencias' },
+    { id: 'fallback', label: 'Fallback con consentimiento, allowlist, timeout y trazabilidad sin PII' },
+    { id: 'exfiltracion', label: 'Exfiltration Test: red bloqueada + endpoint malicioso rechazado' },
+    { id: 'metricas', label: 'Tabla p50/p95, éxito local y decisiones bloqueadas con contexto' },
   ],
 }
