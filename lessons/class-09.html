@@ -12,6 +12,7 @@
 </head>
 <body class="lesson-page" data-lesson-class="class-09">
 <a class="skip-link" href="#main">Saltar al contenido</a>
+
 <header class="site-head">
   <div class="bar">
     <a class="brand" href="/">QVAC <b>Masterclass</b></a>
@@ -22,8 +23,10 @@
     </nav>
   </div>
 </header>
+
 <main id="main">
 <div class="lesson-layout">
+
   <aside class="lesson-sidebar" aria-label="Navegación de la lección">
     <div class="lesson-sidebar-title">
       <span class="lesson-sidebar__kicker">Clase 09 · Módulo 4</span>
@@ -33,149 +36,398 @@
       <span class="toc-head">INTRODUCCIÓN</span>
       <a href="#intro">Pregunta esencial</a>
       <a href="#outcomes">Qué aprenderás</a>
-      <a href="#idea">La idea: frontera estable</a>
-      <span class="toc-head">CONTRATO</span>
-      <a href="#contrato">Contrato mínimo</a>
-      <a href="#config">Configuración y secretos</a>
-      <a href="#conserva">Qué se conserva</a>
-      <a href="#dependencias">Tres dependencias</a>
+      <a href="#contexto">La idea: frontera estable</a>
+      <span class="toc-head">TÉRMINOS</span>
+      <a href="#terminos">Índice de términos</a>
+      <a href="#baseurl">baseURL</a>
+      <a href="#models">/v1/models</a>
+      <a href="#completions">chat.completions</a>
+      <a href="#sse">SSE y [DONE]</a>
+      <a href="#adapter">Adapter</a>
+      <a href="#tres-dependencias">Tres dependencias</a>
+      <a href="#fail-closed">Fail-closed</a>
+      <span class="toc-head">REFERENCIA QVAC</span>
+      <a href="#referencia">Referencia QVAC</a>
+      <a href="#ref-models">Descubrir modelos</a>
+      <a href="#ref-normal">Completion normal</a>
+      <a href="#ref-stream">Streaming SSE</a>
+      <a href="#ref-config">Configuración</a>
+      <span class="toc-head">EJEMPLOS</span>
+      <a href="#ejemplo">Ejemplo completo</a>
       <span class="toc-head">PRÁCTICA</span>
-      <a href="#errores">Errores que importan</a>
-      <a href="#medicion">Diagnóstico y medición</a>
-      <a href="#adr">ADR mínimo</a>
-      <a href="#build">Build: probe</a>
+      <a href="#predict">Antes de ejecutar</a>
+      <a href="#build">Práctica guiada</a>
+      <a href="#errores">Errores comunes</a>
+      <a href="#medicion">Medición</a>
+      <a href="#resumen">Resumen</a>
       <a href="#done">Definition of Done</a>
       <a href="#checkpoint">Checkpoint</a>
+      <a href="#fuentes">Fuentes</a>
     </nav>
   </aside>
+
   <article class="lesson">
-    <p class="lesson-meta">Módulo 4 — Drop-in Sovereignty · QVAC SDK v0.18.x / v0.18.1 · Servidor por defecto en http://localhost:11434/v1/</p>
+    <p class="lesson-meta">
+      Módulo 4 — Drop-in Sovereignty · Baseline: QVAC SDK v0.18.x / v0.18.1 · Servidor por defecto en http://localhost:11434/v1/</p>
+
     <section id="intro">
       <h2>Pregunta esencial</h2>
       <p><em>¿Cómo cambiamos una aplicación de un proveedor remoto a inferencia local sin reescribir su cliente, y cómo demostramos qué dependencias permanecen?</em></p>
-      <p>Un cliente moderno no debería saber si la inteligencia corre en la nube o en un proceso local. Debe conocer un contrato. QVAC expone un servidor HTTP compatible con OpenAI; la app apunta al mismo recurso lógico, pero la inferencia cambia de lugar.</p>
+      <p>Un cliente moderno no debería saber si la inteligencia corre en la nube, en un proceso local o detrás de una máquina de la red privada. Debe conocer un contrato.</p>
+      <p>QVAC expone un servidor HTTP compatible con OpenAI. La aplicación apunta al mismo recurso lógico (<code class="inline">chat.completions</code>), pero el proceso de inferencia cambia de lugar.</p>
     </section>
+
     <section id="outcomes">
       <h2>Qué aprenderás</h2>
       <ol>
         <li><strong>Explicar</strong> qué resuelve y qué no resuelve una API OpenAI-compatible.</li>
-        <li><strong>Configurar</strong> <code class="inline">baseURL</code> como frontera de colocación, sin secretos en código.</li>
+        <li><strong>Configurar</strong> <code class="inline">baseURL</code> como frontera de colocación, sin codificar secretos en el código.</li>
         <li><strong>Usar</strong> <code class="inline">/v1/models</code> y <code class="inline">/v1/chat/completions</code> para comprobar el contrato.</li>
-        <li><strong>Consumir</strong> respuesta normal y stream SSE (<code class="inline">data:</code> … <code class="inline">[DONE]</code>).</li>
-        <li><strong>Migrar</strong> un cliente conservando mensajes, parámetros y errores.</li>
-        <li><strong>Detectar</strong> incompatibilidades de modelo, tools, visión y JSON estructurado.</li>
-        <li><strong>Separar</strong> dependencia de red, de servidor y de modelo.</li>
-        <li><strong>Medir</strong> TTFT, duración, tok/s y tamaño en ambas rutas.</li>
-        <li><strong>Diseñar</strong> fallback explícito y fail-closed para datos privados.</li>
+        <li><strong>Consumir</strong> una respuesta normal y un stream SSE (<code class="inline">data:</code> … <code class="inline">[DONE]</code>).</li>
+        <li><strong>Migrar</strong> un cliente conservando mensajes, parámetros y manejo de errores.</li>
+        <li><strong>Detectar</strong> incompatibilidades de modelo, herramienta, visión y JSON estructurado.</li>
+        <li><strong>Separar</strong> dependencia de red, dependencia del servidor y dependencia del modelo.</li>
+        <li><strong>Medir</strong> TTFT, duración, tok/s y tamaño de respuesta en ambas rutas.</li>
+        <li><strong>Diseñar</strong> un fallback explícito y fail-closed cuando los datos son privados.</li>
         <li><strong>Documentar</strong> la decisión en un ADR reproducible.</li>
       </ol>
     </section>
-    <section id="idea">
+
+    <section id="contexto">
       <h2>La idea: una frontera estable</h2>
-      <p>Por defecto: <code class="inline">http://localhost:11434/v1/</code>. Compatibilidad significa forma reconocible de petición y respuesta, no idénticas salidas ni paridad de capacidades.</p>
-<div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+      <p>La URL base por defecto es <code class="inline">http://localhost:11434/v1/</code>. El cliente conserva la forma de la petición y la respuesta. El backend cambia de un endpoint remoto a QVAC local.</p>
+<div class="mermaid-wrap">
+<pre class="mermaid">flowchart LR
   A[Cliente OpenAI SDK] -->|HTTP /v1| B[QVAC server]
   B --> C[Modelo local]
-  B -. opcional .-> D[Servicio remoto]</pre></div>
+  B -. opcional .-> D[Servicio remoto]</pre>
+</div>
+      <p>Compatibilidad significa que la forma de la petición y la respuesta es reconocible. No promete que todo modelo acepte todas las opciones ni que las salidas sean idénticas.</p>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">No confundas compatibilidad de API con equivalencia de modelo: el contrato de transporte puede ser igual, pero tokens, capacidades, latencia y calidad dependen del backend.</div></div>
     </section>
-    <section id="contrato">
-      <h2>Contrato mínimo</h2>
-      <h3>Descubrir modelos</h3>
+
+    <section id="terminos">
+      <h2>Términos</h2>
+      <h3>Índice rápido</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Definición breve</th></tr></thead>
+        <tbody>
+          <tr><td><strong>baseURL</strong></td><td>Prefijo configurable que decide dónde vive la inferencia</td></tr>
+          <tr><td><strong>/v1/models</strong></td><td>Endpoint de descubrimiento: qué modelos acepta el servidor</td></tr>
+          <tr><td><strong>chat.completions</strong></td><td>Recurso lógico de completado de chat, normal o streaming</td></tr>
+          <tr><td><strong>SSE / [DONE]</strong></td><td>Transporte de eventos para streaming; sentinel de fin</td></tr>
+          <tr><td><strong>Adapter</strong></td><td>Capa fina que normaliza URL, modelo, errores y capacidades</td></tr>
+          <tr><td><strong>Tres dependencias</strong></td><td>Red, servidor y modelo: fallan de forma distinta</td></tr>
+          <tr><td><strong>Fail-closed</strong></td><td>Ante duda con datos privados: bloquear, no enviar fuera</td></tr>
+        </tbody>
+      </table>
+
+      <section id="baseurl">
+        <h3>baseURL</h3>
+        <p><strong>Definición:</strong> Prefijo de URL inyectable por entorno que actúa como frontera de colocación entre cliente y servidor.</p>
+        <p><strong>Uso:</strong> Cambiar la ruta local/remota sin editar código. Es la única variable que debería moverse en una migración drop-in.</p>
+<pre class="codebox"><code>const baseURL = (process.env.QVAC_BASE_URL ?? "http://localhost:11434/v1").replace(/\/$/, "")
+const model = process.env.QVAC_MODEL ?? "local-model"</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">El mismo cliente funciona contra dos endpoints. <code class="inline">QVAC_BASE_URL</code> y <code class="inline">QVAC_MODEL</code> cambian la ruta sin tocar el código.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body"><code class="inline">/v1</code> es prefijo, no endpoint. Duplicarlo (<code class="inline">…/v1/v1/chat/completions</code>) rompe la ruta con 404. Normaliza la barra final una sola vez.</div></div>
+      </section>
+
+      <section id="models">
+        <h3>/v1/models</h3>
+        <p><strong>Definición:</strong> Endpoint de descubrimiento que lista los identificadores de modelo aceptados por el servidor.</p>
+        <p><strong>Uso:</strong> Comprobar que el servidor está vivo y conocer los <code class="inline">id</code> válidos antes de enviar prompts.</p>
 <pre class="codebox"><code>curl -s http://localhost:11434/v1/models</code></pre>
-      <p>Comprueba que el servidor está vivo y qué <code class="inline">id</code> acepta. No asumas que el nombre cloud existe localmente.</p>
-      <h3>Completion normal</h3>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">JSON con la lista de modelos. Si el nombre de un modelo cloud no aparece, no existe localmente: no lo infieras por el nombre.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">El primer paso de cualquier diagnóstico es este endpoint: distingue “servidor caído” de “modelo desconocido”.</div></div>
+      </section>
+
+      <section id="completions">
+        <h3>chat.completions</h3>
+        <p><strong>Definición:</strong> Recurso <code class="inline">POST /v1/chat/completions</code> que acepta <code class="inline">model</code>, <code class="inline">messages</code>, <code class="inline">temperature</code> y <code class="inline">stream</code>.</p>
+        <p><strong>Uso:</strong> Enviar una conversación y leer <code class="inline">choices[0].message.content</code> en modo normal.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">model</code></td><td><code class="inline">string</code></td><td>Debe existir en <code class="inline">/v1/models</code> del servidor destino</td></tr>
+            <tr><td><code class="inline">messages</code></td><td><code class="inline">{ role, content }[]</code></td><td>Se conserva intacto en la migración</td></tr>
+            <tr><td><code class="inline">temperature</code></td><td><code class="inline">number</code></td><td>Usa 0 para corridas deterministas comparables</td></tr>
+            <tr><td><code class="inline">stream</code></td><td><code class="inline">boolean</code></td><td><code class="inline">false</code> = JSON único; <code class="inline">true</code> = SSE</td></tr>
+          </tbody>
+        </table>
 <pre class="codebox"><code>curl -s http://localhost:11434/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{"model":"local-model","messages":[{"role":"user","content":"Di hola en una frase."}],"temperature":0,"stream":false}'</code></pre>
-      <p>Lee <code class="inline">choices[0].message.content</code>, comprueba <code class="inline">error</code> y registra <code class="inline">usage</code> solo si existe.</p>
-      <h3>Streaming SSE</h3>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">JSON con <code class="inline">choices[0].message.content</code>. Registra <code class="inline">usage</code> solo si el backend lo proporciona: su ausencia no invalida la respuesta.</div></div>
+      </section>
+
+      <section id="sse">
+        <h3>SSE y [DONE]</h3>
+        <p><strong>Definición:</strong> Con <code class="inline">stream: true</code> la respuesta es <code class="inline">text/event-stream</code>: líneas <code class="inline">data:</code> con JSON y un sentinel final <code class="inline">data: [DONE]</code>.</p>
+        <p><strong>Uso:</strong> Acumular <code class="inline">choices[0].delta.content</code> hasta <code class="inline">[DONE]</code> para TTFT bajo y salida incremental.</p>
 <pre class="codebox"><code>data: {"choices":[{"delta":{"content":"Hola"}}]}
 data: {"choices":[{"delta":{"content":"."}}]}
 data: [DONE]</code></pre>
-      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Texto incremental en <code class="inline">choices[0].delta.content</code>; <code class="inline">[DONE]</code> es sentinel, no JSON. SSE es transporte: commitea el turno solo con terminación válida.</div></div>
+<pre class="codebox"><code>let output = ""
+let firstDelta = null
+// por cada línea "data: ...":
+//   si payload === "[DONE]" → terminar
+//   si no, output += JSON.parse(payload).choices?.[0]?.delta?.content ?? ""</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Texto completo reconstruido + TTFT (primer delta). <code class="inline">[DONE]</code> no es JSON: no intentes parsearlo.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">SSE es transporte, no persistencia: conserva el buffer provisional y commitea el turno solo con terminación válida, igual que en la Clase 4.</div></div>
+      </section>
+
+      <section id="adapter">
+        <h3>Adapter</h3>
+        <p><strong>Definición:</strong> Módulo pequeño que normaliza base URL, modelo, errores y capacidades entre backends.</p>
+        <p><strong>Uso:</strong> Evitar <code class="inline">if (local)</code> dispersos por toda la aplicación. Toda diferencia cloud/local vive en un solo lugar.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Conservas</th><th>Verificas de nuevo</th></tr></thead>
+          <tbody>
+            <tr><td><code class="inline">messages</code>, ruta, forma de respuesta</td><td><code class="inline">model</code>, chat template</td></tr>
+            <tr><td>Streaming SSE</td><td><code class="inline">tools</code>, JSON mode, visión, embeddings</td></tr>
+            <tr><td>Timeout y cancelación</td><td>Contexto y <code class="inline">max_tokens</code></td></tr>
+            <tr><td>Observabilidad HTTP</td><td>Calidad, seguridad, latencia</td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">La UI no cambia. El adapter traduce capacidades: lo soportado pasa, lo no soportado falla con mensaje accionable.</div></div>
+      </section>
+
+      <section id="tres-dependencias">
+        <h3>Tres dependencias</h3>
+        <p><strong>Definición:</strong> Tres preguntas distintas que suelen confundirse: ¿necesito red? ¿necesito un servidor? ¿necesito un asset local?</p>
+        <p><strong>Uso:</strong> Diagnosticar con precisión: cada “no” produce un error diferente y una evidencia diferente.</p>
+        <table class="booktabs">
+          <thead><tr><th>Pregunta</th><th>Respuesta local</th><th>Cómo probarla</th></tr></thead>
+          <tbody>
+            <tr><td>¿Necesito red?</td><td>No: <code class="inline">localhost</code> no requiere Internet</td><td>Desconecta red, mantén servidor: debe funcionar</td></tr>
+            <tr><td>¿Necesito un servidor?</td><td>Sí: el cliente HTTP no ejecuta el modelo</td><td>Detén QVAC: <code class="inline">ECONNREFUSED</code></td></tr>
+            <tr><td>¿Necesito un asset?</td><td>Sí: modelo + tokenizer + runtime</td><td>Modelo ausente: 400/404 de modelo</td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">“OpenAI-compatible” no equivale a “offline”. Lo demuestras con dos experimentos separados, no con uno.</div></div>
+      </section>
+
+      <section id="fail-closed">
+        <h3>Fail-closed</h3>
+        <p><strong>Definición:</strong> Política segura: si la ruta local no está disponible y los datos son privados, el sistema bloquea en lugar de enviarlos a la nube.</p>
+        <p><strong>Uso:</strong> Fallback por defecto para salud, credenciales y secretos. El fallback remoto requiere decisión explícita, nunca automática.</p>
+<pre class="codebox"><code>// pseudopolítica
+if (!localReady &amp;&amp; sensitivity === 'high') return 'refuse'
+// remoto solo con consentimiento + endpoint permitido + timeout</code></pre>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Nunca uses una clave cloud como fallback automático: podría enviar contenido privado fuera de la máquina sin que nadie lo note.</div></div>
+      </section>
     </section>
-    <section id="config">
-      <h2>Configuración y secretos</h2>
-<pre class="codebox"><code>const baseURL = process.env.QVAC_BASE_URL ?? "http://localhost:11434/v1";
-const apiKey = process.env.QVAC_API_KEY ?? "local-development-key";</code></pre>
-      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">En local el token puede ignorarse, pero conserva la cabecera. Nunca uses una clave cloud como fallback automático: podría exfiltrar contenido privado.</div></div>
+
+    <section id="referencia">
+      <h2>Referencia QVAC</h2>
+
+      <h3 id="ref-models">Descubrir modelos</h3>
+      <p><strong>Definición:</strong> <code class="inline">GET /v1/models</code> devuelve los modelos servidos.</p>
+      <p><strong>Uso:</strong> Liveness check + inventario de <code class="inline">id</code> antes de cualquier completion.</p>
+<pre class="codebox"><code>curl -s http://localhost:11434/v1/models</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Lista de <code class="inline">id</code>. Guarda la salida fechada como evidencia del ADR.</div></div>
+
+      <h3 id="ref-normal">Completion normal</h3>
+      <p><strong>Definición:</strong> <code class="inline">POST /v1/chat/completions</code> con <code class="inline">stream: false</code> devuelve un JSON único.</p>
+      <p><strong>Uso:</strong> Caso base de la migración. El cliente lee <code class="inline">choices[0].message.content</code> y comprueba <code class="inline">error</code>.</p>
+<pre class="codebox"><code>const response = await fetch(`${baseURL}/chat/completions`, {
+  method: "POST",
+  headers: { "content-type": "application/json", authorization: "Bearer local-development-key" },
+  body: JSON.stringify({ model, messages, temperature: 0 }),
+})
+const text = await response.text()
+if (!response.ok) throw new Error(`HTTP ${response.status}: ${text.slice(0, 500)}`)
+const data = JSON.parse(text)</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Si <code class="inline">!response.ok</code>, lee el cuerpo como texto antes de asumir JSON: algunos errores no son JSON válido.</div></div>
+
+      <h3 id="ref-stream">Streaming SSE</h3>
+      <p><strong>Definición:</strong> Con <code class="inline">stream: true</code>, el cuerpo es un flujo de eventos <code class="inline">data:</code>.</p>
+      <p><strong>Uso:</strong> TTFT + salida incremental. Buffer parcial por líneas: un chunk TCP puede partir una línea <code class="inline">data:</code> por la mitad.</p>
+<pre class="codebox"><code>const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
+let pending = ""
+while (true) {
+  const { value, done } = await reader.read()
+  if (done) break
+  pending += value
+  const lines = pending.split("\n")
+  pending = lines.pop() ?? ""
+  for (const line of lines) {
+    if (!line.startsWith("data: ")) continue
+    const payload = line.slice(6).trim()
+    if (payload === "[DONE]") continue
+    output += JSON.parse(payload).choices?.[0]?.delta?.content ?? ""
+  }
+}</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">TTFT = primer delta − inicio; duración = fin − inicio. Ejemplo en <code class="inline">examples/02-stream-sse.ts</code>.</div></div>
+
+      <h3 id="ref-config">Configuración y secretos</h3>
+      <p><strong>Definición:</strong> URL y clave inyectables por entorno, nunca quemadas en el código.</p>
+      <p><strong>Uso:</strong> <code class="inline">QVAC_BASE_URL</code> y <code class="inline">QVAC_MODEL</code> por proceso; la cabecera <code class="inline">Authorization</code> conserva la forma aunque el servidor local la ignore.</p>
+<pre class="codebox"><code>const baseURL = process.env.QVAC_BASE_URL ?? "http://localhost:11434/v1"
+const apiKey = process.env.QVAC_API_KEY ?? "local-development-key"</code></pre>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">No imprimas secretos en logs ni en <code class="inline">predictions.md</code>. Sanitiza respuestas antes de guardarlas.</div></div>
     </section>
-    <section id="conserva">
-      <h2>Qué se conserva y qué cambia</h2>
-      <table class="booktabs"><thead><tr><th>Conservas</th><th>Debes volver a verificar</th></tr></thead>
-      <tbody>
-        <tr><td><code class="inline">messages</code>, ruta y forma de respuesta</td><td><code class="inline">model</code>, chat template</td></tr>
-        <tr><td>Streaming SSE</td><td><code class="inline">tools</code>, JSON mode, visión, embeddings</td></tr>
-        <tr><td>Timeout y cancelación</td><td>Contexto y <code class="inline">max_tokens</code></td></tr>
-        <tr><td>Observabilidad HTTP</td><td>Calidad, seguridad, latencia</td></tr>
-      </tbody></table>
-      <p>Un adapter pequeño es preferible a llenar la app de <code class="inline">if (local)</code>.</p>
+
+    <section id="ejemplo">
+      <h2>Ejemplo completo</h2>
+      <p>Smoke test mínimo contra cualquier <code class="inline">baseURL</code>. Ejecutable en <a href="../class-09-openai-compatible-escape-hatch/examples/01-smoke-test.ts">examples/01-smoke-test.ts</a>.</p>
+<pre class="codebox"><code>const baseURL = (process.env.QVAC_BASE_URL ?? "http://localhost:11434/v1").replace(/\/$/, "")
+const model = process.env.QVAC_MODEL ?? "local-model"
+const started = performance.now()
+const response = await fetch(`${baseURL}/chat/completions`, {
+  method: "POST",
+  headers: { "content-type": "application/json", authorization: "Bearer local-development-key" },
+  body: JSON.stringify({ model, messages: [{ role: "user", content: "Di únicamente: smoke test OK" }], temperature: 0 }),
+})
+const text = await response.text()
+if (!response.ok) throw new Error(`HTTP ${response.status}: ${text.slice(0, 500)}`)
+const data = JSON.parse(text)
+console.log(JSON.stringify({
+  status: response.status,
+  ms: Math.round(performance.now() - started),
+  content: data.choices?.[0]?.message?.content,
+  usage: data.usage ?? null,
+}, null, 2))</code></pre>
+      <p>Ejecución:</p>
+<pre class="codebox"><code>npm install @qvac/sdk tsx
+npx tsx examples/01-smoke-test.ts
+npx tsx examples/02-stream-sse.ts</code></pre>
     </section>
-    <section id="dependencias">
-      <h2>Dependencias: tres preguntas distintas</h2>
+
+    <section id="predict">
+      <h2>Antes de ejecutar</h2>
+      <p>Escribe una predicción por escrito antes de cada experimento:</p>
       <ol>
-        <li><strong>¿Necesito red?</strong> <code class="inline">localhost</code> no requiere Internet, aunque sí un proceso local.</li>
-        <li><strong>¿Necesito un servidor?</strong> Sí: el cliente HTTP no ejecuta el modelo.</li>
-        <li><strong>¿Necesito un asset local?</strong> El servidor necesita modelo, tokenizer y runtime.</li>
+        <li><code class="inline">baseURL</code> con <code class="inline">/v1</code> duplicado: ¿qué status esperas y por qué?</li>
+        <li>Nombre de modelo cloud enviado al servidor local: ¿qué error devuelve?</li>
+        <li><code class="inline">stream: true</code> leído como JSON único: ¿qué le pasa al parser?</li>
+        <li>Servidor detenido con red activa: ¿qué error y qué datos salen de la máquina?</li>
+        <li>Red desconectada con servidor y asset activos: ¿sigue funcionando la completion?</li>
       </ol>
-      <p>“OpenAI-compatible” no equivale a “offline”. Apaga la red y repite; luego detén el servidor y compara errores.</p>
     </section>
-    <section id="errores">
-      <h2>Errores que importan</h2>
-      <table class="booktabs api-ref"><thead><tr><th>Código</th><th>Significado</th></tr></thead>
-      <tbody>
-        <tr><td>ECONNREFUSED</td><td>Sin listener; fallo de infraestructura local</td></tr>
-        <tr><td>404</td><td>Ruta o versión incorrecta</td></tr>
-        <tr><td>400</td><td>Cuerpo o capability no soportada</td></tr>
-        <tr><td>401/403</td><td>Autenticación/autorización</td></tr>
-        <tr><td>408/504</td><td>Timeout; carga o generación lenta</td></tr>
-        <tr><td>500</td><td>Error servidor/modelo; conserva request_id</td></tr>
-      </tbody></table>
-      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">No conviertas todo en fallback cloud. Con datos privados, ante servidor caído: explica el bloqueo y pide decisión explícita.</div></div>
-    </section>
-    <section id="medicion">
-      <h2>Diagnóstico y medición</h2>
-      <table class="booktabs"><thead><tr><th>Experimento</th><th>Predicción</th></tr></thead>
-      <tbody>
-        <tr><td><code class="inline">/v1</code> duplicado</td><td>404 o ruta inválida</td></tr>
-        <tr><td>Modelo cloud al servidor local</td><td>400/404 modelo desconocido</td></tr>
-        <tr><td><code class="inline">stream:true</code> leído como JSON</td><td>Parser bloqueado</td></tr>
-        <tr><td>Servidor detenido</td><td>ECONNREFUSED, sin fuga</td></tr>
-        <tr><td>Red cortada, servidor+asset activos</td><td>Completion aún funciona</td></tr>
-      </tbody></table>
-      <p>Mide TTFT, duración, caracteres/tokens, HTTP y bytes fuera de localhost.</p>
-    </section>
-    <section id="adr">
-      <h2>ADR mínimo</h2>
-<pre class="codebox"><code># ADR-009: servidor OpenAI-compatible local
-## Contexto
-## Decisión — QVAC en localhost como ruta por defecto para datos privados
-## Capacidades verificadas
-## Riesgos y fallback explícito
-## Evidencia — comandos, fecha, modelo, TTFT, duración, logs sanitizados</code></pre>
-    </section>
+
     <section id="build">
-      <h2>Build — Compatibility Probe</h2>
-      <p>Probe contra dos <code class="inline">baseURL</code> sin cambiar el cliente: <code class="inline">/v1/models</code>, completion con <code class="inline">temperature: 0</code>, SSE hasta <code class="inline">[DONE]</code>, errores normalizados y registro sin prompts sensibles.</p>
+      <h2>Práctica guiada</h2>
+      <p><strong>Lab — Drop-in Local Client (75–90 min).</strong> Guía en <a href="../class-09-openai-compatible-escape-hatch/lab/README.md">lab/README.md</a>. Starter en <a href="../class-09-openai-compatible-escape-hatch/lab/starter/client-starter.ts">lab/starter/client-starter.ts</a>.</p>
+      <ol>
+        <li><strong>Predict:</strong> anota qué pasa con servidor detenido, modelo incorrecto y <code class="inline">/v1</code> duplicado.</li>
+        <li><strong>Modify:</strong> completa los 4 TODO del starter usando <code class="inline">fetch</code>; sin claves reales en el archivo.</li>
+        <li><strong>Run:</strong> ejecuta normal y <code class="inline">--stream</code>; guarda respuestas sanitizadas.</li>
+        <li><strong>Break It:</strong> cambia una sola variable por intento; clasifica el fallo (URL, contrato, modelo o recurso).</li>
+        <li><strong>Measure:</strong> calcula TTFT, duración, bytes y estado HTTP.</li>
+        <li><strong>Offline proof:</strong> desconecta la red sin detener QVAC y repite; después detén QVAC y compara el diagnóstico.</li>
+        <li><strong>Extend:</strong> agrega <code class="inline">--json</code> y escribe <code class="inline">ADR-009.md</code> con capacidades verificadas.</li>
+      </ol>
+      <p>Entregable: <code class="inline">predictions.md</code>, script final, mediciones, evidencia offline, diagnóstico de cuatro fallos y <code class="inline">ADR-009.md</code>.</p>
     </section>
-    <section id="done">
-      <h2>Definition of Done</h2>
+
+    <section id="errores">
+      <h2>Errores comunes</h2>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">ECONNREFUSED</code></td><td>Sin listener en la URL; QVAC detenido</td><td>Inicia el servidor; no actives cloud silencioso</td></tr>
+          <tr><td>404 en <code class="inline">/chat/completions</code></td><td><code class="inline">/v1</code> duplicado o ruta mal formada</td><td>Normaliza <code class="inline">baseURL</code> sin barra final</td></tr>
+          <tr><td>400 con modelo cloud</td><td>Modelo inexistente en el backend local</td><td>Usa un <code class="inline">id</code> de <code class="inline">/v1/models</code></td></tr>
+          <tr><td>Parser colgado en stream</td><td><code class="inline">[DONE]</code> tratado como JSON o línea partida</td><td>Buffer por líneas + sentinel antes de <code class="inline">JSON.parse</code></td></tr>
+          <tr><td>Respuesta vacía sin error</td><td>Lectura de <code class="inline">message.content</code> en un chunk SSE</td><td>En SSE lee <code class="inline">delta.content</code>, no <code class="inline">message</code></td></tr>
+          <tr><td>Funciona con red, falla sin red</td><td>El <code class="inline">baseURL</code> efectivo sigue siendo cloud</td><td>Imprime la URL efectiva al inicio de cada corrida</td></tr>
+          <tr><td>Clave cloud en logs</td><td>Volcado de headers/entorno</td><td>Sanitiza: nunca registres <code class="inline">Authorization</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="medicion">
+      <h2>Medición</h2>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Métrica</th><th>Cómo obtenerla</th><th>Unidad</th><th>Interpretación</th></tr></thead>
+        <tbody>
+          <tr><td>TTFT</td><td>Primer <code class="inline">delta</code> − inicio del fetch</td><td>ms</td><td>Latencia percibida de arranque</td></tr>
+          <tr><td>Duración</td><td>Fin del stream − inicio</td><td>ms</td><td>Costo total de la llamada</td></tr>
+          <tr><td>Caracteres</td><td>Longitud del texto acumulado</td><td>chars</td><td>Tamaño de respuesta</td></tr>
+          <tr><td>Estado HTTP</td><td><code class="inline">response.status</code></td><td>código</td><td>Contrato: 200 vs 400/404/500</td></tr>
+          <tr><td>Bytes fuera de localhost</td><td>Inspección de destino + sockets</td><td>count</td><td>Evidencia de no-exfiltración</td></tr>
+        </tbody>
+      </table>
+      <p>Compara local vs remoto con el mismo prompt, <code class="inline">temperature: 0</code> y contexto de hardware/modelo. Una cifra de una máquina no es una promesa universal.</p>
+    </section>
+
+    <section id="resumen">
+      <h2>Resumen</h2>
       <ul>
-        <li>Mismo cliente con dos endpoints configurables.</li>
-        <li><code class="inline">/v1/models</code>, normal y SSE con pruebas separadas.</li>
-        <li>ECONNREFUSED, 404, 400 y timeout distinguibles.</li>
-        <li>Matriz de capacidades verificada, no inferida.</li>
-        <li>Caso privado fail-closed sin ruta local.</li>
-        <li>ADR-009 con evidencia fechada y métricas.</li>
+        <li>OpenAI-compatible es contrato HTTP, no equivalencia de modelo.</li>
+        <li><code class="inline">baseURL</code> es la frontera: una variable mueve la inferencia sin reescribir el cliente.</li>
+        <li><code class="inline">/v1/models</code> primero; <code class="inline">chat.completions</code> después; SSE acumula <code class="inline">delta</code> hasta <code class="inline">[DONE]</code>.</li>
+        <li>Red, servidor y modelo son dependencias distintas con errores distintos.</li>
+        <li>Con datos privados, el fallback por defecto es fail-closed.</li>
+        <li>Toda migración termina en un ADR con evidencia fechada.</li>
       </ul>
     </section>
+
+    <section id="done">
+      <h2>Definition of Done</h2>
+      <ul class="check">
+        <li>El mismo cliente funciona con dos endpoints configurables.</li>
+        <li><code class="inline">/v1/models</code>, completion normal y SSE tienen pruebas separadas.</li>
+        <li><code class="inline">ECONNREFUSED</code>, 404, 400 y timeout se distinguen.</li>
+        <li>Existe una matriz de capacidades verificada, no inferida por nombre.</li>
+        <li>El caso privado falla cerrado cuando la ruta local no está disponible.</li>
+        <li>ADR-009 contiene evidencia fechada y métricas comparables.</li>
+      </ul>
+    </section>
+
     <section id="checkpoint">
       <h2>Checkpoint</h2>
-      <p>Defiende la migración si explicas el contrato, ejecutas normal + SSE, identificas tres incompatibilidades, demuestras offline y justificas el fallback con ADR. Ver <a href="/class-09-openai-compatible-escape-hatch/assessment/checkpoint.md">assessment/checkpoint.md</a>.</p>
-      <p><a href="/class/09">← Volver a la página de la clase</a> · <a href="/curriculum">Currículo</a></p>
+      <ol>
+        <li>¿Qué significa “OpenAI-compatible” y qué no garantiza?</li>
+        <li>¿Cuál es la diferencia entre <code class="inline">baseURL</code> con <code class="inline">/v1</code> y el endpoint completo?</li>
+        <li>¿Cómo parseas una respuesta SSE y por qué <code class="inline">[DONE]</code> no es JSON?</li>
+        <li>Clasifica <code class="inline">ECONNREFUSED</code>, 404 y 400 por capa.</li>
+        <li>¿Por qué un servidor local no demuestra por sí solo modo avión?</li>
+        <li>Nombra tres capacidades que debes volver a probar al cambiar de backend.</li>
+        <li>Diseña una política segura para datos privados cuando QVAC no está disponible.</li>
+        <li>¿Qué métricas registrarías para comparar local y remoto, y qué sesgo tienen?</li>
+      </ol>
+      <p>Checkpoint completo en <a href="../class-09-openai-compatible-escape-hatch/assessment/checkpoint.md">assessment/checkpoint.md</a>.</p>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes</h2>
+      <ul>
+        <li><a href="https://docs.qvac.tether.io/reference/api/">QVAC — API reference v0.18.x</a></li>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">QVAC — Text generation</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/release-notes/">QVAC — Release notes</a></li>
+        <li><a href="../class-04-build-offline-chat/lesson.md">Clase 04 — Build the Offline Chat (commit provisional vs committed)</a></li>
+      </ul>
     </section>
   </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Introducción</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/09">Clase</a></li>
+        <li><a href="/class-09-openai-compatible-escape-hatch/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-09-openai-compatible-escape-hatch/lab/README.md">Lab</a></li>
+      </ul>
+    </div>
+  </aside>
 </div>
 </main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 9 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-09-openai-compatible-escape-hatch/">← Volver a la Clase 9</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
 </body>
 </html>

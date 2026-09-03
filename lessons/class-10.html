@@ -12,6 +12,7 @@
 </head>
 <body class="lesson-page" data-lesson-class="class-10">
 <a class="skip-link" href="#main">Saltar al contenido</a>
+
 <header class="site-head">
   <div class="bar">
     <a class="brand" href="/">QVAC <b>Masterclass</b></a>
@@ -22,8 +23,10 @@
     </nav>
   </div>
 </header>
+
 <main id="main">
 <div class="lesson-layout">
+
   <aside class="lesson-sidebar" aria-label="Navegación de la lección">
     <div class="lesson-sidebar-title">
       <span class="lesson-sidebar__kicker">Clase 10 · Módulo 4</span>
@@ -33,124 +36,386 @@
       <span class="toc-head">INTRODUCCIÓN</span>
       <a href="#intro">Pregunta esencial</a>
       <a href="#outcomes">Qué aprenderás</a>
-      <a href="#politica">De todo-local a política</a>
-      <span class="toc-head">MÉTODO</span>
-      <a href="#adr">Método ADR</a>
-      <a href="#matriz">Matriz de enrutamiento</a>
-      <a href="#invariantes">Invariantes y degradación</a>
+      <a href="#contexto">De todo-local a política</a>
+      <span class="toc-head">TÉRMINOS</span>
+      <a href="#terminos">Índice de términos</a>
+      <a href="#frontera-datos">Frontera de datos</a>
+      <a href="#frontera-ejecucion">Frontera de ejecución</a>
+      <a href="#frontera-confianza">Frontera de confianza</a>
+      <a href="#adr-t">ADR</a>
+      <a href="#matriz-t">Matriz de enrutamiento</a>
+      <a href="#invariantes-t">Invariantes</a>
+      <a href="#fallback-t">Fallback seguro</a>
+      <a href="#degradacion">Degradación</a>
+      <span class="toc-head">REFERENCIA QVAC</span>
+      <a href="#referencia">Referencia QVAC</a>
+      <a href="#ref-classifier">Clasificador</a>
+      <a href="#ref-policy">Política de fallback</a>
+      <span class="toc-head">EJEMPLOS</span>
+      <a href="#ejemplo">Ejemplo completo</a>
       <span class="toc-head">PRÁCTICA</span>
-      <a href="#medir">Qué medir</a>
-      <a href="#build">Build: routing policy</a>
-      <a href="#breakit">Break It: exfiltración</a>
+      <a href="#predict">Antes de ejecutar</a>
+      <a href="#build">Práctica guiada</a>
+      <a href="#errores">Errores comunes</a>
+      <a href="#medicion">Medición</a>
+      <a href="#resumen">Resumen</a>
       <a href="#done">Definition of Done</a>
       <a href="#checkpoint">Checkpoint</a>
+      <a href="#fuentes">Fuentes</a>
     </nav>
   </aside>
+
   <article class="lesson">
-    <p class="lesson-meta">Módulo 4 — Drop-in Sovereignty · Baseline QVAC SDK v0.18.x / v0.18.1</p>
+    <p class="lesson-meta">
+      Módulo 4 — Drop-in Sovereignty · Baseline: QVAC SDK v0.18.x / v0.18.1 · Verifica las release notes antes de impartir.</p>
+
     <section id="intro">
       <h2>Pregunta esencial</h2>
       <p><em>¿Debe todo correr local? No: la arquitectura correcta hace visible qué datos, capacidades y fallos pueden cruzar una frontera.</em></p>
-      <p>Local-first significa que la ruta local es la primera opción compatible con los requisitos, no que todo deba ser local. Un modelo remoto puede ser necesario, pero solo tras evaluar datos, consentimiento y riesgo.</p>
+      <p>Esta clase convierte “local-first” en una decisión arquitectónica explícita. Partimos del cliente OpenAI-compatible de la Clase 9 y diseñamos políticas de privacidad, disponibilidad, coste y calidad.</p>
+      <p>No asumimos que “todo local” siempre es la respuesta: un modelo remoto puede ser necesario para una capacidad ausente, pero solo después de evaluar datos, consentimiento y riesgo.</p>
+    </section>
+
+    <section id="outcomes">
+      <h2>Qué aprenderás</h2>
+      <ol>
+        <li><strong>Definir</strong> “local-first” como política verificable, no como eslogan.</li>
+        <li><strong>Dibujar</strong> fronteras de datos, ejecución y confianza.</li>
+        <li><strong>Clasificar</strong> solicitudes por sensibilidad y capacidad requerida.</li>
+        <li><strong>Escribir</strong> un Architecture Decision Record (ADR) defendible.</li>
+        <li><strong>Diseñar</strong> fallback local/remoto con consentimiento, timeout y auditoría.</li>
+        <li><strong>Separar</strong> degradación de disponibilidad de degradación de calidad.</li>
+        <li><strong>Medir</strong> latencia, coste, disponibilidad y exposición de datos.</li>
+        <li><strong>Probar</strong> que una política bloquea exfiltración accidental.</li>
+      </ol>
+    </section>
+
+    <section id="contexto">
+      <h2>De “todo local” a una política</h2>
+      <p>Local-first significa que la ruta local es la primera opción compatible con los requisitos. La política se ejecuta por solicitud:</p>
 <pre class="codebox"><code>request → classify(data, capability, consent)
         → local route (preferred)
         → if unavailable: safe fallback or refuse
         → record decision + outcome (without sensitive content)</code></pre>
+      <p>Hay tres fronteras que no deben confundirse. Cada una tiene su pregunta y su control:</p>
+      <table class="booktabs">
+        <thead><tr><th>Frontera</th><th>Pregunta</th><th>Ejemplo de control</th></tr></thead>
+        <tbody>
+          <tr><td>Datos</td><td>¿Qué bytes salen del dispositivo?</td><td>Red bloqueada para PII</td></tr>
+          <tr><td>Ejecución</td><td>¿Dónde se calculan tokens?</td><td>QVAC local / endpoint compatible</td></tr>
+          <tr><td>Confianza</td><td>¿Quién puede observar o cambiar el resultado?</td><td>Allowlist, TLS, logs minimizados</td></tr>
+        </tbody>
+      </table>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">“Usaremos IA local por privacidad” no es una decisión: no dice qué es privado, qué pasa si el modelo no está cargado, ni qué prueba lo demuestra.</div></div>
     </section>
-    <section id="outcomes">
-      <h2>Qué aprenderás</h2>
+
+    <section id="terminos">
+      <h2>Términos</h2>
+      <h3>Índice rápido</h3>
+      <table class="booktabs">
+        <thead><tr><th>Término</th><th>Definición breve</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Frontera de datos</strong></td><td>Límite de qué bytes pueden salir del dispositivo</td></tr>
+          <tr><td><strong>Frontera de ejecución</strong></td><td>Límite de dónde se calculan los tokens</td></tr>
+          <tr><td><strong>Frontera de confianza</strong></td><td>Límite de quién observa o altera el resultado</td></tr>
+          <tr><td><strong>ADR</strong></td><td>Registro auditable de una decisión arquitectónica</td></tr>
+          <tr><td><strong>Matriz de enrutamiento</strong></td><td>Tabla sensibilidad × capacidad → ruta por defecto y fallback</td></tr>
+          <tr><td><strong>Invariantes I1–I5</strong></td><td>Propiedades que ninguna ruta puede romper</td></tr>
+          <tr><td><strong>Fallback seguro</strong></td><td>Remoto solo con consentimiento, allowlist y timeout</td></tr>
+          <tr><td><strong>Degradación</strong></td><td>Pérdida explícita de disponibilidad o de calidad, etiquetada</td></tr>
+        </tbody>
+      </table>
+
+      <section id="frontera-datos">
+        <h3>Frontera de datos</h3>
+        <p><strong>Definición:</strong> Límite explícito de qué bytes pueden salir del dispositivo hacia cualquier endpoint.</p>
+        <p><strong>Uso:</strong> Clasificar cada solicitud antes de enrutar. Salud, credenciales y secretos son alta sensibilidad: nunca salen.</p>
+<pre class="codebox"><code>function classify(request) {
+  if (request.contains.some((item) =&gt; ['health', 'credential', 'secret'].includes(item))) return 'high'
+  if (request.contains.includes('confidential')) return 'medium'
+  return 'low'
+}</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Cada solicitud obtiene una sensibilidad sin imprimir su contenido. Alta → ruta local o rechazo.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">El log de clasificación registra la decisión y el motivo, nunca el prompt completo.</div></div>
+      </section>
+
+      <section id="frontera-ejecucion">
+        <h3>Frontera de ejecución</h3>
+        <p><strong>Definición:</strong> Límite de dónde se calculan los tokens: runtime QVAC local o endpoint remoto compatible.</p>
+        <p><strong>Uso:</strong> Preferir local siempre que esté disponible. La Clase 9 aporta el mecanismo (cliente OpenAI-compatible); esta clase aporta la política.</p>
+<pre class="codebox"><code>// la decisión y el transporte van separados:
+// 1. decide() — política pura, sin red (testeable offline)
+// 2. adapter  — ejecuta la ruta elegida (Clase 9)</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Puedes probar la privacidad sin encender ningún servidor: la política es una función pura.</div></div>
+      </section>
+
+      <section id="frontera-confianza">
+        <h3>Frontera de confianza</h3>
+        <p><strong>Definición:</strong> Límite de quién puede observar o alterar el resultado: endpoints permitidos, TLS, minimización de logs.</p>
+        <p><strong>Uso:</strong> Allowlist de endpoints remotos + consentimiento vigente + mensajes que indican dónde se ejecutó cada respuesta.</p>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">El usuario siempre sabe si su solicitud fue <code class="inline">local</code>, <code class="inline">remote-consented</code> o <code class="inline">refuse</code>, y por qué.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Un endpoint no permitido se rechaza antes de serializar el prompt, no después de enviarlo.</div></div>
+      </section>
+
+      <section id="adr-t">
+        <h3>ADR</h3>
+        <p><strong>Definición:</strong> Architecture Decision Record corto que deja auditable el razonamiento: contexto, decisión, alternativas, invariantes, consecuencias, evidencia, fecha y dueño.</p>
+        <p><strong>Uso:</strong> Defender la frontera ante producto, seguridad y auditoría. Sin ADR, cada incidente reabre la misma discusión.</p>
+<pre class="codebox"><code># ADR-001: asistente de campo local-first
+## Contexto — técnicos sin conexión estable + mejora opcional remota
+## Decisión — local por defecto; remoto solo medio/bajo con consentimiento
+## Alternativas descartadas — todo-cloud / todo-local sin fallback
+## Invariantes — I1..I5 (no exfiltración, consentimiento, transparencia…)
+## Consecuencias — latencia local vs calidad remota, costo, UX de rechazo
+## Evidencia — comandos, fecha, modelo, p50/p95, bloqueos
+## Fecha y dueño</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Una decisión útil incluye clase de datos, capacidad, SLO, política ante fallo y cómo se verificará.</div></div>
+      </section>
+
+      <section id="matriz-t">
+        <h3>Matriz de enrutamiento</h3>
+        <p><strong>Definición:</strong> Tabla que clasifica antes de enrutar: cada combinación de sensibilidad y capacidad tiene ruta por defecto y fallback.</p>
+        <p><strong>Uso:</strong> Convertir la política en casos testeables. Cada fila es un test automatizado.</p>
+        <table class="booktabs api-ref">
+          <thead><tr><th>Sensibilidad</th><th>Capacidad</th><th>Ruta por defecto</th><th>Fallback</th></tr></thead>
+          <tbody>
+            <tr><td>alta (credenciales, salud)</td><td>resumen</td><td>local</td><td>rechazar</td></tr>
+            <tr><td>media</td><td>redacción</td><td>local</td><td>remoto solo con consentimiento</td></tr>
+            <tr><td>baja</td><td>modelo grande</td><td>local</td><td>remoto permitido, registrado</td></tr>
+            <tr><td>cualquiera</td><td>capacidad no instalada</td><td>instalación/local</td><td>explicar bloqueo</td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Cinco casos del lab con rutas esperadas: <code class="inline">local</code>, <code class="inline">remote-consented</code> o <code class="inline">refuse</code> + razón + código de política.</div></div>
+      </section>
+
+      <section id="invariantes-t">
+        <h3>Invariantes I1–I5</h3>
+        <p><strong>Definición:</strong> Propiedades que ninguna ejecución puede violar, se caiga lo que se caiga.</p>
+        <p><strong>Uso:</strong> Escribirlas antes de probar; el Break It las ataca una por una.</p>
+        <table class="booktabs">
+          <thead><tr><th>ID</th><th>Invariante</th><th>Ataque del lab</th></tr></thead>
+          <tbody>
+            <tr><td>I1</td><td>Alta sensibilidad nunca sale</td><td>PII + runtime caído → debe ser <code class="inline">refuse</code></td></tr>
+            <tr><td>I2</td><td>Remoto requiere consentimiento vigente</td><td>Consentimiento revocado → <code class="inline">refuse</code></td></tr>
+            <tr><td>I3</td><td>La respuesta indica dónde se ejecutó</td><td>Ruta sin etiqueta → fallo de transparencia</td></tr>
+            <tr><td>I4</td><td>Ningún fallback bloquea indefinidamente</td><td>Endpoint lento → timeout finito</td></tr>
+            <tr><td>I5</td><td>Decisión registrada sin contenido sensible</td><td>Log con prompt → fallo de minimización</td></tr>
+          </tbody>
+        </table>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Cada invariante tiene al menos una prueba automatizada que la demuestra.</div></div>
+      </section>
+
+      <section id="fallback-t">
+        <h3>Fallback seguro</h3>
+        <p><strong>Definición:</strong> Ruta remota condicionada a cuatro checks: autorización explícita, endpoint permitido, timeout acotado y ausencia de datos prohibidos.</p>
+        <p><strong>Uso:</strong> El fallback no es un <code class="inline">catch</code> que envía el prompt a cualquier endpoint. Si un check falla, se rechaza con alternativa accionable.</p>
+<pre class="codebox"><code>export function decide(input) {
+  if (input.localReady) return { route: 'local', reason: 'preferred local route' }
+  if (input.sensitivity === 'high') return { route: 'refuse', reason: 'high-sensitivity data is local-only' }
+  if (!input.consent) return { route: 'refuse', reason: 'remote fallback requires consent' }
+  if (!input.endpointAllowed) return { route: 'refuse', reason: 'endpoint is not allowlisted' }
+  if (input.timedOut) return { route: 'refuse', reason: 'fallback timeout exceeded' }
+  return { route: 'remote', reason: 'consented and allowlisted fallback' }
+}</code></pre>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">Orden conservado: local → sensibilidad → consentimiento → allowlist → timeout. Ejemplo en <code class="inline">examples/02-fallback-policy.ts</code>.</div></div>
+        <div class="block alert"><div class="block-title">Nota</div><div class="block-body">El orden importa: comprobar consentimiento antes que sensibilidad podría registrar datos prohibidos en el camino.</div></div>
+      </section>
+
+      <section id="degradacion">
+        <h3>Degradación</h3>
+        <p><strong>Definición:</strong> Pérdida explícita y etiquetada de disponibilidad o de calidad cuando la ruta ideal no existe.</p>
+        <p><strong>Uso:</strong> Distinguir estados en lugar de un binario éxito/fallo: <code class="inline">local-success</code>, <code class="inline">remote-consented</code>, <code class="inline">local-unavailable</code>, <code class="inline">remote-denied</code>, <code class="inline">quality-degraded</code>.</p>
+        <div class="block"><div class="block-title">Resultado</div><div class="block-body">La disponibilidad no justifica romper I1–I2: sin ruta segura, la respuesta es un rechazo comprensible, no un envío silencioso.</div></div>
+      </section>
+    </section>
+
+    <section id="referencia">
+      <h2>Referencia QVAC</h2>
+
+      <h3 id="ref-classifier">Clasificador de privacidad</h3>
+      <p><strong>Definición:</strong> Función que mapea una solicitud a sensibilidad alta/media/baja sin imprimir su contenido.</p>
+      <p><strong>Uso:</strong> Primera etapa del pipeline. Alta → <code class="inline">local-only</code>; resto → <code class="inline">local-first</code>.</p>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Entrada</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">id</code></td><td><code class="inline">string</code></td><td>Identificador opaco para logs (sin PII)</td></tr>
+          <tr><td><code class="inline">purpose</code></td><td><code class="inline">string</code></td><td>Propósito declarado: resume, rewrite, translate…</td></tr>
+          <tr><td><code class="inline">contains</code></td><td><code class="inline">string[]</code></td><td>Etiquetas de contenido: health, credential, confidential…</td></tr>
+          <tr><td><code class="inline">needs</code></td><td><code class="inline">string</code></td><td>Capacidad requerida para la matriz</td></tr>
+        </tbody>
+      </table>
+<pre class="codebox"><code>for (const request of requests) {
+  const sensitivity = classify(request)
+  const route = sensitivity === 'high' ? 'local-only' : 'local-first'
+  console.log(`${request.id}: ${sensitivity} → ${route} (${request.needs})`)
+}</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Seis solicitudes clasificadas y justificadas en el lab. Ejecutable: <code class="inline">examples/01-privacy-classifier.ts</code>.</div></div>
+
+      <h3 id="ref-policy">Política de fallback</h3>
+      <p><strong>Definición:</strong> Función pura <code class="inline">decide()</code> que recibe sensibilidad, disponibilidad local, consentimiento, allowlist y timeout.</p>
+      <p><strong>Uso:</strong> Simular timeout y alta sensibilidad sin red. La salida es ruta + razón, lista para auditar.</p>
+<pre class="codebox"><code>const cases = [
+  { sensitivity: 'high', localReady: false, consent: true, endpointAllowed: true },
+  { sensitivity: 'medium', localReady: false, consent: false, endpointAllowed: true },
+  { sensitivity: 'low', localReady: false, consent: true, endpointAllowed: true },
+  { sensitivity: 'low', localReady: false, consent: true, endpointAllowed: true, timedOut: true },
+]
+for (const input of cases) console.log(decide(input))</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body">Remoto solo cuando hay consentimiento y nunca para datos prohibidos. Ejecutable: <code class="inline">examples/02-fallback-policy.ts</code>.</div></div>
+      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">Separar decisión y transporte permite probar la privacidad sin depender de que un servidor esté encendido.</div></div>
+    </section>
+
+    <section id="ejemplo">
+      <h2>Ejemplo completo</h2>
+      <p>Starter del lab con el orden de invariantes ya marcado. Tu trabajo: ampliar casos y el ADR. En <a href="../class-10-local-first-architectures/lab/starter/architecture-lab-starter.ts">lab/starter/architecture-lab-starter.ts</a>.</p>
+<pre class="codebox"><code>// TODO: conserva el orden: local → sensibilidad → consentimiento → allowlist
+export function route(request) {
+  if (request.localReady) return 'local'
+  if (request.sensitivity === 'high') return 'refuse'
+  if (!request.consent || !request.endpointAllowed) return 'refuse'
+  return 'remote'
+}
+
+const sample = [
+  { id: 'high-offline', sensitivity: 'high', localReady: false, consent: true, endpointAllowed: true },
+  { id: 'medium-consented', sensitivity: 'medium', localReady: false, consent: true, endpointAllowed: true },
+  { id: 'low-local', sensitivity: 'low', localReady: true, consent: false, endpointAllowed: false },
+]
+for (const request of sample) console.log(request.id, route(request))</code></pre>
+      <div class="block"><div class="block-title">Resultado</div><div class="block-body"><code class="inline">high-offline → refuse</code>, <code class="inline">medium-consented → remote</code>, <code class="inline">low-local → local</code>. Tres rutas, tres motivos.</div></div>
+    </section>
+
+    <section id="predict">
+      <h2>Antes de ejecutar</h2>
+      <p>Escribe tus predicciones antes de tocar código:</p>
       <ol>
-        <li><strong>Definir</strong> local-first como política verificable, no eslogan.</li>
-        <li><strong>Dibujar</strong> fronteras de datos, ejecución y confianza.</li>
-        <li><strong>Clasificar</strong> solicitudes por sensibilidad y capacidad.</li>
-        <li><strong>Escribir</strong> un ADR defendible.</li>
-        <li><strong>Diseñar</strong> fallback con consentimiento, timeout y auditoría.</li>
-        <li><strong>Separar</strong> degradación de disponibilidad vs calidad.</li>
-        <li><strong>Medir</strong> latencia, coste, disponibilidad y exposición.</li>
-        <li><strong>Probar</strong> que la política bloquea exfiltración accidental.</li>
+        <li><strong>P1:</strong> el modelo local está descargado pero no cargado. ¿Qué ruta obtienes y qué mensaje ve el usuario?</li>
+        <li><strong>P2:</strong> una solicitud médica encuentra el runtime local caído. ¿Se envía al remoto consentido o se rechaza?</li>
+        <li><strong>P3:</strong> el usuario no dio consentimiento remoto y local no está listo. ¿Qué invariante se activaría si igual lo enviaras?</li>
+        <li><strong>P4:</strong> el endpoint remoto tarda más que el timeout. ¿Qué estado registra el sistema?</li>
+        <li><strong>P5:</strong> inyectas un endpoint no permitido con consentimiento vigente. ¿En qué punto se rechaza: antes o después de serializar el prompt?</li>
       </ol>
     </section>
-    <section id="politica">
-      <h2>Tres fronteras</h2>
-      <table class="booktabs"><thead><tr><th>Frontera</th><th>Pregunta</th><th>Control</th></tr></thead>
-      <tbody>
-        <tr><td>Datos</td><td>¿Qué bytes salen?</td><td>Red bloqueada para PII</td></tr>
-        <tr><td>Ejecución</td><td>¿Dónde se calculan tokens?</td><td>QVAC local / endpoint compatible</td></tr>
-        <tr><td>Confianza</td><td>¿Quién observa el resultado?</td><td>Allowlist, TLS, logs minimizados</td></tr>
-      </tbody></table>
-    </section>
-    <section id="adr">
-      <h2>Método ADR</h2>
-<pre class="codebox"><code>Contexto → decisión → alternativas descartadas → invariantes
-        → consecuencias → evidencia/experimento → fecha y dueño</code></pre>
-      <div class="block alert"><div class="block-title">Nota</div><div class="block-body">“Usaremos IA local por privacidad” no es un ADR: falta qué es privado, qué pasa sin modelo cargado y qué prueba lo demuestra.</div></div>
-    </section>
-    <section id="matriz">
-      <h2>Matriz de enrutamiento</h2>
-      <table class="booktabs"><thead><tr><th>Sensibilidad</th><th>Capacidad</th><th>Por defecto</th><th>Fallback</th></tr></thead>
-      <tbody>
-        <tr><td>alta</td><td>resumen</td><td>local</td><td>rechazar</td></tr>
-        <tr><td>media</td><td>redacción</td><td>local</td><td>remoto solo con consentimiento</td></tr>
-        <tr><td>baja</td><td>modelo grande</td><td>local</td><td>remoto permitido, registrado</td></tr>
-        <tr><td>cualquiera</td><td>no instalada</td><td>instalación/local</td><td>explicar bloqueo</td></tr>
-      </tbody></table>
-      <p>El fallback comprueba: autorización explícita, endpoint permitido, timeout acotado y ausencia de datos prohibidos.</p>
-    </section>
-    <section id="invariantes">
-      <h2>Invariantes y degradación</h2>
-      <ul>
-        <li><strong>I1 — No exfiltración:</strong> alta sensibilidad nunca sale.</li>
-        <li><strong>I2 — Consentimiento:</strong> ruta remota requiere consentimiento vigente.</li>
-        <li><strong>I3 — Transparencia:</strong> la respuesta indica dónde se ejecutó.</li>
-        <li><strong>I4 — Control temporal:</strong> ningún fallback bloquea indefinidamente.</li>
-        <li><strong>I5 — Reproducibilidad:</strong> decisión registrada sin contenido sensible.</li>
-      </ul>
-      <p>Estados: <code class="inline">local-success</code>, <code class="inline">remote-consented</code>, <code class="inline">local-unavailable</code>, <code class="inline">remote-denied</code>, <code class="inline">quality-degraded</code>.</p>
-    </section>
-    <section id="medir">
-      <h2>Qué medir</h2>
-      <p>Por clase de solicitud: TTFT y latencia total, tasa de éxito, % rutas locales, timeouts, coste y remotos bloqueados. Un número sin hardware, modelo, prompt y ventana no es reproducible.</p>
-    </section>
+
     <section id="build">
-      <h2>Build — Routing Policy Simulator</h2>
-<pre class="codebox"><code>type RequestClass = {
-  sensitivity: 'high' | 'medium' | 'low'
-  capability: string
-  consent: boolean
-  localAvailable: boolean
-}
-// → 'local' | 'remote-consented' | 'refuse' + razón + código</code></pre>
-      <table class="booktabs"><thead><tr><th>Caso</th><th>Esperado</th></tr></thead>
-      <tbody>
-        <tr><td>PII + local disponible</td><td>local</td></tr>
-        <tr><td>PII + local caído</td><td>refuse</td></tr>
-        <tr><td>medio + consentimiento</td><td>remote-consented</td></tr>
-        <tr><td>medio sin consentimiento</td><td>refuse</td></tr>
-        <tr><td>bajo + capacidad local</td><td>local</td></tr>
-      </tbody></table>
+      <h2>Práctica guiada</h2>
+      <p><strong>Lab — ADR + Safe Fallback (75–90 min).</strong> Guía en <a href="../class-10-local-first-architectures/lab/README.md">lab/README.md</a>. Trabaja con una app de la Clase 9 o con los ejemplos de esta carpeta.</p>
+      <ol>
+        <li><strong>Predice</strong> P1–P4 por escrito antes de ejecutar.</li>
+        <li><strong>Clasifica</strong> al menos seis solicitudes en alta/media/baja; justifica sin imprimir contenido.</li>
+        <li><strong>Escribe</strong> <code class="inline">ADR-001-local-first.md</code>: contexto, decisión, alternativas, invariantes, consecuencias, métricas, fecha y dueño + diagrama de fronteras.</li>
+        <li><strong>Implementa</strong> el fallback: añade simulación de timeout + solicitud de alta sensibilidad. Esperado: remoto solo con consentimiento, nunca para prohibidos.</li>
+        <li><strong>Rompe</strong> cada rama: runtime caído, consentimiento revocado, endpoint no permitido, timeout. Registra ruta, motivo, datos expuestos (cero en alta) y mensaje al usuario.</li>
+        <li><strong>Mide y defiende</strong> en 3 minutos: qué proteges, qué sacrificas y qué evidencia cambiaría tu decisión. Tabla p50/p95, éxito local, fallos y bloqueos.</li>
+      </ol>
     </section>
-    <section id="breakit">
-      <h2>Break It — Exfiltration Test</h2>
-      <p>Bloquea la red y fuerza cada rama. Inyecta un endpoint no permitido: la política debe rechazar antes de serializar el prompt, registrando la decisión sin contenido sensible.</p>
+
+    <section id="errores">
+      <h2>Errores comunes</h2>
+      <table class="booktabs">
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+          <tr><td>PII llega al endpoint remoto</td><td>Fallback automático sin check de sensibilidad</td><td>Check de alta sensibilidad antes que consentimiento</td></tr>
+          <tr><td>Remoto sin permiso del usuario</td><td>Consentimiento asumido o caducado</td><td>Consentimiento explícito y vigente por solicitud</td></tr>
+          <tr><td>Prompt completo en logs</td><td>Registro de contenido en lugar de decisión</td><td>Loguea ruta + motivo + código, nunca el prompt</td></tr>
+          <tr><td>Fallback colgado minutos</td><td>Sin timeout acotado</td><td>Timeout finito + estado <code class="inline">remote-denied</code></td></tr>
+          <tr><td>Cualquier URL aceptada</td><td>Sin allowlist de endpoints</td><td>Rechaza no-permitidos antes de serializar</td></tr>
+          <tr><td>“Todo local” sin fallback</td><td>Capacidad no instalada = bloqueo mudo</td><td>Explica el bloqueo + alternativa accionable</td></tr>
+          <tr><td>ADR vago e indefendible</td><td>Sin invariantes ni evidencia</td><td>Invariantes + matriz + métricas con contexto</td></tr>
+        </tbody>
+      </table>
     </section>
+
+    <section id="medicion">
+      <h2>Medición</h2>
+      <table class="booktabs api-ref">
+        <thead><tr><th>Métrica</th><th>Cómo obtenerla</th><th>Unidad</th><th>Interpretación</th></tr></thead>
+        <tbody>
+          <tr><td>TTFT / latencia total</td><td>Por clase de solicitud, p50/p95</td><td>ms</td><td>Costo percibido y total por ruta</td></tr>
+          <tr><td>Éxito local</td><td><code class="inline">local-success</code> / total</td><td>%</td><td>Cobertura real de la ruta preferida</td></tr>
+          <tr><td>Remotos bloqueados</td><td>Rechazos I1/I2 / intentos</td><td>count</td><td>Efectividad de la política</td></tr>
+          <tr><td>Timeouts</td><td>Fallbacks que superan el límite</td><td>count</td><td>Salud del control temporal (I4)</td></tr>
+          <tr><td>Coste estimado</td><td>Tokens × tarifa por ruta</td><td>$</td><td>Trade-off local vs remoto</td></tr>
+        </tbody>
+      </table>
+      <p>Un número sin contexto de hardware, modelo, prompt y ventana temporal no es una comparación reproducible.</p>
+    </section>
+
+    <section id="resumen">
+      <h2>Resumen</h2>
+      <ul>
+        <li>Local-first es política verificable: local por defecto, remoto solo condicionado, rechazo cuando toca.</li>
+        <li>Tres fronteras distintas: datos (qué sale), ejecución (dónde se calcula), confianza (quién observa).</li>
+        <li>El ADR deja la decisión auditable: contexto, alternativas, invariantes, consecuencias y evidencia.</li>
+        <li>El fallback exige consentimiento + allowlist + timeout + ausencia de prohibidos, en ese orden.</li>
+        <li>Decisión y transporte van separados: la política es testeable sin red.</li>
+        <li>Sin respuesta a “qué dato jamás sale y qué permiso activa el fallback”, la arquitectura no está lista.</li>
+      </ul>
+      <p><strong>Fin del Módulo 4 — Drop-in Sovereignty.</strong></p>
+    </section>
+
     <section id="done">
       <h2>Definition of Done</h2>
-      <ul>
-        <li>Diagrama de tres fronteras.</li>
-        <li>Matriz + invariantes con pruebas automatizadas.</li>
-        <li>Fallback con consentimiento y allowlist.</li>
-        <li>Respuesta expone ruta y motivo de degradación.</li>
-        <li>Exfiltration Test con red bloqueada y endpoint malicioso.</li>
-        <li>ADR con trade-offs de latencia, coste, disponibilidad y privacidad.</li>
+      <ul class="check">
+        <li>Las tres fronteras (datos, ejecución y confianza) aparecen en un diagrama.</li>
+        <li>La matriz de rutas y sus invariantes tienen pruebas automatizadas.</li>
+        <li>El fallback remoto exige consentimiento y allowlist.</li>
+        <li>La respuesta expone la ruta usada y el motivo de degradación.</li>
+        <li>El Exfiltration Test pasa con red bloqueada y endpoint malicioso.</li>
+        <li>El ADR incluye trade-offs de latencia, coste, disponibilidad y privacidad.</li>
       </ul>
     </section>
+
     <section id="checkpoint">
       <h2>Checkpoint de defensa</h2>
-      <p>¿Qué dato jamás sale? ¿Qué permiso activa el fallback? ¿Cómo sabe el usuario dónde se ejecutó? ¿Qué ocurre sin ruta segura? Ver <a href="/class-10-local-first-architectures/assessment/checkpoint.md">assessment/checkpoint.md</a>.</p>
-      <p><a href="/class/10">← Volver a la página de la clase</a> · <a href="/curriculum">Currículo</a></p>
+      <ol>
+        <li>¿Qué diferencia hay entre frontera de datos, ejecución y confianza?</li>
+        <li>Presenta tu ADR y nombra dos alternativas descartadas.</li>
+        <li>¿Qué invariantes impiden exfiltración?</li>
+        <li>Muestra cinco casos de fallback y sus rutas resultantes.</li>
+        <li>Reporta latencia, éxito local, bloqueos y contexto de medición.</li>
+        <li>¿Qué sacrificio de producto aceptas para preservar privacidad?</li>
+      </ol>
+      <p>Checkpoint completo en <a href="../class-10-local-first-architectures/assessment/checkpoint.md">assessment/checkpoint.md</a>. Aprueba con respuestas concretas, logs reproducibles y nivel ≥3 en la rúbrica.</p>
+    </section>
+
+    <section id="fuentes">
+      <h2>Fuentes</h2>
+      <ul>
+        <li><a href="https://docs.qvac.tether.io/reference/api/">QVAC — API reference</a></li>
+        <li><a href="https://docs.qvac.tether.io/ai-capabilities/text-generation/">QVAC — Text generation</a></li>
+        <li><a href="https://docs.qvac.tether.io/reference/release-notes/">QVAC — Release notes</a></li>
+        <li><a href="../class-09-openai-compatible-escape-hatch/lesson.md">Clase 09 — The OpenAI-Compatible Escape Hatch</a></li>
+      </ul>
     </section>
   </article>
+
+  <aside class="lesson-rail" aria-label="Contexto de la lección">
+    <div class="rail-card">
+      <span class="rail-label">Estás en</span>
+      <p class="rail-current" data-toc-current>Introducción</p>
+    </div>
+    <div class="rail-card">
+      <span class="rail-label">Artefactos</span>
+      <ul class="rail-links">
+        <li><a href="/class/10">Clase</a></li>
+        <li><a href="/class-10-local-first-architectures/slides.html" target="_blank" rel="noopener">Slides ↗</a></li>
+        <li><a href="/class-10-local-first-architectures/lab/README.md">Lab</a></li>
+      </ul>
+    </div>
+  </aside>
 </div>
 </main>
+
+<footer class="site-foot">
+  <div class="inner">
+    <span>Clase 10 · The Local-First AI Systems Masterclass</span>
+    <span><a href="../class-10-local-first-architectures/">← Volver a la Clase 10</a></span>
+  </div>
+</footer>
+
+<script src="../assets/theme.js"></script>
+<script src="../assets/mermaid.js"></script>
+<script src="../assets/site.js"></script>
 </body>
 </html>
